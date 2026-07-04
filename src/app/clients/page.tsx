@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/features/auth/logout-button";
 import { ClientList } from "@/features/clients/client-list";
+import { PendingInvitations } from "@/features/clients/invitations/pending-invitations";
+import { getPendingInvitationsForCurrentUser } from "@/features/clients/invitations/queries";
 import { getAccessibleClients } from "@/features/clients/queries";
 import { getServerUser } from "@/lib/supabase/session";
 
@@ -12,7 +14,10 @@ export default async function ClientsPage() {
     redirect("/login");
   }
 
-  const result = await getAccessibleClients(user.id);
+  const [clientsResult, invitationsResult] = await Promise.all([
+    getAccessibleClients(user.id),
+    getPendingInvitationsForCurrentUser(),
+  ]);
 
   return (
     <main className="p-8">
@@ -22,8 +27,12 @@ export default async function ClientsPage() {
       </div>
       <p className="mt-2">Choose which client to work on.</p>
 
-      {result.ok ? (
-        <ClientList clients={result.clients} />
+      {invitationsResult.ok && invitationsResult.invitations.length > 0 ? (
+        <PendingInvitations invitations={invitationsResult.invitations} />
+      ) : null}
+
+      {clientsResult.ok ? (
+        <ClientList clients={clientsResult.clients} />
       ) : (
         <p className="mt-6 text-small text-danger">
           We could not load your clients. Please try again.
