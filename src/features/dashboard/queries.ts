@@ -52,6 +52,7 @@ export type LatestResearchRun = {
 };
 
 export type DashboardMetrics = {
+  clientName: string | null;
   setupCompleteness: { completed: number; total: number; percent: number };
   latestResearchRun: LatestResearchRun | null;
   collectedArticlesCount: number;
@@ -149,6 +150,7 @@ export async function getDashboardMetrics(
   return {
     ok: true,
     metrics: {
+      clientName: clientRow?.name ?? null,
       setupCompleteness: {
         completed,
         total,
