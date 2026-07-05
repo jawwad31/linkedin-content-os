@@ -11,6 +11,35 @@ Before making changes, read:
 
 Build one feature at a time.
 
+## Git Workflow
+
+Work directly on `main` by default. Only use a separate branch if the user explicitly asks for one.
+
+Before starting any change:
+
+```bash
+git checkout main
+git pull origin main
+git status
+```
+
+Rules:
+
+- One feature or change per commit. Do not mix unrelated changes into one commit.
+- Run `npm run lint` before every commit.
+- Run `npm run build` before every commit.
+- Do not commit if lint or build fails.
+- Do not push to `main` until lint and build both pass.
+- Every push to `main` is production-bound. If pushing triggers a Railway deploy, treat it as a production deploy.
+- For risky work, create a local safety checkpoint (a git tag or branch) before editing, so there's a known-good state to return to.
+- To roll back a bad change, prefer `git revert` of the specific commit over rewriting history.
+- Do not open a pull request, wait for PR review, or merge a PR by default. That is not the default workflow. Only use a PR if the user explicitly asks for one.
+
+## Database Migration Safety
+
+- Review every migration carefully before pushing to `main`.
+- Never make a destructive database change (drops, irreversible column removal, data deletion) without explicit user approval.
+
 ## Commit Style
 
 Use clear commits:

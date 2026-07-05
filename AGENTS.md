@@ -14,6 +14,14 @@ Security rules override convenience. User-confirmed decisions override defaults.
 
 ---
 
+## Development Workflow
+
+Work directly on `main` by default. Do not create a feature branch, open a pull request, or wait for PR review/merge unless the user explicitly asks for one.
+
+See `CONTRIBUTING.md` for the full Git workflow (pulling before starting, one change per commit, lint/build before every commit, migration review, rollback via revert).
+
+---
+
 ## Product Summary
 
 AIXelerate Content OS is an ICP-first LinkedIn content operating system for B2B founders, operators, consultants, GTM experts, and client-facing experts.

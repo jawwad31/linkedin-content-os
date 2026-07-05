@@ -15,6 +15,7 @@ import {
   getCurrentUserRoleForClient,
 } from "@/features/clients/invitations/queries";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
+import { FounderExperiencesSection } from "@/features/setup/founder-experiences/founder-experiences-section";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -37,6 +38,10 @@ export default async function SetupPage({
 
       {role ? (
         <BusinessContextSection clientId={clientId} role={role} />
+      ) : null}
+
+      {role ? (
+        <FounderExperiencesSection clientId={clientId} role={role} />
       ) : null}
 
       {role === "owner" ? (
