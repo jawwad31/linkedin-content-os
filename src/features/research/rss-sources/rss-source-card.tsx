@@ -19,6 +19,16 @@ import type { RssSource } from "./queries";
 const archiveInitialState: ArchiveRssSourceState = { error: null };
 const toggleInitialState: ToggleRssSourceState = { error: null };
 
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function RssSourceCard({
   clientId,
   role,
@@ -74,6 +84,15 @@ export function RssSourceCard({
 
         {source.lastError ? (
           <p className="text-small text-danger">{source.lastError}</p>
+        ) : null}
+
+        {source.lastCheckedAt ? (
+          <span className="font-mono text-caption text-muted-foreground">
+            Last checked {formatDateTime(source.lastCheckedAt)}
+            {source.lastSuccessAt
+              ? ` · Last success ${formatDateTime(source.lastSuccessAt)}`
+              : ""}
+          </span>
         ) : null}
 
         {toggleState.error ? (
