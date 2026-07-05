@@ -509,17 +509,19 @@ src/
 │   ├── clients/
 │   ├── client/[client_id]/
 │   │   ├── dashboard/
-│   │   ├── settings/
 │   │   ├── research/
+│   │   ├── founder-experiences/
 │   │   ├── ideas/
-│   │   ├── posts/[post_id]/review/
-│   │   └── publish/
+│   │   ├── publish/
+│   │   ├── settings/
+│   │   └── posts/[post_id]/review/
 │   └── api/
 ├── features/
 │   ├── auth/
 │   ├── clients/
 │   ├── dashboard/
 │   ├── setup/
+│   ├── founder-experiences/
 │   ├── research/
 │   ├── ideas/
 │   ├── posts/
@@ -574,11 +576,14 @@ Protected:
 
 - `/clients`
 - `/client/[client_id]/dashboard`
-- `/client/[client_id]/settings`
 - `/client/[client_id]/research`
+- `/client/[client_id]/founder-experiences`
 - `/client/[client_id]/ideas`
-- `/client/[client_id]/posts/[post_id]/review`
 - `/client/[client_id]/publish`
+- `/client/[client_id]/settings`
+- `/client/[client_id]/posts/[post_id]/review`
+
+Primary sidebar nav order: Dashboard, Research, Founder Experiences, Ideas, Publish, Setup. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
 
 ---
 
@@ -593,7 +598,7 @@ The Setup page is the always-on business context editor for a client.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
 - Team Access / invitations remain part of Setup and must not be broken by business-context changes.
-- Founder Experiences are separate records (Feature 11), not part of Business Context Settings.
+- Founder Experiences are separate records (Feature 11) with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Setup at all, not part of Business Context Settings.
 
 Supported Business Context fields (on `clients`):
 

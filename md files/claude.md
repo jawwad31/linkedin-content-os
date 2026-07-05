@@ -14,6 +14,14 @@ Security rules override convenience. User-confirmed decisions override defaults.
 
 ---
 
+## Development Workflow
+
+Work directly on `main` by default. Do not create a feature branch, open a pull request, or wait for PR review/merge unless the user explicitly asks for one.
+
+See `CONTRIBUTING.md` for the full Git workflow (pulling before starting, one change per commit, lint/build before every commit, migration review, rollback via revert).
+
+---
+
 ## Product Summary
 
 AIXelerate Content OS is an ICP-first LinkedIn content operating system for B2B founders, operators, consultants, GTM experts, and client-facing experts.
@@ -126,6 +134,41 @@ Do not design for public self-serve signup in v1.
 | Audit logs | Lightweight logs: user, action, timestamp, client |
 | Delete policy | Soft delete business records; hard delete temporary logs |
 | Publishing | Manual only; no LinkedIn API |
+
+---
+
+## UX Reference Decision
+
+`jawwad31/linkedin-content-os` is the production source of truth.
+
+Two things are visual/UX reference only — never a source for architecture, dependencies, behavior, fake data, or production code:
+
+- The Google AI Studio prototype repo (`jawwad31/Linkedin-content--os-google`), if referenced.
+- Google Stitch static HTML exports used as screen-level design mockups.
+
+UX patterns may be adopted from either reference gradually, one screen at a time:
+
+- polished login
+- workspace/client selector cards
+- dark sidebar with a current-workspace card
+- top header
+- denser dashboard layout
+- tabbed/card Setup layout
+
+Never copy from either reference:
+
+- Vite
+- Express
+- Gemini
+- fake/mock auth
+- local mock state
+- hardcoded workspaces
+- fake proof
+- fake metrics
+- fake buyer quotes
+- fake posts
+- automatic idea/post generation
+- unsupported generation modes
 
 ---
 
@@ -466,17 +509,19 @@ src/
 │   ├── clients/
 │   ├── client/[client_id]/
 │   │   ├── dashboard/
-│   │   ├── settings/
 │   │   ├── research/
+│   │   ├── founder-experiences/
 │   │   ├── ideas/
-│   │   ├── posts/[post_id]/review/
-│   │   └── publish/
+│   │   ├── publish/
+│   │   ├── settings/
+│   │   └── posts/[post_id]/review/
 │   └── api/
 ├── features/
 │   ├── auth/
 │   ├── clients/
 │   ├── dashboard/
 │   ├── setup/
+│   ├── founder-experiences/
 │   ├── research/
 │   ├── ideas/
 │   ├── posts/
@@ -531,11 +576,48 @@ Protected:
 
 - `/clients`
 - `/client/[client_id]/dashboard`
-- `/client/[client_id]/settings`
 - `/client/[client_id]/research`
+- `/client/[client_id]/founder-experiences`
 - `/client/[client_id]/ideas`
-- `/client/[client_id]/posts/[post_id]/review`
 - `/client/[client_id]/publish`
+- `/client/[client_id]/settings`
+- `/client/[client_id]/posts/[post_id]/review`
+
+Primary sidebar nav order: Dashboard, Research, Founder Experiences, Ideas, Publish, Setup. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
+
+---
+
+## Setup / Business Context Rules
+
+The Setup page is the always-on business context editor for a client.
+
+- User-facing nav label: **Setup**. Route stays `/client/[client_id]/settings`.
+- Business context lives on the `clients` table — no separate business-context table.
+- Owner and editor can edit; viewer is read-only.
+- Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted client access, and owner/editor role.
+- Input is validated with Zod.
+- Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
+- Team Access / invitations remain part of Setup and must not be broken by business-context changes.
+- Founder Experiences are separate records (Feature 11) with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Setup at all, not part of Business Context Settings.
+
+Supported Business Context fields (on `clients`):
+
+- `name`
+- `founder_name`
+- `industry`
+- `business_description`
+- `primary_icp`
+- `main_offer`
+- `core_pov`
+- `content_pillars`
+- `research_keywords`
+- `banned_topics`
+- `founder_voice_sample`
+- `phrases_to_use`
+- `phrases_to_avoid`
+- `approved_proof`
+- `reference_material`
+- `publishing_preferences`
 
 ---
 

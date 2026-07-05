@@ -126,11 +126,12 @@ Protected:
 ```text
 /clients
 /client/[client_id]/dashboard
-/client/[client_id]/settings
 /client/[client_id]/research
+/client/[client_id]/founder-experiences
 /client/[client_id]/ideas
-/client/[client_id]/posts/[post_id]/review
 /client/[client_id]/publish
+/client/[client_id]/settings
+/client/[client_id]/posts/[post_id]/review
 ```
 
 Unauthorized behavior:

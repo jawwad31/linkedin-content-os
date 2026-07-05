@@ -455,6 +455,10 @@ Dependencies:
 
 - Feature 10
 
+UI:
+
+- `/client/[client_id]/founder-experiences` — primary sidebar nav item, not a Setup tab/section.
+
 Acceptance Criteria:
 
 - Owner/editor can create/edit/soft-delete.

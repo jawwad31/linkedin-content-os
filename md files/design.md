@@ -177,14 +177,16 @@ Main canvas:
 
 ## Navigation
 
-Primary sidebar labels:
+Primary sidebar labels, in order:
 
 1. Dashboard
-2. Setup
-3. Research
+2. Research
+3. Founder Experiences
 4. Ideas
-5. Posts
-6. Publish
+5. Publish
+6. Setup
+
+Post Review is not a primary sidebar item — it appears contextually only while viewing that exact post, alongside the primary items above.
 
 Avoid internal implementation terms in UI:
 
@@ -495,15 +497,41 @@ Sections:
 - Proof and reference material
 - Banned topics
 - Publishing preferences
-- Founder Experiences
+- Team Access (owner only)
 
 Primary action:
 
 - Save context
 
-Secondary action:
+Founder Experiences are not part of Setup — see the dedicated Founder Experiences page below.
+
+### Founder Experiences
+
+Purpose:
+
+- log real operator moments as structured setup data, for later use by idea generation
+
+Layout:
+
+- founder entry form at the top (owner/editor only)
+- Founder Experience Log below
+
+Founder Experience card fields:
+
+- title
+- what happened
+- what was learned (if present)
+- what changed (if present)
+- why it matters (if present)
+- created/updated metadata
+
+Primary action:
 
 - Add Founder Experience
+
+Viewer:
+
+- read-only log, no entry form, no edit/archive controls
 
 ### Research
 
@@ -680,14 +708,15 @@ Create these screens:
 1. Login
 2. Client Selector
 3. Dashboard
-4. Setup / Business Context
-5. Research
+4. Research
+5. Founder Experiences
 6. Ideas
 7. Post Review
 8. Publish Queue
+9. Setup / Business Context
 
 Navigation:
-Dashboard, Setup, Research, Ideas, Posts, Publish.
+Dashboard, Research, Founder Experiences, Ideas, Publish, Setup.
 
 Each page should have one primary job and one primary action. Advanced/debug controls should be collapsed.
 ```
