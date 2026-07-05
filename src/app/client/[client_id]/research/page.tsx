@@ -1,4 +1,5 @@
-import { History, Layers, Rss, TrendingUp } from "lucide-react";
+import { redirect } from "next/navigation";
+import { History, Layers, TrendingUp } from "lucide-react";
 
 import {
   Card,
@@ -10,8 +11,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { getRssSources } from "@/features/research/rss-sources/queries";
+import { RssSourcesPanel } from "@/features/research/rss-sources/rss-sources-panel";
+import { getServerUser } from "@/lib/supabase/session";
 
-export default function ResearchPage() {
+export default async function ResearchPage({
+  params,
+}: {
+  params: Promise<{ client_id: string }>;
+}) {
+  const { client_id: clientId } = await params;
+  const { user } = await getServerUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRoleForClient(user.id, clientId);
+  const result = role ? await getRssSources(clientId) : null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -28,16 +47,19 @@ export default function ResearchPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={Rss}
-              title="No RSS sources yet"
-              description="RSS source management is coming later."
-              action={
-                <Button variant="outline" size="sm" disabled>
-                  Add RSS source — Coming later
-                </Button>
-              }
-            />
+            {role && result ? (
+              result.ok ? (
+                <RssSourcesPanel
+                  clientId={clientId}
+                  role={role}
+                  sources={result.sources}
+                />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load RSS sources. Please try again.
+                </p>
+              )
+            ) : null}
           </CardContent>
         </Card>
 
