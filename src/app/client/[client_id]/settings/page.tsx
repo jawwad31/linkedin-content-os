@@ -13,6 +13,7 @@ import {
   getClientAccessList,
   getCurrentUserRoleForClient,
 } from "@/features/clients/invitations/queries";
+import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -33,6 +34,10 @@ export default async function SetupPage({
     <main className="p-8">
       <h1 className="text-2xl font-semibold">Setup</h1>
       <p className="mt-2">Business context for this client.</p>
+
+      {role ? (
+        <BusinessContextSection clientId={clientId} role={role} />
+      ) : null}
 
       {role === "owner" ? (
         <Card className="mt-6">
