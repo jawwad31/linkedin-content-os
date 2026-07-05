@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { PageHeader } from "@/components/ui/page-header";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { ClientList } from "@/features/clients/client-list";
 import { PendingInvitations } from "@/features/clients/invitations/pending-invitations";
@@ -20,12 +21,12 @@ export default async function ClientsPage() {
   ]);
 
   return (
-    <main className="p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <LogoutButton />
-      </div>
-      <p className="mt-2">Choose which client to work on.</p>
+    <main className="mx-auto w-full max-w-[1440px] p-6 lg:p-8">
+      <PageHeader
+        title="Clients"
+        description="Choose which client to work on."
+        action={<LogoutButton />}
+      />
 
       {invitationsResult.ok && invitationsResult.invitations.length > 0 ? (
         <PendingInvitations invitations={invitationsResult.invitations} />

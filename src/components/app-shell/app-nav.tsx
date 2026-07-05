@@ -30,8 +30,8 @@ export function AppNav({ clientId }: { clientId: string }) {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-control border-l-2 border-transparent px-3 py-2 text-small font-medium text-soft-white/60 transition-colors hover:bg-white/5 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black",
-              isActive && "border-brand-orange bg-white/10 text-soft-white",
+              "flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-small font-medium text-soft-white/60 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black",
+              isActive && "bg-gradient-brand font-semibold text-white shadow-sm",
             )}
           >
             <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />

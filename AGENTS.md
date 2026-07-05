@@ -129,6 +129,36 @@ Do not design for public self-serve signup in v1.
 
 ---
 
+## UX Reference Decision
+
+`jawwad31/linkedin-content-os` is the production source of truth. `jawwad31/Linkedin-content--os-google` is a visual/UX reference only — never a source for architecture, dependencies, or behavior.
+
+UX patterns may be adopted from the Google reference gradually, one screen at a time:
+
+- polished login
+- workspace/client selector cards
+- dark sidebar with a current-workspace card
+- top header
+- denser dashboard layout
+- tabbed/card Setup layout
+
+Never copy from the Google reference:
+
+- Vite
+- Express
+- Gemini
+- fake/mock auth
+- local mock state
+- hardcoded workspaces
+- fake proof
+- fake metrics
+- fake buyer quotes
+- fake posts
+- automatic idea/post generation
+- unsupported generation modes
+
+---
+
 ## MVP Scope
 
 Build in v1:
@@ -536,6 +566,40 @@ Protected:
 - `/client/[client_id]/ideas`
 - `/client/[client_id]/posts/[post_id]/review`
 - `/client/[client_id]/publish`
+
+---
+
+## Setup / Business Context Rules
+
+The Setup page is the always-on business context editor for a client.
+
+- User-facing nav label: **Setup**. Route stays `/client/[client_id]/settings`.
+- Business context lives on the `clients` table — no separate business-context table.
+- Owner and editor can edit; viewer is read-only.
+- Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted client access, and owner/editor role.
+- Input is validated with Zod.
+- Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
+- Team Access / invitations remain part of Setup and must not be broken by business-context changes.
+- Founder Experiences are separate records (Feature 11), not part of Business Context Settings.
+
+Supported Business Context fields (on `clients`):
+
+- `name`
+- `founder_name`
+- `industry`
+- `business_description`
+- `primary_icp`
+- `main_offer`
+- `core_pov`
+- `content_pillars`
+- `research_keywords`
+- `banned_topics`
+- `founder_voice_sample`
+- `phrases_to_use`
+- `phrases_to_avoid`
+- `approved_proof`
+- `reference_material`
+- `publishing_preferences`
 
 ---
 

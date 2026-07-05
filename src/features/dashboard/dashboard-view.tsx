@@ -63,11 +63,11 @@ function MetricIcon({
     <span
       aria-hidden="true"
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-control",
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-control",
         tint,
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="h-5 w-5" />
     </span>
   );
 }
@@ -88,7 +88,7 @@ function MetricCard({
   ctaLabel?: string;
 }) {
   return (
-    <Card className="transition-transform duration-150 hover:-translate-y-0.5">
+    <Card className="hover-lift">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardDescription>{title}</CardDescription>
@@ -191,7 +191,7 @@ export function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
               <CardTitle>Setup completeness</CardTitle>
@@ -233,7 +233,7 @@ export function DashboardView({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
               <CardTitle>Latest research run</CardTitle>

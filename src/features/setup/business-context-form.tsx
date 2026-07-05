@@ -70,16 +70,22 @@ export function BusinessContextForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <div className="flex gap-1 overflow-x-auto border-b border-border-grey">
+      {isReadOnly ? (
+        <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
+          Your role is view-only for this client.
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-1.5 rounded-full bg-soft-white p-1.5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "shrink-0 whitespace-nowrap border-b-2 border-transparent px-4 py-2.5 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
+              "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
               activeTab === tab.id &&
-                "border-brand-orange text-near-black",
+                "bg-white text-near-black shadow-sm",
             )}
           >
             {tab.label}
@@ -297,20 +303,26 @@ export function BusinessContextForm({
       </div>
 
       {state.error ? (
-        <p role="alert" className="text-small text-danger">
+        <p
+          role="alert"
+          className="rounded-control bg-danger/10 px-3 py-2 text-small font-medium text-danger"
+        >
           {state.error}
         </p>
       ) : null}
       {state.success ? (
-        <p className="text-small text-success">{state.success}</p>
+        <p className="rounded-control bg-success/10 px-3 py-2 text-small font-medium text-success">
+          {state.success}
+        </p>
       ) : null}
 
-      {isReadOnly ? (
-        <p className="text-small text-muted-foreground">
-          Your role is view-only for this client.
-        </p>
-      ) : (
-        <Button type="submit" variant="gradient" disabled={isPending} className="self-start">
+      {isReadOnly ? null : (
+        <Button
+          type="submit"
+          variant="gradient"
+          disabled={isPending}
+          className="self-start"
+        >
           {isPending ? "Saving..." : "Save business context"}
         </Button>
       )}

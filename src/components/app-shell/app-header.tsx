@@ -65,12 +65,12 @@ export function AppHeader({
             disabled
             aria-label="Search coming later"
             placeholder="Search coming later"
-            className="w-48 pl-9 text-caption"
+            className="w-48 rounded-full pl-9 text-caption"
           />
         </div>
         <Link
           href="/clients"
-          className="rounded-control border border-border-grey px-3 py-2 text-small font-medium text-near-black transition-colors hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+          className="rounded-full border border-border-grey px-4 py-2 text-small font-medium text-near-black transition-colors hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
         >
           Switch workspace
         </Link>
