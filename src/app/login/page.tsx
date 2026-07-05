@@ -18,12 +18,12 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-soft-white p-8">
-      <Card className="w-full max-w-sm shadow-sm">
+    <main className="flex min-h-screen items-center justify-center bg-soft-white bg-radial-brand p-8">
+      <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="items-center text-center">
           <span
             aria-hidden="true"
-            className="mb-2 flex h-12 w-12 items-center justify-center rounded-control bg-gradient-brand font-heading text-lg font-bold text-white"
+            className="mb-3 flex h-14 w-14 items-center justify-center rounded-control bg-gradient-brand font-heading text-xl font-bold text-white shadow-md"
           >
             A
           </span>

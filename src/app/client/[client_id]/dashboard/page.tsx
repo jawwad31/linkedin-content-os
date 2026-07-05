@@ -11,7 +11,7 @@ export default async function DashboardPage({
   const result = await getDashboardMetrics(clientId);
 
   return (
-    <main>
+    <div>
       {result.ok ? (
         <DashboardView clientId={clientId} metrics={result.metrics} />
       ) : (
@@ -19,6 +19,6 @@ export default async function DashboardPage({
           Could not load dashboard metrics. Refresh and try again.
         </p>
       )}
-    </main>
+    </div>
   );
 }

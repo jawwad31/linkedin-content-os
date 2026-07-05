@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { AccessList } from "@/features/clients/invitations/access-list";
 import { InviteForm } from "@/features/clients/invitations/invite-form";
 import {
@@ -31,9 +32,8 @@ export default async function SetupPage({
   const role = await getCurrentUserRoleForClient(user.id, clientId);
 
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">Setup</h1>
-      <p className="mt-2">Business context for this client.</p>
+    <div>
+      <PageHeader title="Setup" description="Business context for this client." />
 
       {role ? (
         <BusinessContextSection clientId={clientId} role={role} />
@@ -53,7 +53,7 @@ export default async function SetupPage({
           </CardContent>
         </Card>
       ) : null}
-    </main>
+    </div>
   );
 }
 

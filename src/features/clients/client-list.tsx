@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Building2, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -67,7 +67,7 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search clients..."
           aria-label="Search clients"
-          className="pl-9"
+          className="rounded-full pl-9"
         />
       </div>
 
@@ -81,14 +81,20 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
             <Link
               key={client.id}
               href={`/client/${client.id}/dashboard`}
-              className="block h-full rounded-card transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+              className="hover-lift block h-full rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
             >
               <Card className="h-full transition-colors hover:border-brand-orange/50">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle>{client.name}</CardTitle>
+                    <span
+                      aria-hidden="true"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-soft-white text-near-black"
+                    >
+                      <Building2 className="h-5 w-5" />
+                    </span>
                     <Badge variant="neutral">{ROLE_LABELS[client.role]}</Badge>
                   </div>
+                  <CardTitle className="mt-1">{client.name}</CardTitle>
                   <CardDescription>
                     {client.founderName || client.industry
                       ? [client.founderName, client.industry]
