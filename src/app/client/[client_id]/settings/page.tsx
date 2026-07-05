@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogoutButton } from "@/features/auth/logout-button";
 import { AccessList } from "@/features/clients/invitations/access-list";
 import { InviteForm } from "@/features/clients/invitations/invite-form";
 import {
@@ -32,10 +31,7 @@ export default async function SetupPage({
 
   return (
     <main className="p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Setup</h1>
-        <LogoutButton />
-      </div>
+      <h1 className="text-2xl font-semibold">Setup</h1>
       <p className="mt-2">Business context for this client.</p>
 
       {role === "owner" ? (
