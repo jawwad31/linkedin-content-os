@@ -131,9 +131,14 @@ Do not design for public self-serve signup in v1.
 
 ## UX Reference Decision
 
-`jawwad31/linkedin-content-os` is the production source of truth. `jawwad31/Linkedin-content--os-google` is a visual/UX reference only — never a source for architecture, dependencies, or behavior.
+`jawwad31/linkedin-content-os` is the production source of truth.
 
-UX patterns may be adopted from the Google reference gradually, one screen at a time:
+Two things are visual/UX reference only — never a source for architecture, dependencies, behavior, fake data, or production code:
+
+- The Google AI Studio prototype repo (`jawwad31/Linkedin-content--os-google`), if referenced.
+- Google Stitch static HTML exports used as screen-level design mockups.
+
+UX patterns may be adopted from either reference gradually, one screen at a time:
 
 - polished login
 - workspace/client selector cards
@@ -142,7 +147,7 @@ UX patterns may be adopted from the Google reference gradually, one screen at a 
 - denser dashboard layout
 - tabbed/card Setup layout
 
-Never copy from the Google reference:
+Never copy from either reference:
 
 - Vite
 - Express

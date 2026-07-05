@@ -34,7 +34,7 @@ export function AppHeader({
   const pageTitle = params?.post_id ? "Post Review" : (activeItem?.label ?? "Dashboard");
 
   return (
-    <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white px-6 py-4 lg:px-8">
+    <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white/90 px-6 py-4 backdrop-blur-md lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <h2 className="truncate text-card-title font-heading font-semibold">
           {pageTitle}
