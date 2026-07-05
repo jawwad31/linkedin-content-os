@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookOpen,
   LayoutDashboard,
   Lightbulb,
   Radar,
@@ -27,14 +28,14 @@ export function getNavItems(clientId: string): NavItem[] {
       icon: LayoutDashboard,
     },
     {
-      label: "Setup",
-      href: `/client/${clientId}/settings`,
-      icon: SlidersHorizontal,
-    },
-    {
       label: "Research",
       href: `/client/${clientId}/research`,
       icon: Radar,
+    },
+    {
+      label: "Founder Experiences",
+      href: `/client/${clientId}/founder-experiences`,
+      icon: BookOpen,
     },
     {
       label: "Ideas",
@@ -45,6 +46,11 @@ export function getNavItems(clientId: string): NavItem[] {
       label: "Publish",
       href: `/client/${clientId}/publish`,
       icon: Send,
+    },
+    {
+      label: "Setup",
+      href: `/client/${clientId}/settings`,
+      icon: SlidersHorizontal,
     },
   ];
 }

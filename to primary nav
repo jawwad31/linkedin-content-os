@@ -1,0 +1,13 @@
+warning: in the working copy of 'src/app/client/[client_id]/settings/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/app-shell/nav-items.ts', LF will be replaced by CRLF the next time Git touches it
+ src/app/client/[client_id]/settings/page.tsx       |  46 [32m++[m[31m---[m
+ src/components/app-shell/nav-items.ts              |  16 [32m+[m[31m-[m
+ src/features/setup/founder-experiences/actions.ts  | 230 [31m---------------------[m
+ .../founder-experience-card.tsx                    | 152 [31m--------------[m
+ .../founder-experience-form.tsx                    | 166 [31m---------------[m
+ .../founder-experiences-panel.tsx                  |  56 [31m-----[m
+ .../founder-experiences-section.tsx                |  46 [31m-----[m
+ src/features/setup/founder-experiences/queries.ts  |  67 [31m------[m
+ src/features/setup/founder-experiences/schemas.ts  |  50 [31m-----[m
+ src/features/setup/setup-tabs.tsx                  |  55 [31m-----[m
+ 10 files changed, 30 insertions(+), 854 deletions(-)

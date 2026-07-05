@@ -104,7 +104,7 @@ export async function createFounderExperienceAction(
     metadata: { title_present: true },
   });
 
-  revalidatePath(`/client/${clientIdResult.data}/settings`);
+  revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
 
   return { error: null, success: "Founder experience added." };
 }
@@ -179,7 +179,7 @@ export async function updateFounderExperienceAction(
     });
   }
 
-  revalidatePath(`/client/${clientIdResult.data}/settings`);
+  revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
 
   return { error: null, success: "Founder experience updated." };
 }
@@ -224,7 +224,7 @@ export async function archiveFounderExperienceAction(
     entityId: experienceIdResult.data,
   });
 
-  revalidatePath(`/client/${clientIdResult.data}/settings`);
+  revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
 
   return { error: null };
 }

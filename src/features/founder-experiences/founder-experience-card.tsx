@@ -97,8 +97,8 @@ export function FounderExperienceCard({
               className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
             >
               <p className="text-small font-medium">
-                Archive this founder experience? It will be hidden from Setup
-                but not deleted.
+                Archive this founder experience? It will be hidden from the
+                log but not deleted.
               </p>
               {archiveState.error ? (
                 <p role="alert" className="text-small text-danger">
