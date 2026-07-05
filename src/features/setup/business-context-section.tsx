@@ -20,7 +20,7 @@ export async function BusinessContextSection({
   const result = await getClientBusinessContext(clientId);
 
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
         <CardTitle>Business Context</CardTitle>
         <CardDescription>

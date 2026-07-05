@@ -16,6 +16,7 @@ import {
 } from "@/features/clients/invitations/queries";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { FounderExperiencesSection } from "@/features/setup/founder-experiences/founder-experiences-section";
+import { SetupTabs } from "@/features/setup/setup-tabs";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -37,26 +38,31 @@ export default async function SetupPage({
       <PageHeader title="Setup" description="Business context for this client." />
 
       {role ? (
-        <BusinessContextSection clientId={clientId} role={role} />
-      ) : null}
-
-      {role ? (
-        <FounderExperiencesSection clientId={clientId} role={role} />
-      ) : null}
-
-      {role === "owner" ? (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Team Access</CardTitle>
-            <CardDescription>
-              Invite collaborators and manage who has access to this client.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <InviteForm clientId={clientId} />
-            <TeamAccessList clientId={clientId} />
-          </CardContent>
-        </Card>
+        <SetupTabs
+          businessContext={
+            <BusinessContextSection clientId={clientId} role={role} />
+          }
+          founderExperiences={
+            <FounderExperiencesSection clientId={clientId} role={role} />
+          }
+          teamAccess={
+            role === "owner" ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Access</CardTitle>
+                  <CardDescription>
+                    Invite collaborators and manage who has access to this
+                    client.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-6">
+                  <InviteForm clientId={clientId} />
+                  <TeamAccessList clientId={clientId} />
+                </CardContent>
+              </Card>
+            ) : null
+          }
+        />
       ) : null}
     </div>
   );

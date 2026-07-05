@@ -20,11 +20,11 @@ export async function FounderExperiencesSection({
   const result = await getFounderExperiences(clientId);
 
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
         <CardTitle>Founder Experiences</CardTitle>
         <CardDescription>
-          Add real operator moments so future ideas can use lived experience
+          Log real operator moments so future ideas can use lived experience
           instead of generic prompts.
         </CardDescription>
       </CardHeader>
