@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { History, Layers, TrendingUp } from "lucide-react";
+import { Layers, TrendingUp } from "lucide-react";
 
 import {
   Card,
@@ -8,10 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { getRecentResearchRuns } from "@/features/research/research-runs/queries";
+import { ResearchRunsPanel } from "@/features/research/research-runs/research-runs-panel";
 import { getRssSources } from "@/features/research/rss-sources/queries";
 import { RssSourcesPanel } from "@/features/research/rss-sources/rss-sources-panel";
 import { getServerUser } from "@/lib/supabase/session";
@@ -30,6 +31,7 @@ export default async function ResearchPage({
 
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   const result = role ? await getRssSources(clientId) : null;
+  const runsResult = role ? await getRecentResearchRuns(clientId) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,16 +73,15 @@ export default async function ResearchPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={History}
-              title="No research runs yet"
-              description="Running the research agent is coming later."
-              action={
-                <Button variant="outline" size="sm" disabled>
-                  Run Research Agent — Coming later
-                </Button>
-              }
-            />
+            {role && runsResult ? (
+              runsResult.ok ? (
+                <ResearchRunsPanel runs={runsResult.runs} />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load research runs. Please try again.
+                </p>
+              )
+            ) : null}
           </CardContent>
         </Card>
 

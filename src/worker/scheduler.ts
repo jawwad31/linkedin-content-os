@@ -16,6 +16,15 @@ import nextEnv from "@next/env";
 const { loadEnvConfig } = nextEnv;
 
 import { collectForClient } from "@/features/research/rss-collector";
+// Imported from the run-guard submodule directly, not the feature's
+// index.ts barrel: that barrel also re-exports queries.ts, which imports
+// next/headers through the SSR Supabase client — that only works inside a
+// real Next.js request, and would break the worker's module graph even
+// though the worker never actually calls that export.
+import {
+  RSS_COLLECT_LOCK_KEY,
+  withResearchRunGuard,
+} from "@/features/research/research-runs/run-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Next.js only auto-loads .env.local for its own `next` CLI commands; a
@@ -58,6 +67,8 @@ type CycleSummary = {
   skippedInvalid: number;
   skippedError: number;
   errorCount: number;
+  lockedRuns: number;
+  failedRuns: number;
 };
 
 function readWorkerEnv(): WorkerEnv {
@@ -107,9 +118,13 @@ async function discoverEligibleClientIds(): Promise<string[]> {
 }
 
 /**
- * Runs collectForClient for every eligible client. One client failing
- * outright (beyond the broken-feed handling collectForClient already does
- * internally) is caught here and does not stop the rest of the cycle.
+ * Runs collectForClient for every eligible client, each wrapped in the
+ * distributed research run guard (Feature 15) so overlapping worker
+ * replicas/intervals — or a future manual trigger — can't collect for the
+ * same client at once. One locked client is skipped safely; one client
+ * failing outright (beyond the broken-feed handling collectForClient
+ * already does internally) is caught here — neither stops the rest of the
+ * cycle.
  */
 async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
   const summary: CycleSummary = {
@@ -121,13 +136,31 @@ async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
     skippedInvalid: 0,
     skippedError: 0,
     errorCount: 0,
+    lockedRuns: 0,
+    failedRuns: 0,
   };
 
   const clientIds = await discoverEligibleClientIds();
 
   for (const clientId of clientIds) {
-    try {
-      const result = await collectForClient(clientId);
+    const guardResult = await withResearchRunGuard(
+      clientId,
+      RSS_COLLECT_LOCK_KEY,
+      "worker",
+      () => collectForClient(clientId),
+      (result) => ({
+        sourcesProcessed: result.sourcesProcessed,
+        totalFetched: result.totalFetched,
+        totalNew: result.totalNew,
+        skippedDuplicate: result.skippedDuplicate,
+        skippedInvalid: result.skippedInvalid,
+        skippedError: result.skippedError,
+        errorCount: result.errors.length,
+      }),
+    );
+
+    if (guardResult.ok && guardResult.status === "completed") {
+      const result = guardResult.result;
       summary.clientsProcessed += 1;
       summary.sourcesProcessed += result.sourcesProcessed;
       summary.totalFetched += result.totalFetched;
@@ -136,9 +169,11 @@ async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
       summary.skippedInvalid += result.skippedInvalid;
       summary.skippedError += result.skippedError;
       summary.errorCount += result.errors.length;
-    } catch {
-      summary.errorCount += 1;
-      console.error("[rss-worker] Collection failed for one client; continuing.");
+    } else if (guardResult.ok && guardResult.status === "locked") {
+      summary.lockedRuns += 1;
+    } else {
+      summary.failedRuns += 1;
+      console.error("[rss-worker] Research run failed for one client; continuing.");
     }
 
     if (batchDelayMs > 0) {
