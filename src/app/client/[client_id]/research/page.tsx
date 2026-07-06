@@ -119,7 +119,11 @@ export default async function ResearchPage({
           <CardContent>
             {role && articlesResult ? (
               articlesResult.ok ? (
-                <CollectedArticlesPanel articles={articlesResult.articles} />
+                <CollectedArticlesPanel
+                  clientId={clientId}
+                  role={role}
+                  articles={articlesResult.articles}
+                />
               ) : (
                 <p className="text-small text-danger">
                   We could not load collected articles. Please try again.
@@ -139,7 +143,11 @@ export default async function ResearchPage({
           <CardContent>
             {role && signalsResult ? (
               signalsResult.ok ? (
-                <MarketSignalsPanel signals={signalsResult.signals} />
+                <MarketSignalsPanel
+                  clientId={clientId}
+                  role={role}
+                  signals={signalsResult.signals}
+                />
               ) : (
                 <p className="text-small text-danger">
                   We could not load Market Signals. Please try again.

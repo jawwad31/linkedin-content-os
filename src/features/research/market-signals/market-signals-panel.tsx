@@ -2,7 +2,9 @@ import { TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { ClientRole } from "@/features/clients/invitations/schemas";
 
+import { MarketSignalReviewControls } from "./market-signal-review-controls";
 import type { MarketSignal } from "./queries";
 
 function formatDate(value: string): string {
@@ -13,12 +15,17 @@ function formatDate(value: string): string {
   });
 }
 
-/**
- * Read-only list of synthesized Market Signals. No founder-take editing, no
- * approve-for-ideas action, no delete/archive — those come with the
- * Research Review UI (Feature 19), not this feature.
- */
-export function MarketSignalsPanel({ signals }: { signals: MarketSignal[] }) {
+export function MarketSignalsPanel({
+  clientId,
+  role,
+  signals,
+}: {
+  clientId: string;
+  role: ClientRole;
+  signals: MarketSignal[];
+}) {
+  const canManage = role === "owner" || role === "editor";
+
   if (signals.length === 0) {
     return (
       <EmptyState
@@ -81,7 +88,14 @@ export function MarketSignalsPanel({ signals }: { signals: MarketSignal[] }) {
             </div>
           ) : null}
 
-          {signal.founderTake ? (
+          {canManage ? (
+            <MarketSignalReviewControls
+              clientId={clientId}
+              signalId={signal.id}
+              founderTake={signal.founderTake}
+              approvedForIdeas={signal.approvedForIdeas}
+            />
+          ) : signal.founderTake ? (
             <div>
               <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
                 Founder take

@@ -2,7 +2,9 @@ import { Layers } from "lucide-react";
 
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { ClientRole } from "@/features/clients/invitations/schemas";
 
+import { CollectedArticleActions } from "./collected-article-actions";
 import type { CollectedArticle, CollectedArticleStatus } from "./queries";
 
 const STATUS_BADGE_VARIANT: Record<CollectedArticleStatus, BadgeProps["variant"]> = {
@@ -28,11 +30,17 @@ function formatDate(value: string | null): string {
   });
 }
 
-/**
- * Read-only list of collected articles. No mark relevant/irrelevant
- * controls yet — that's the Research Review UI, not this feature.
- */
-export function CollectedArticlesPanel({ articles }: { articles: CollectedArticle[] }) {
+export function CollectedArticlesPanel({
+  clientId,
+  role,
+  articles,
+}: {
+  clientId: string;
+  role: ClientRole;
+  articles: CollectedArticle[];
+}) {
+  const canManage = role === "owner" || role === "editor";
+
   if (articles.length === 0) {
     return (
       <EmptyState
@@ -80,6 +88,14 @@ export function CollectedArticlesPanel({ articles }: { articles: CollectedArticl
             <p className="text-small text-muted-foreground">
               {article.classificationReason}
             </p>
+          ) : null}
+
+          {canManage && article.status !== "used" ? (
+            <CollectedArticleActions
+              clientId={clientId}
+              itemId={article.id}
+              status={article.status}
+            />
           ) : null}
         </div>
       ))}
