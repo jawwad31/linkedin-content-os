@@ -101,26 +101,38 @@ export async function startResearchRun(
   return { ok: true, runId: data.id };
 }
 
-/** Marks a run successful and records its summary counters. */
+/**
+ * Marks a run successful and records its summary counters. `stage` is an
+ * optional override so a run that also classified (Feature 17) can leave
+ * `stage = 'classify'` instead of the collect-only default set at start.
+ */
 export async function completeResearchRun(
   runId: string,
   summary: ResearchRunSummary,
+  stage?: string,
 ): Promise<void> {
   const admin = createAdminClient();
 
+  const updatePayload: Record<string, unknown> = {
+    status: "success",
+    finished_at: new Date().toISOString(),
+    sources_processed: summary.sourcesProcessed,
+    total_fetched: summary.totalFetched,
+    total_new: summary.totalNew,
+    skipped_duplicate: summary.skippedDuplicate,
+    skipped_invalid: summary.skippedInvalid,
+    skipped_error: summary.skippedError,
+    error_count: summary.errorCount,
+    classified_count: summary.classifiedCount ?? 0,
+    relevant_count: summary.relevantCount ?? 0,
+    irrelevant_count: summary.irrelevantCount ?? 0,
+    classification_error_count: summary.classificationErrorCount ?? 0,
+  };
+  if (stage) updatePayload.stage = stage;
+
   const { data, error } = await admin
     .from("research_runs")
-    .update({
-      status: "success",
-      finished_at: new Date().toISOString(),
-      sources_processed: summary.sourcesProcessed,
-      total_fetched: summary.totalFetched,
-      total_new: summary.totalNew,
-      skipped_duplicate: summary.skippedDuplicate,
-      skipped_invalid: summary.skippedInvalid,
-      skipped_error: summary.skippedError,
-      error_count: summary.errorCount,
-    })
+    .update(updatePayload)
     .eq("id", runId)
     .select("client_id, lock_key, trigger_type")
     .single();
@@ -199,6 +211,7 @@ export async function withResearchRunGuard<T>(
   fn: () => Promise<T>,
   toSummary: (result: T) => ResearchRunSummary,
   triggeredByUserId: string | null = null,
+  finalStage?: string,
 ): Promise<RunGuardResult<T>> {
   const start = await startResearchRun(clientId, lockKey, triggerType, triggeredByUserId);
 
@@ -224,7 +237,7 @@ export async function withResearchRunGuard<T>(
 
   try {
     const result = await fn();
-    await completeResearchRun(start.runId, toSummary(result));
+    await completeResearchRun(start.runId, toSummary(result), finalStage);
     return { ok: true, status: "completed", result };
   } catch {
     await failResearchRun(start.runId, RUN_FAILURE_ERROR);

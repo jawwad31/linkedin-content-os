@@ -2,9 +2,10 @@
 //
 // Runs standalone under plain `node` (see package.json's "worker" script
 // and register-hooks.mjs / ts-resolve-hook.mjs alongside this file — no
-// tsx/ts-node dependency was added). Classification and Market Signal
-// synthesis (RESEARCH_PIPELINE_FULL) are not implemented yet; this worker
-// only collects.
+// tsx/ts-node dependency was added). Collect-only by default
+// (RESEARCH_PIPELINE_FULL=false); set RESEARCH_PIPELINE_FULL=true to also
+// classify collected articles after each client's collection (Feature 17).
+// Market Signal synthesis is not implemented yet.
 
 // @next/env's bundled CJS output isn't statically analyzable for named ESM
 // exports under plain Node (no bundler), so `import { loadEnvConfig } from
@@ -15,6 +16,7 @@ import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
 
+import { classifyForClient } from "@/features/research/agents/research-classifier";
 import { collectForClient } from "@/features/research/rss-collector";
 // Imported from the run-guard submodule directly, not the feature's
 // index.ts barrel: that barrel also re-exports queries.ts, which imports
@@ -25,7 +27,10 @@ import {
   RSS_COLLECT_LOCK_KEY,
   withResearchRunGuard,
 } from "@/features/research/research-runs/run-guard";
+import type { ResearchRunSummary } from "@/features/research/research-runs/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+const CLASSIFY_STAGE = "classify";
 
 // Next.js only auto-loads .env.local for its own `next` CLI commands; a
 // plain `node` process (this worker) does not get that for free. Load it
@@ -56,6 +61,7 @@ type WorkerEnv = {
   intervalHours: number;
   runOnStart: boolean;
   batchDelayMs: number;
+  fullPipeline: boolean;
 };
 
 type CycleSummary = {
@@ -69,6 +75,10 @@ type CycleSummary = {
   errorCount: number;
   lockedRuns: number;
   failedRuns: number;
+  classifiedCount: number;
+  relevantCount: number;
+  irrelevantCount: number;
+  classificationErrorCount: number;
 };
 
 function readWorkerEnv(): WorkerEnv {
@@ -88,7 +98,10 @@ function readWorkerEnv(): WorkerEnv {
   const batchDelayMs =
     Number.isFinite(batchDelayMsRaw) && batchDelayMsRaw >= 0 ? batchDelayMsRaw : 0;
 
-  return { enabled, intervalHours, runOnStart, batchDelayMs };
+  const fullPipeline =
+    (process.env.RESEARCH_PIPELINE_FULL ?? "false").toLowerCase() === "true";
+
+  return { enabled, intervalHours, runOnStart, batchDelayMs, fullPipeline };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -117,16 +130,56 @@ async function discoverEligibleClientIds(): Promise<string[]> {
   return Array.from(new Set(data.map((row) => row.client_id as string)));
 }
 
+type CycleFnResult = {
+  collect: Awaited<ReturnType<typeof collectForClient>>;
+  classify: Awaited<ReturnType<typeof classifyForClient>> | null;
+};
+
+function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
+  const base: ResearchRunSummary = {
+    sourcesProcessed: result.collect.sourcesProcessed,
+    totalFetched: result.collect.totalFetched,
+    totalNew: result.collect.totalNew,
+    skippedDuplicate: result.collect.skippedDuplicate,
+    skippedInvalid: result.collect.skippedInvalid,
+    skippedError: result.collect.skippedError,
+    errorCount: result.collect.errors.length,
+  };
+
+  if (!result.classify) return base;
+
+  if (result.classify.ok) {
+    return {
+      ...base,
+      classifiedCount: result.classify.summary.classifiedCount,
+      relevantCount: result.classify.summary.relevantCount,
+      irrelevantCount: result.classify.summary.irrelevantCount,
+      classificationErrorCount: result.classify.summary.errorCount,
+    };
+  }
+
+  // "not_configured" is a benign, expected ops state — collection still
+  // succeeded. Any other classify failure reason is one classification
+  // error, not a failure of the whole (already-successful) collection run.
+  return {
+    ...base,
+    classificationErrorCount: result.classify.reason === "not_configured" ? 0 : 1,
+  };
+}
+
 /**
- * Runs collectForClient for every eligible client, each wrapped in the
- * distributed research run guard (Feature 15) so overlapping worker
- * replicas/intervals — or a future manual trigger — can't collect for the
- * same client at once. One locked client is skipped safely; one client
- * failing outright (beyond the broken-feed handling collectForClient
- * already does internally) is caught here — neither stops the rest of the
- * cycle.
+ * Runs collectForClient (and, when fullPipeline is enabled, classifyForClient
+ * right after) for every eligible client, each wrapped in the distributed
+ * research run guard (Feature 15) so overlapping worker replicas/intervals
+ * — or a manual trigger (Feature 16) — can't run for the same client at
+ * once. One locked client is skipped safely; one client failing outright
+ * (beyond the broken-feed handling collectForClient already does
+ * internally) is caught here — neither stops the rest of the cycle.
  */
-async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
+async function runCollectionCycle(
+  batchDelayMs: number,
+  fullPipeline: boolean,
+): Promise<CycleSummary> {
   const summary: CycleSummary = {
     clientsProcessed: 0,
     sourcesProcessed: 0,
@@ -138,6 +191,10 @@ async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
     errorCount: 0,
     lockedRuns: 0,
     failedRuns: 0,
+    classifiedCount: 0,
+    relevantCount: 0,
+    irrelevantCount: 0,
+    classificationErrorCount: 0,
   };
 
   const clientIds = await discoverEligibleClientIds();
@@ -147,28 +204,37 @@ async function runCollectionCycle(batchDelayMs: number): Promise<CycleSummary> {
       clientId,
       RSS_COLLECT_LOCK_KEY,
       "worker",
-      () => collectForClient(clientId),
-      (result) => ({
-        sourcesProcessed: result.sourcesProcessed,
-        totalFetched: result.totalFetched,
-        totalNew: result.totalNew,
-        skippedDuplicate: result.skippedDuplicate,
-        skippedInvalid: result.skippedInvalid,
-        skippedError: result.skippedError,
-        errorCount: result.errors.length,
-      }),
+      async () => {
+        const collect = await collectForClient(clientId);
+        const classify = fullPipeline
+          ? await classifyForClient(clientId)
+          : null;
+        return { collect, classify };
+      },
+      toCycleRunSummary,
+      null,
+      fullPipeline ? CLASSIFY_STAGE : undefined,
     );
 
     if (guardResult.ok && guardResult.status === "completed") {
       const result = guardResult.result;
       summary.clientsProcessed += 1;
-      summary.sourcesProcessed += result.sourcesProcessed;
-      summary.totalFetched += result.totalFetched;
-      summary.totalNew += result.totalNew;
-      summary.skippedDuplicate += result.skippedDuplicate;
-      summary.skippedInvalid += result.skippedInvalid;
-      summary.skippedError += result.skippedError;
-      summary.errorCount += result.errors.length;
+      summary.sourcesProcessed += result.collect.sourcesProcessed;
+      summary.totalFetched += result.collect.totalFetched;
+      summary.totalNew += result.collect.totalNew;
+      summary.skippedDuplicate += result.collect.skippedDuplicate;
+      summary.skippedInvalid += result.collect.skippedInvalid;
+      summary.skippedError += result.collect.skippedError;
+      summary.errorCount += result.collect.errors.length;
+
+      if (result.classify?.ok) {
+        summary.classifiedCount += result.classify.summary.classifiedCount;
+        summary.relevantCount += result.classify.summary.relevantCount;
+        summary.irrelevantCount += result.classify.summary.irrelevantCount;
+        summary.classificationErrorCount += result.classify.summary.errorCount;
+      } else if (result.classify && result.classify.reason !== "not_configured") {
+        summary.classificationErrorCount += 1;
+      }
     } else if (guardResult.ok && guardResult.status === "locked") {
       summary.lockedRuns += 1;
     } else {
@@ -208,7 +274,7 @@ function scheduleNextCycle(env: WorkerEnv): void {
     if (stopped) return;
 
     try {
-      const summary = await runCollectionCycle(env.batchDelayMs);
+      const summary = await runCollectionCycle(env.batchDelayMs, env.fullPipeline);
       logCycleSummary(summary);
     } catch {
       console.error(
@@ -223,7 +289,7 @@ function scheduleNextCycle(env: WorkerEnv): void {
 async function mainLoop(env: WorkerEnv): Promise<void> {
   if (env.runOnStart) {
     try {
-      const summary = await runCollectionCycle(env.batchDelayMs);
+      const summary = await runCollectionCycle(env.batchDelayMs, env.fullPipeline);
       logCycleSummary(summary);
     } catch {
       console.error(

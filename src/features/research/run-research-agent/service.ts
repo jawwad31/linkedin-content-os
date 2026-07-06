@@ -5,6 +5,11 @@ import { z } from "zod";
 
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import {
+  classifyForClient,
+  NOT_CONFIGURED_ERROR,
+  type ClassifyForClientResult,
+} from "@/features/research/agents/research-classifier";
+import {
   RSS_COLLECT_LOCK_KEY,
   withResearchRunGuard,
 } from "@/features/research/research-runs/run-guard";
@@ -15,19 +20,51 @@ import {
 } from "@/features/research/rss-collector";
 import { getServerUser } from "@/lib/supabase/session";
 
-function toResearchRunSummary(
-  result: CollectForClientSummary,
-): ResearchRunSummary {
+const CLASSIFY_STAGE = "classify";
+
+type PipelineResult = {
+  collect: CollectForClientSummary;
+  classify: ClassifyForClientResult;
+};
+
+function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
+  const collect = pipeline.collect;
+  const base: ResearchRunSummary = {
+    sourcesProcessed: collect.sourcesProcessed,
+    totalFetched: collect.totalFetched,
+    totalNew: collect.totalNew,
+    skippedDuplicate: collect.skippedDuplicate,
+    skippedInvalid: collect.skippedInvalid,
+    skippedError: collect.skippedError,
+    errorCount: collect.errors.length,
+  };
+
+  if (pipeline.classify.ok) {
+    return {
+      ...base,
+      classifiedCount: pipeline.classify.summary.classifiedCount,
+      relevantCount: pipeline.classify.summary.relevantCount,
+      irrelevantCount: pipeline.classify.summary.irrelevantCount,
+      classificationErrorCount: pipeline.classify.summary.errorCount,
+    };
+  }
+
+  // "not_configured" is a benign, expected ops state (no OPENROUTER_* env
+  // set yet) — collection still succeeded and is real progress, so this
+  // isn't treated as a classification error count. Any other classify
+  // failure reason is reflected as one classification error instead of
+  // failing the whole run — collection's success should not be erased by a
+  // downstream classification problem.
   return {
-    sourcesProcessed: result.sourcesProcessed,
-    totalFetched: result.totalFetched,
-    totalNew: result.totalNew,
-    skippedDuplicate: result.skippedDuplicate,
-    skippedInvalid: result.skippedInvalid,
-    skippedError: result.skippedError,
-    errorCount: result.errors.length,
+    ...base,
+    classificationErrorCount: pipeline.classify.reason === "not_configured" ? 0 : 1,
   };
 }
+
+export type ManualRunData = {
+  summary: ResearchRunSummary;
+  classificationMessage: string | null;
+};
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
@@ -73,11 +110,11 @@ const GENERIC_FAILURE = {
 };
 
 /**
- * Manually triggers RSS collection for one client — the same collect-only
- * stage the worker runs on its interval, sharing the same distributed run
- * guard (Feature 15) so a manual click and a worker cycle can never
- * overlap for the same client. Classification and Market Signal synthesis
- * are not implemented yet; this is intentionally collect-only.
+ * Manually runs RSS collection then classification for one client, sharing
+ * the same distributed run guard (Feature 15) and lock_key as the worker
+ * so a manual click and a worker cycle can never overlap for the same
+ * client. Market Signal synthesis and idea/post generation are not
+ * implemented yet.
  *
  * Application-level auth is the primary gate here (not RLS): authenticated
  * user, accepted client access, owner/editor role. RLS's
@@ -86,7 +123,7 @@ const GENERIC_FAILURE = {
  */
 export async function runResearchAgentManually(
   clientId: string,
-): Promise<ServiceResult<ResearchRunSummary>> {
+): Promise<ServiceResult<ManualRunData>> {
   const { user } = await getServerUser();
   if (!user) return AUTH_REQUIRED;
 
@@ -101,14 +138,32 @@ export async function runResearchAgentManually(
     clientIdResult.data,
     RSS_COLLECT_LOCK_KEY,
     "manual",
-    () => collectForClient(clientIdResult.data),
+    async () => {
+      const collect = await collectForClient(clientIdResult.data);
+      const classify = await classifyForClient(clientIdResult.data, user.id);
+      return { collect, classify };
+    },
     toResearchRunSummary,
     user.id,
+    CLASSIFY_STAGE,
   );
 
   if (guardResult.ok && guardResult.status === "completed") {
     revalidatePath(`/client/${clientIdResult.data}/research`);
-    return { ok: true, data: toResearchRunSummary(guardResult.result) };
+
+    const classify = guardResult.result.classify;
+    const classificationMessage =
+      !classify.ok && classify.reason === "not_configured"
+        ? NOT_CONFIGURED_ERROR
+        : null;
+
+    return {
+      ok: true,
+      data: {
+        summary: toResearchRunSummary(guardResult.result),
+        classificationMessage,
+      },
+    };
   }
 
   if (guardResult.ok && guardResult.status === "locked") {

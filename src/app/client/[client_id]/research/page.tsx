@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Layers, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 import {
   Card,
@@ -11,6 +11,8 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { CollectedArticlesPanel } from "@/features/research/collected-articles/collected-articles-panel";
+import { getRecentCollectedArticles } from "@/features/research/collected-articles/queries";
 import { getRecentResearchRuns } from "@/features/research/research-runs/queries";
 import { ResearchRunsPanel } from "@/features/research/research-runs/research-runs-panel";
 import { RunResearchAgentButton } from "@/features/research/run-research-agent/run-research-agent-button";
@@ -33,6 +35,7 @@ export default async function ResearchPage({
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   const result = role ? await getRssSources(clientId) : null;
   const runsResult = role ? await getRecentResearchRuns(clientId) : null;
+  const articlesResult = role ? await getRecentCollectedArticles(clientId) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,8 +48,8 @@ export default async function ResearchPage({
         <CardHeader>
           <CardTitle>Run Research Agent</CardTitle>
           <CardDescription>
-            Collect the latest articles from active RSS sources.
-            Classification and Market Signals come next.
+            Collect the latest articles from active RSS sources, then
+            classify them for ICP relevance. Market Signals come next.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,11 +116,15 @@ export default async function ResearchPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={Layers}
-              title="No collected articles yet"
-              description="Articles will appear here once research is running."
-            />
+            {role && articlesResult ? (
+              articlesResult.ok ? (
+                <CollectedArticlesPanel articles={articlesResult.articles} />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load collected articles. Please try again.
+                </p>
+              )
+            ) : null}
           </CardContent>
         </Card>
 

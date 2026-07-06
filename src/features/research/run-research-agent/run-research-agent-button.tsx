@@ -6,10 +6,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ResearchRunSummary } from "@/features/research/research-runs/types";
 
+type RunSuccessData = {
+  summary: ResearchRunSummary;
+  classificationMessage: string | null;
+};
+
 type RunState =
   | { status: "idle" }
   | { status: "pending" }
-  | { status: "success"; summary: ResearchRunSummary }
+  | { status: "success"; data: RunSuccessData }
   | { status: "error"; message: string };
 
 const GENERIC_ERROR_COPY = "Could not run research right now. Please try again.";
@@ -38,7 +43,7 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
         return;
       }
 
-      setState({ status: "success", summary: body.data });
+      setState({ status: "success", data: body.data });
       router.refresh();
     } catch {
       setState({ status: "error", message: GENERIC_ERROR_COPY });
@@ -56,15 +61,33 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
       </div>
 
       {state.status === "success" ? (
-        <p className="text-small text-muted-foreground">
-          {state.summary.sourcesProcessed} source
-          {state.summary.sourcesProcessed === 1 ? "" : "s"} ·{" "}
-          {state.summary.totalFetched} fetched · {state.summary.totalNew} new ·{" "}
-          {state.summary.skippedDuplicate} duplicate
-          {state.summary.errorCount > 0
-            ? ` · ${state.summary.errorCount} error${state.summary.errorCount === 1 ? "" : "s"}`
-            : ""}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-small text-muted-foreground">
+            {state.data.summary.sourcesProcessed} source
+            {state.data.summary.sourcesProcessed === 1 ? "" : "s"} ·{" "}
+            {state.data.summary.totalFetched} fetched · {state.data.summary.totalNew}{" "}
+            new · {state.data.summary.skippedDuplicate} duplicate
+            {state.data.summary.errorCount > 0
+              ? ` · ${state.data.summary.errorCount} error${state.data.summary.errorCount === 1 ? "" : "s"}`
+              : ""}
+          </p>
+          {typeof state.data.summary.classifiedCount === "number" &&
+          state.data.summary.classifiedCount > 0 ? (
+            <p className="text-small text-muted-foreground">
+              {state.data.summary.classifiedCount} classified ·{" "}
+              {state.data.summary.relevantCount ?? 0} relevant ·{" "}
+              {state.data.summary.irrelevantCount ?? 0} irrelevant
+              {state.data.summary.classificationErrorCount
+                ? ` · ${state.data.summary.classificationErrorCount} classification error${state.data.summary.classificationErrorCount === 1 ? "" : "s"}`
+                : ""}
+            </p>
+          ) : null}
+          {state.data.classificationMessage ? (
+            <p className="text-small text-muted-foreground">
+              {state.data.classificationMessage}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {state.status === "error" ? (

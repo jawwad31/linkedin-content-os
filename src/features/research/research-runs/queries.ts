@@ -19,6 +19,10 @@ type ResearchRunRow = {
   skipped_invalid: number;
   skipped_error: number;
   error_count: number;
+  classified_count: number;
+  relevant_count: number;
+  irrelevant_count: number;
+  classification_error_count: number;
   created_at: string;
 };
 
@@ -41,7 +45,7 @@ export async function getRecentResearchRuns(
   const { data, error } = await supabase
     .from("research_runs")
     .select(
-      "id, status, stage, trigger_type, error_message, started_at, finished_at, sources_processed, total_fetched, total_new, skipped_duplicate, skipped_invalid, skipped_error, error_count, created_at",
+      "id, status, stage, trigger_type, error_message, started_at, finished_at, sources_processed, total_fetched, total_new, skipped_duplicate, skipped_invalid, skipped_error, error_count, classified_count, relevant_count, irrelevant_count, classification_error_count, created_at",
     )
     .eq("client_id", clientId)
     .order("created_at", { ascending: false })
@@ -67,6 +71,10 @@ export async function getRecentResearchRuns(
       skippedInvalid: row.skipped_invalid,
       skippedError: row.skipped_error,
       errorCount: row.error_count,
+      classifiedCount: row.classified_count,
+      relevantCount: row.relevant_count,
+      irrelevantCount: row.irrelevant_count,
+      classificationErrorCount: row.classification_error_count,
       createdAt: row.created_at,
     })),
   };
