@@ -2,12 +2,15 @@
   "name": "aixelerate-content-os",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.19.0 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "worker": "echo \"Research worker placeholder. The worker is implemented in Feature 14.\""
+    "worker": "node --import ./src/worker/register-hooks.mjs ./src/worker/scheduler.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
