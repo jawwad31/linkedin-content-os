@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { getRecentResearchRuns } from "@/features/research/research-runs/queries";
 import { ResearchRunsPanel } from "@/features/research/research-runs/research-runs-panel";
+import { RunResearchAgentButton } from "@/features/research/run-research-agent/run-research-agent-button";
 import { getRssSources } from "@/features/research/rss-sources/queries";
 import { RssSourcesPanel } from "@/features/research/rss-sources/rss-sources-panel";
 import { getServerUser } from "@/lib/supabase/session";
@@ -39,6 +40,25 @@ export default async function ResearchPage({
         title="Research"
         description="Collect and process market signals for this client."
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Run Research Agent</CardTitle>
+          <CardDescription>
+            Collect the latest articles from active RSS sources.
+            Classification and Market Signals come next.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {role === "owner" || role === "editor" ? (
+            <RunResearchAgentButton clientId={clientId} />
+          ) : role === "viewer" ? (
+            <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
+              Your role is view-only for this client.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

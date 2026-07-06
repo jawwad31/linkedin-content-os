@@ -59,6 +59,7 @@ export async function startResearchRun(
   clientId: string,
   lockKey: string,
   triggerType: ResearchRunTriggerType,
+  triggeredByUserId: string | null = null,
 ): Promise<StartResearchRunResult> {
   const admin = createAdminClient();
 
@@ -70,7 +71,7 @@ export async function startResearchRun(
     .from("research_runs")
     .insert({
       client_id: clientId,
-      triggered_by_user_id: null,
+      triggered_by_user_id: triggeredByUserId,
       trigger_type: triggerType,
       status: "running",
       stage: lockKey,
@@ -197,8 +198,9 @@ export async function withResearchRunGuard<T>(
   triggerType: ResearchRunTriggerType,
   fn: () => Promise<T>,
   toSummary: (result: T) => ResearchRunSummary,
+  triggeredByUserId: string | null = null,
 ): Promise<RunGuardResult<T>> {
-  const start = await startResearchRun(clientId, lockKey, triggerType);
+  const start = await startResearchRun(clientId, lockKey, triggerType, triggeredByUserId);
 
   if (!start.ok) {
     if (start.reason === "locked") {
