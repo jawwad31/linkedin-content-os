@@ -127,6 +127,8 @@ export async function completeResearchRun(
     relevant_count: summary.relevantCount ?? 0,
     irrelevant_count: summary.irrelevantCount ?? 0,
     classification_error_count: summary.classificationErrorCount ?? 0,
+    signals_created: summary.signalsCreated ?? 0,
+    synthesis_error_count: summary.synthesisErrorCount ?? 0,
   };
   if (stage) updatePayload.stage = stage;
 

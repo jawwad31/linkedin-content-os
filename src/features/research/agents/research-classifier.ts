@@ -11,6 +11,12 @@ import {
 import type { OpenRouterConfig } from "@/lib/openrouter/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import {
+  getClientBusinessContext,
+  type AdminClient,
+  type ClientBusinessContext,
+} from "./client-context";
+
 const MAX_ITEMS_PER_RUN = 50;
 const BATCH_SIZE = 12;
 const CLASSIFIER_FEATURE = "research_classification";
@@ -29,19 +35,6 @@ export type ClassificationSummary = {
 export type ClassifyForClientResult =
   | { ok: true; summary: ClassificationSummary }
   | { ok: false; reason: "not_configured" | "error"; message: string };
-
-type AdminClient = ReturnType<typeof createAdminClient>;
-
-type ClientBusinessContext = {
-  industry: string | null;
-  businessDescription: string | null;
-  primaryIcp: string | null;
-  mainOffer: string | null;
-  corePov: string | null;
-  contentPillars: unknown;
-  researchKeywords: unknown;
-  bannedTopics: unknown;
-};
 
 type ClassifiableItem = {
   id: string;
@@ -62,33 +55,6 @@ const classificationItemSchema = z.object({
 const classificationResponseSchema = z.object({
   items: z.array(classificationItemSchema),
 });
-
-async function getClientBusinessContext(
-  admin: AdminClient,
-  clientId: string,
-): Promise<ClientBusinessContext | null> {
-  const { data, error } = await admin
-    .from("clients")
-    .select(
-      "industry, business_description, primary_icp, main_offer, core_pov, content_pillars, research_keywords, banned_topics",
-    )
-    .eq("id", clientId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return {
-    industry: data.industry,
-    businessDescription: data.business_description,
-    primaryIcp: data.primary_icp,
-    mainOffer: data.main_offer,
-    corePov: data.core_pov,
-    contentPillars: data.content_pillars,
-    researchKeywords: data.research_keywords,
-    bannedTopics: data.banned_topics,
-  };
-}
 
 /**
  * Unclassified items for one client: status = 'new' only (never

@@ -21,6 +21,10 @@ export type ResearchRunSummary = {
   relevantCount?: number;
   irrelevantCount?: number;
   classificationErrorCount?: number;
+  // Optional: only set when a run also synthesizes (Feature 18). Omitted by
+  // collect/classify-only callers, which write 0s.
+  signalsCreated?: number;
+  synthesisErrorCount?: number;
 };
 
 export type ResearchRun = {
@@ -42,5 +46,7 @@ export type ResearchRun = {
   relevantCount: number;
   irrelevantCount: number;
   classificationErrorCount: number;
+  signalsCreated: number;
+  synthesisErrorCount: number;
   createdAt: string;
 };

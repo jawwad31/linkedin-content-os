@@ -5,6 +5,11 @@ import { z } from "zod";
 
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import {
+  NOT_CONFIGURED_ERROR as SYNTHESIS_NOT_CONFIGURED_ERROR,
+  synthesizeMarketSignalsForClient,
+  type SynthesizeForClientResult,
+} from "@/features/research/agents/market-signal-synthesizer";
+import {
   classifyForClient,
   NOT_CONFIGURED_ERROR,
   type ClassifyForClientResult,
@@ -20,16 +25,17 @@ import {
 } from "@/features/research/rss-collector";
 import { getServerUser } from "@/lib/supabase/session";
 
-const CLASSIFY_STAGE = "classify";
+const SYNTHESIZE_STAGE = "synthesize";
 
 type PipelineResult = {
   collect: CollectForClientSummary;
   classify: ClassifyForClientResult;
+  synthesize: SynthesizeForClientResult;
 };
 
 function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
   const collect = pipeline.collect;
-  const base: ResearchRunSummary = {
+  let summary: ResearchRunSummary = {
     sourcesProcessed: collect.sourcesProcessed,
     totalFetched: collect.totalFetched,
     totalNew: collect.totalNew,
@@ -39,31 +45,42 @@ function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
     errorCount: collect.errors.length,
   };
 
-  if (pipeline.classify.ok) {
-    return {
-      ...base,
-      classifiedCount: pipeline.classify.summary.classifiedCount,
-      relevantCount: pipeline.classify.summary.relevantCount,
-      irrelevantCount: pipeline.classify.summary.irrelevantCount,
-      classificationErrorCount: pipeline.classify.summary.errorCount,
-    };
-  }
-
   // "not_configured" is a benign, expected ops state (no OPENROUTER_* env
   // set yet) — collection still succeeded and is real progress, so this
-  // isn't treated as a classification error count. Any other classify
-  // failure reason is reflected as one classification error instead of
-  // failing the whole run — collection's success should not be erased by a
-  // downstream classification problem.
-  return {
-    ...base,
-    classificationErrorCount: pipeline.classify.reason === "not_configured" ? 0 : 1,
-  };
+  // isn't treated as an error count. Any other failure reason is reflected
+  // as one error instead of failing the whole run — an earlier stage's
+  // success should never be erased by a downstream problem.
+  summary = pipeline.classify.ok
+    ? {
+        ...summary,
+        classifiedCount: pipeline.classify.summary.classifiedCount,
+        relevantCount: pipeline.classify.summary.relevantCount,
+        irrelevantCount: pipeline.classify.summary.irrelevantCount,
+        classificationErrorCount: pipeline.classify.summary.errorCount,
+      }
+    : {
+        ...summary,
+        classificationErrorCount:
+          pipeline.classify.reason === "not_configured" ? 0 : 1,
+      };
+
+  return pipeline.synthesize.ok
+    ? {
+        ...summary,
+        signalsCreated: pipeline.synthesize.summary.signalsCreated,
+        synthesisErrorCount: pipeline.synthesize.summary.synthesisErrorCount,
+      }
+    : {
+        ...summary,
+        synthesisErrorCount:
+          pipeline.synthesize.reason === "not_configured" ? 0 : 1,
+      };
 }
 
 export type ManualRunData = {
   summary: ResearchRunSummary;
   classificationMessage: string | null;
+  synthesisMessage: string | null;
 };
 
 export type ServiceResult<T> =
@@ -110,10 +127,10 @@ const GENERIC_FAILURE = {
 };
 
 /**
- * Manually runs RSS collection then classification for one client, sharing
- * the same distributed run guard (Feature 15) and lock_key as the worker
- * so a manual click and a worker cycle can never overlap for the same
- * client. Market Signal synthesis and idea/post generation are not
+ * Manually runs RSS collection, then classification, then Market Signal
+ * synthesis for one client, sharing the same distributed run guard
+ * (Feature 15) and lock_key as the worker so a manual click and a worker
+ * cycle can never overlap for the same client. Idea/post generation is not
  * implemented yet.
  *
  * Application-level auth is the primary gate here (not RLS): authenticated
@@ -141,11 +158,15 @@ export async function runResearchAgentManually(
     async () => {
       const collect = await collectForClient(clientIdResult.data);
       const classify = await classifyForClient(clientIdResult.data, user.id);
-      return { collect, classify };
+      const synthesize = await synthesizeMarketSignalsForClient(
+        clientIdResult.data,
+        user.id,
+      );
+      return { collect, classify, synthesize };
     },
     toResearchRunSummary,
     user.id,
-    CLASSIFY_STAGE,
+    SYNTHESIZE_STAGE,
   );
 
   if (guardResult.ok && guardResult.status === "completed") {
@@ -157,11 +178,19 @@ export async function runResearchAgentManually(
         ? NOT_CONFIGURED_ERROR
         : null;
 
+    const synthesize = guardResult.result.synthesize;
+    const synthesisMessage = !synthesize.ok
+      ? synthesize.reason === "not_configured"
+        ? SYNTHESIS_NOT_CONFIGURED_ERROR
+        : null
+      : (synthesize.summary.note ?? null);
+
     return {
       ok: true,
       data: {
         summary: toResearchRunSummary(guardResult.result),
         classificationMessage,
+        synthesisMessage,
       },
     };
   }

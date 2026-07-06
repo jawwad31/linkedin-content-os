@@ -9,6 +9,7 @@ import type { ResearchRunSummary } from "@/features/research/research-runs/types
 type RunSuccessData = {
   summary: ResearchRunSummary;
   classificationMessage: string | null;
+  synthesisMessage: string | null;
 };
 
 type RunState =
@@ -85,6 +86,22 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
           {state.data.classificationMessage ? (
             <p className="text-small text-muted-foreground">
               {state.data.classificationMessage}
+            </p>
+          ) : null}
+          {typeof state.data.summary.signalsCreated === "number" &&
+          (state.data.summary.signalsCreated > 0 ||
+            (state.data.summary.synthesisErrorCount ?? 0) > 0) ? (
+            <p className="text-small text-muted-foreground">
+              {state.data.summary.signalsCreated} signal
+              {state.data.summary.signalsCreated === 1 ? "" : "s"} created
+              {state.data.summary.synthesisErrorCount
+                ? ` · ${state.data.summary.synthesisErrorCount} synthesis error${state.data.summary.synthesisErrorCount === 1 ? "" : "s"}`
+                : ""}
+            </p>
+          ) : null}
+          {state.data.synthesisMessage ? (
+            <p className="text-small text-muted-foreground">
+              {state.data.synthesisMessage}
             </p>
           ) : null}
         </div>

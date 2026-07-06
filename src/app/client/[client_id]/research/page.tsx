@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { TrendingUp } from "lucide-react";
 
 import {
   Card,
@@ -8,11 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { CollectedArticlesPanel } from "@/features/research/collected-articles/collected-articles-panel";
 import { getRecentCollectedArticles } from "@/features/research/collected-articles/queries";
+import { MarketSignalsPanel } from "@/features/research/market-signals/market-signals-panel";
+import { getRecentMarketSignals } from "@/features/research/market-signals/queries";
 import { getRecentResearchRuns } from "@/features/research/research-runs/queries";
 import { ResearchRunsPanel } from "@/features/research/research-runs/research-runs-panel";
 import { RunResearchAgentButton } from "@/features/research/run-research-agent/run-research-agent-button";
@@ -36,6 +36,7 @@ export default async function ResearchPage({
   const result = role ? await getRssSources(clientId) : null;
   const runsResult = role ? await getRecentResearchRuns(clientId) : null;
   const articlesResult = role ? await getRecentCollectedArticles(clientId) : null;
+  const signalsResult = role ? await getRecentMarketSignals(clientId) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,8 +49,8 @@ export default async function ResearchPage({
         <CardHeader>
           <CardTitle>Run Research Agent</CardTitle>
           <CardDescription>
-            Collect the latest articles from active RSS sources, then
-            classify them for ICP relevance. Market Signals come next.
+            Collect the latest articles, classify them for ICP relevance,
+            then synthesize evidence-backed Market Signals.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -136,11 +137,15 @@ export default async function ResearchPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={TrendingUp}
-              title="No Market Signals yet"
-              description="Signals will appear here once research is running."
-            />
+            {role && signalsResult ? (
+              signalsResult.ok ? (
+                <MarketSignalsPanel signals={signalsResult.signals} />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load Market Signals. Please try again.
+                </p>
+              )
+            ) : null}
           </CardContent>
         </Card>
       </div>
