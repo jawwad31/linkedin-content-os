@@ -15,7 +15,7 @@ export default function IdeasPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Ideas"
-        description="Generate Content Ideas for this client from three modes."
+        description="Generate and manage Content Ideas for this client."
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -47,9 +47,9 @@ export default function IdeasPage() {
             >
               <TrendingUp className="h-5 w-5" />
             </span>
-            <CardTitle>Market Signal</CardTitle>
+            <CardTitle>TrendCard</CardTitle>
             <CardDescription>
-              Generate an idea from an approved Market Signal.
+              Generate an idea from an approved TrendCard.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -67,9 +67,9 @@ export default function IdeasPage() {
             >
               <Lightbulb className="h-5 w-5" />
             </span>
-            <CardTitle>Signal Reaction / Founder Take</CardTitle>
+            <CardTitle>Trend Reaction / Founder Take</CardTitle>
             <CardDescription>
-              Generate an idea led by a founder take on a Market Signal.
+              Generate an idea led by a founder take on a TrendCard.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -83,7 +83,7 @@ export default function IdeasPage() {
       <div className="rounded-card border border-border-grey bg-white p-8 text-center">
         <p className="text-body font-medium">No ideas yet for this client.</p>
         <p className="mt-1 text-small text-muted-foreground">
-          Idea generation is coming later.
+          Idea management is coming next.
         </p>
       </div>
     </div>
