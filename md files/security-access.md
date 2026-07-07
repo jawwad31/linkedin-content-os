@@ -227,6 +227,12 @@ Viewer:
 - select/read only
 - no insert/update/delete
 
+TrendCard writes:
+
+- `trend_cards` read access follows accepted client access.
+- `trend_cards` create/update/archive actions run through trusted server-side code and route handlers.
+- Viewer remains read-only; owner/editor permissions are checked server-side before mutation.
+
 ---
 
 ## API Security Rules
@@ -423,8 +429,11 @@ Record lightweight audit logs for:
 - RSS source created/edited/deleted
 - research run started/completed/failed
 - article marked relevant/irrelevant
-- TrendCard approved
-- founder take added
+- trend_card_created
+- trend_card_approved_for_ideas
+- trend_card_archived
+- trend_card_reaction_added
+- founder_take_added / founder_take_updated
 - idea generated
 - founder direction updated
 - post generated

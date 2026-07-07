@@ -187,8 +187,8 @@ Build in v1:
 9. Manual Run Research Agent button.
 10. Article classification.
 11. TrendCard synthesis.
-12. Founder Take on TrendCards.
-13. Approve TrendCards for Ideas.
+12. Founder Take and Trend Reactions on TrendCards.
+13. Approve or archive TrendCards.
 14. Content Idea generation from exactly three modes:
     - `founder_experience`
     - `trend_card`
@@ -401,10 +401,11 @@ Outputs:
 
 Output contract:
 
-- `signal_summary`
-- `why_buyers_care`
-- `content_angles`
-- `proof_notes`
+- `title`
+- `shift`
+- `why_it_matters`
+- `relevance_to_icp`
+- `content_angle`
 - `source_item_ids`
 - `confidence_score`
 
@@ -413,6 +414,8 @@ Rules:
 - no source evidence = no TrendCard
 - RSS claims are context, not verified proof
 - do not duplicate existing TrendCards
+- source links are resolved from cited `market_signal_items`; the model must only return cited source item IDs
+- founder POV must come from a human Founder Take or Trend Reaction, not generated `founder_pov`
 - do not expose raw prompts
 - do not flash raw LLM errors
 
@@ -696,6 +699,8 @@ POST   /api/client/[client_id]/market-items/[item_id]/mark-relevant
 POST   /api/client/[client_id]/market-items/[item_id]/mark-irrelevant
 POST   /api/client/[client_id]/trend-cards/[trend_card_id]/founder-take
 POST   /api/client/[client_id]/trend-cards/[trend_card_id]/approve-for-ideas
+POST   /api/client/[client_id]/trend-cards/[trend_card_id]/react
+POST   /api/client/[client_id]/trend-cards/[trend_card_id]/archive
 ```
 
 Ideas:
@@ -849,14 +854,15 @@ Key fields:
 
 - `client_id`
 - `title`
-- `signal_summary`
-- `why_buyers_care`
-- `content_angles`
-- `proof_notes`
+- `shift`
+- `why_it_matters`
+- `relevance_to_icp`
+- `content_angle`
 - `source_item_ids_json`
 - `confidence_score`
 - `founder_take`
 - `approved_for_ideas`
+- `week_of`
 - `deleted_at`
 
 Rules:
@@ -864,6 +870,9 @@ Rules:
 - must have source evidence
 - confidence_score must be 1–10
 - approved_for_ideas controls Planning Agent eligibility
+- source links are shown from cited `market_signal_items`
+- `founder_pov` and `evidence` are legacy columns for old records; new synthesis does not generate them
+- archive is soft delete via `deleted_at`
 
 ### founder_experiences
 
@@ -877,6 +886,9 @@ Key fields:
 - `what_was_learned`
 - `what_changed`
 - `why_it_matters`
+- `entry_type`: work_log | trend_reaction
+- `reaction_type`: agreement | contradiction | gap | observation
+- `source_trend_card_id`
 - `deleted_at`
 
 ### content_ideas

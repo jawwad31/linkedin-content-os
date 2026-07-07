@@ -417,7 +417,7 @@ v1 can ship with placeholder search UI if full search is not ready.
 Show recent events:
 
 - research run completed
-- signal approved
+- TrendCard approved
 - idea generated
 - post approved
 - post published
@@ -554,13 +554,17 @@ Primary action:
 TrendCard card fields:
 
 - title
-- summary
-- why buyers care
+- shift
+- why it matters
+- relevance to ICP
+- content angle
 - confidence score
 - source count
-- proof notes
+- source links
 - founder take
+- Trend Reactions
 - approve for ideas
+- archive
 
 Advanced/debug controls should be collapsed.
 
