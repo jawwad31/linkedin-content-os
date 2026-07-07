@@ -119,9 +119,28 @@ export function TrendCardsPanel({
 
               <CardSection label="Why it matters" text={card.whyItMatters} />
               <CardSection label="Relevance to ICP" text={card.relevanceToIcp} />
-              <CardSection label="Founder POV" text={card.founderPov} />
               <CardSection label="Content angle" text={card.contentAngle} />
-              <CardSection label="Evidence" text={card.evidence} />
+
+              {card.sources.length > 0 ? (
+                <details>
+                  <summary className="cursor-pointer select-none text-caption font-medium uppercase tracking-wide text-muted-foreground">
+                    Sources ({card.sources.length})
+                  </summary>
+                  <div className="mt-1.5 flex flex-col gap-1.5">
+                    {card.sources.map((source) => (
+                      <a
+                        key={source.id}
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="rounded-control border border-border-grey bg-white px-2.5 py-1.5 text-small text-brand-orange underline-offset-2 hover:underline"
+                      >
+                        {source.title}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
 
               {canManage ? (
                 <TrendCardReviewControls

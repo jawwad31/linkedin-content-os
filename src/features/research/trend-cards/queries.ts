@@ -2,15 +2,20 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
+export type TrendCardSource = {
+  id: string;
+  title: string;
+  url: string;
+};
+
 export type TrendCard = {
   id: string;
   title: string;
   shift: string | null;
   whyItMatters: string | null;
   relevanceToIcp: string | null;
-  founderPov: string | null;
   contentAngle: string | null;
-  evidence: string | null;
+  sources: TrendCardSource[];
   sourceItemCount: number;
   confidenceScore: number | null;
   founderTake: string | null;
@@ -26,9 +31,7 @@ type TrendCardRow = {
   shift: string | null;
   why_it_matters: string | null;
   relevance_to_icp: string | null;
-  founder_pov: string | null;
   content_angle: string | null;
-  evidence: string | null;
   source_item_ids_json: unknown;
   confidence_score: number | null;
   founder_take: string | null;
@@ -36,6 +39,11 @@ type TrendCardRow = {
   week_of: string;
   created_at: string;
 };
+
+function toSourceIdArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string");
+}
 
 export type RecentTrendCardsResult =
   | { ok: true; cards: TrendCard[] }
@@ -58,7 +66,7 @@ export async function getRecentTrendCards(
   const { data, error } = await supabase
     .from("trend_cards")
     .select(
-      "id, title, shift, why_it_matters, relevance_to_icp, founder_pov, content_angle, evidence, source_item_ids_json, confidence_score, founder_take, approved_for_ideas, week_of, created_at",
+      "id, title, shift, why_it_matters, relevance_to_icp, content_angle, source_item_ids_json, confidence_score, founder_take, approved_for_ideas, week_of, created_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -89,26 +97,51 @@ export async function getRecentTrendCards(
     }
   }
 
+  // Resolve each card's cited article ids to title + url so the panel can
+  // show real source links (the card's evidence). One query for all cards;
+  // ids citing since-deleted articles simply resolve to nothing.
+  const allSourceIds = Array.from(
+    new Set(data.flatMap((row) => toSourceIdArray(row.source_item_ids_json))),
+  );
+  const sourcesById = new Map<string, TrendCardSource>();
+
+  if (allSourceIds.length > 0) {
+    const { data: sourceRows, error: sourcesError } = await supabase
+      .from("market_signal_items")
+      .select("id, title, url")
+      .eq("client_id", clientId)
+      .in("id", allSourceIds)
+      .is("deleted_at", null);
+
+    if (!sourcesError && sourceRows) {
+      for (const row of sourceRows) {
+        sourcesById.set(row.id, { id: row.id, title: row.title, url: row.url });
+      }
+    }
+  }
+
   return {
     ok: true,
-    cards: data.map((row) => ({
-      id: row.id,
-      title: row.title,
-      shift: row.shift,
-      whyItMatters: row.why_it_matters,
-      relevanceToIcp: row.relevance_to_icp,
-      founderPov: row.founder_pov,
-      contentAngle: row.content_angle,
-      evidence: row.evidence,
-      sourceItemCount: Array.isArray(row.source_item_ids_json)
-        ? row.source_item_ids_json.length
-        : 0,
-      confidenceScore: row.confidence_score,
-      founderTake: row.founder_take,
-      approvedForIdeas: row.approved_for_ideas,
-      weekOf: row.week_of,
-      reactionCount: reactionCounts.get(row.id) ?? 0,
-      createdAt: row.created_at,
-    })),
+    cards: data.map((row) => {
+      const sourceIds = toSourceIdArray(row.source_item_ids_json);
+      return {
+        id: row.id,
+        title: row.title,
+        shift: row.shift,
+        whyItMatters: row.why_it_matters,
+        relevanceToIcp: row.relevance_to_icp,
+        contentAngle: row.content_angle,
+        sources: sourceIds
+          .map((id) => sourcesById.get(id))
+          .filter((source): source is TrendCardSource => source !== undefined),
+        sourceItemCount: sourceIds.length,
+        confidenceScore: row.confidence_score,
+        founderTake: row.founder_take,
+        approvedForIdeas: row.approved_for_ideas,
+        weekOf: row.week_of,
+        reactionCount: reactionCounts.get(row.id) ?? 0,
+        createdAt: row.created_at,
+      };
+    }),
   };
 }
