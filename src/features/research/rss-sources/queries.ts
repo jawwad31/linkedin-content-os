@@ -7,6 +7,7 @@ export type RssSource = {
   sourceName: string;
   feedUrl: string;
   category: string | null;
+  recencyDays: number;
   active: boolean;
   lastCheckedAt: string | null;
   lastSuccessAt: string | null;
@@ -20,6 +21,7 @@ type RssSourceRow = {
   source_name: string;
   feed_url: string;
   category: string | null;
+  recency_days: number;
   active: boolean;
   last_checked_at: string | null;
   last_success_at: string | null;
@@ -46,7 +48,7 @@ export async function getRssSources(
   const { data, error } = await supabase
     .from("rss_sources")
     .select(
-      "id, source_name, feed_url, category, active, last_checked_at, last_success_at, last_error, created_at, updated_at",
+      "id, source_name, feed_url, category, recency_days, active, last_checked_at, last_success_at, last_error, created_at, updated_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -62,6 +64,7 @@ export async function getRssSources(
       sourceName: row.source_name,
       feedUrl: row.feed_url,
       category: row.category,
+      recencyDays: row.recency_days,
       active: row.active,
       lastCheckedAt: row.last_checked_at,
       lastSuccessAt: row.last_success_at,

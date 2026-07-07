@@ -65,7 +65,7 @@ type MarkResult = { id: string; status: CollectedArticleStatus };
  * policy (Feature 04, not tightened for this table) is the backstop, so the
  * regular session-bound client is used, not the admin client.
  *
- * "used" articles (already consumed by a synthesized Market Signal) are
+ * "used" articles (already consumed by a synthesized TrendCard) are
  * locked — they cannot be re-marked from here.
  */
 async function markCollectedArticleStatus(

@@ -17,7 +17,7 @@ export type ClientBusinessContext = {
 
 /**
  * Shared business-context fetch used by both the classifier (Feature 17)
- * and the Market Signal synthesizer (Feature 18) — kept in one place so
+ * and the TrendCard synthesizer (Feature 18) — kept in one place so
  * the exact same minimal, safe field list is used everywhere an agent
  * needs client context.
  */

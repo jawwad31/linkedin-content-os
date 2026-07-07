@@ -6,7 +6,12 @@ import { z } from "zod";
  * field names, never values. `active` and `deleted_at` are managed by
  * separate actions (toggle/archive), not this form.
  */
-export const RSS_SOURCE_COLUMNS = ["source_name", "feed_url", "category"] as const;
+export const RSS_SOURCE_COLUMNS = [
+  "source_name",
+  "feed_url",
+  "category",
+  "recency_days",
+] as const;
 
 export type RssSourceColumn = (typeof RSS_SOURCE_COLUMNS)[number];
 
@@ -36,6 +41,11 @@ export const rssSourceFormSchema = z.object({
     }
   }),
   category: optionalText(100),
+  recencyDays: z.coerce
+    .number()
+    .int("Recency window must be a whole number of days.")
+    .min(1, "Recency window must be at least 1 day.")
+    .max(365, "Recency window cannot be more than 365 days."),
 });
 
 export type RssSourceFormInput = z.infer<typeof rssSourceFormSchema>;
@@ -53,5 +63,6 @@ export function toRssSourceRow(input: RssSourceFormInput) {
     source_name: input.sourceName,
     feed_url: input.feedUrl,
     category: emptyToNull(input.category),
+    recency_days: input.recencyDays,
   } satisfies Record<RssSourceColumn, unknown>;
 }

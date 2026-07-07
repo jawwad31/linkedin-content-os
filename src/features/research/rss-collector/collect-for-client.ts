@@ -10,6 +10,7 @@ export type CollectForClientSummary = {
   totalNew: number;
   skippedDuplicate: number;
   skippedInvalid: number;
+  skippedStale: number;
   skippedError: number;
   errors: { sourceId: string; sourceName: string; message: string }[];
 };
@@ -32,13 +33,14 @@ export async function collectForClient(
     totalNew: 0,
     skippedDuplicate: 0,
     skippedInvalid: 0,
+    skippedStale: 0,
     skippedError: 0,
     errors: [],
   };
 
   const { data: sources, error } = await admin
     .from("rss_sources")
-    .select("id, client_id, source_name, feed_url")
+    .select("id, client_id, source_name, feed_url, recency_days")
     .eq("client_id", clientId)
     .eq("active", true)
     .is("deleted_at", null);
@@ -53,6 +55,7 @@ export async function collectForClient(
       clientId: source.client_id,
       sourceName: source.source_name,
       feedUrl: source.feed_url,
+      recencyDays: source.recency_days,
     });
 
     summary.sourcesProcessed += 1;
@@ -60,6 +63,7 @@ export async function collectForClient(
     summary.totalNew += result.inserted;
     summary.skippedDuplicate += result.skippedDuplicate;
     summary.skippedInvalid += result.skippedInvalid;
+    summary.skippedStale += result.skippedStale;
 
     if (result.error) {
       summary.skippedError += 1;

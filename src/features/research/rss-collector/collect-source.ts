@@ -13,6 +13,7 @@ export type CollectSourceInput = {
   clientId: string;
   sourceName: string;
   feedUrl: string;
+  recencyDays: number;
 };
 
 export type CollectSourceResult = {
@@ -20,10 +21,25 @@ export type CollectSourceResult = {
   inserted: number;
   skippedDuplicate: number;
   skippedInvalid: number;
+  skippedStale: number;
   error: string | null;
 };
 
 const UNIQUE_VIOLATION = "23505";
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function isWithinRecencyWindow(
+  publishedAt: string | null,
+  recencyDays: number,
+  nowMs: number,
+): boolean {
+  if (!publishedAt) return true;
+
+  const publishedMs = new Date(publishedAt).getTime();
+  if (Number.isNaN(publishedMs)) return true;
+
+  return publishedMs >= nowMs - recencyDays * MS_PER_DAY;
+}
 
 /**
  * Collects one RSS source: fetch with timeout, parse entries, normalize +
@@ -38,6 +54,7 @@ export async function collectSource(
   source: CollectSourceInput,
 ): Promise<CollectSourceResult> {
   const now = new Date().toISOString();
+  const nowMs = Date.parse(now);
   const fetchResult = await fetchFeed(source.feedUrl);
 
   if (!fetchResult.ok) {
@@ -52,6 +69,7 @@ export async function collectSource(
       inserted: 0,
       skippedDuplicate: 0,
       skippedInvalid: 0,
+      skippedStale: 0,
       error: fetchResult.error,
     };
   }
@@ -71,6 +89,7 @@ export async function collectSource(
       inserted: 0,
       skippedDuplicate: 0,
       skippedInvalid: 0,
+      skippedStale: 0,
       error: SAFE_FEED_ERROR,
     };
   }
@@ -78,12 +97,18 @@ export async function collectSource(
   let inserted = 0;
   let skippedDuplicate = 0;
   let skippedInvalid = 0;
+  let skippedStale = 0;
 
   for (const entry of entries) {
     const normalizedUrl = entry.url ? normalizeUrl(entry.url) : null;
 
     if (!entry.title || !normalizedUrl) {
       skippedInvalid += 1;
+      continue;
+    }
+
+    if (!isWithinRecencyWindow(entry.publishedAt, source.recencyDays, nowMs)) {
+      skippedStale += 1;
       continue;
     }
 
@@ -121,6 +146,7 @@ export async function collectSource(
     inserted,
     skippedDuplicate,
     skippedInvalid,
+    skippedStale,
     error: null,
   };
 }

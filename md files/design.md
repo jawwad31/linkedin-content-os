@@ -568,6 +568,16 @@ TrendCard card fields:
 
 Advanced/debug controls should be collapsed.
 
+RSS Source card fields:
+
+- source name
+- feed URL
+- category
+- active status
+- recency window
+- last checked / last success
+- safe error message
+
 ### Ideas
 
 Purpose:

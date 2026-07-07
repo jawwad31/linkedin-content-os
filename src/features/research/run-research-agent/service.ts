@@ -41,6 +41,7 @@ function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
     totalNew: collect.totalNew,
     skippedDuplicate: collect.skippedDuplicate,
     skippedInvalid: collect.skippedInvalid,
+    skippedStale: collect.skippedStale,
     skippedError: collect.skippedError,
     errorCount: collect.errors.length,
   };
@@ -127,7 +128,7 @@ const GENERIC_FAILURE = {
 };
 
 /**
- * Manually runs RSS collection, then classification, then Market Signal
+ * Manually runs RSS collection, then classification, then TrendCard
  * synthesis for one client, sharing the same distributed run guard
  * (Feature 15) and lock_key as the worker so a manual click and a worker
  * cycle can never overlap for the same client. Idea/post generation is not

@@ -68,6 +68,9 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
             {state.data.summary.sourcesProcessed === 1 ? "" : "s"} ·{" "}
             {state.data.summary.totalFetched} fetched · {state.data.summary.totalNew}{" "}
             new · {state.data.summary.skippedDuplicate} duplicate
+            {state.data.summary.skippedStale
+              ? ` · ${state.data.summary.skippedStale} stale`
+              : ""}
             {state.data.summary.errorCount > 0
               ? ` · ${state.data.summary.errorCount} error${state.data.summary.errorCount === 1 ? "" : "s"}`
               : ""}

@@ -41,6 +41,7 @@ export function RssSourceForm({
   const sourceNameId = `${idPrefix}-sourceName`;
   const feedUrlId = `${idPrefix}-feedUrl`;
   const categoryId = `${idPrefix}-category`;
+  const recencyDaysId = `${idPrefix}-recencyDays`;
 
   useEffect(() => {
     if (state.success) {
@@ -95,6 +96,26 @@ export function RssSourceForm({
           defaultValue={source?.category ?? ""}
           maxLength={100}
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={recencyDaysId} className="text-small font-medium">
+          Recency window
+        </label>
+        <Input
+          id={recencyDaysId}
+          name="recencyDays"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={365}
+          step={1}
+          defaultValue={source?.recencyDays ?? 30}
+          required
+        />
+        <p className="text-caption text-muted-foreground">
+          Collect entries published within this many days.
+        </p>
       </div>
 
       {state.error ? (

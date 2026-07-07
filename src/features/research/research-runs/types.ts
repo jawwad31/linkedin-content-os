@@ -13,6 +13,7 @@ export type ResearchRunSummary = {
   totalNew: number;
   skippedDuplicate: number;
   skippedInvalid: number;
+  skippedStale?: number;
   skippedError: number;
   errorCount: number;
   // Optional: only set when a run also classifies (Feature 17). Omitted by

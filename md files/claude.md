@@ -815,6 +815,7 @@ Key fields:
 - `feed_url`
 - `category`
 - `active`
+- `recency_days`
 - `last_checked_at`
 - `last_success_at`
 - `last_error`
@@ -842,6 +843,7 @@ Key fields:
 
 Rules:
 
+- recency_days is a per-source collection window in days
 - dedupe by `client_id + content_hash`
 - normalize URLs before hashing
 - do not expose raw RSS JSON by default

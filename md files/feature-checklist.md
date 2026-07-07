@@ -500,6 +500,7 @@ Acceptance Criteria:
 
 - Add/edit/toggle/soft-delete RSS source.
 - Validate feed URL.
+- Configure per-source recency window.
 - Store feed errors safely.
 - Viewer read-only.
 - Audit logs written.
@@ -533,6 +534,7 @@ Dependencies:
 Logic:
 
 - parse active feeds
+- apply each source's recency window
 - normalize URLs
 - hash content
 - dedupe by `client_id + content_hash`

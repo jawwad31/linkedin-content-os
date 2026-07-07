@@ -72,6 +72,7 @@ type CycleSummary = {
   totalNew: number;
   skippedDuplicate: number;
   skippedInvalid: number;
+  skippedStale: number;
   skippedError: number;
   errorCount: number;
   lockedRuns: number;
@@ -146,6 +147,7 @@ function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
     totalNew: result.collect.totalNew,
     skippedDuplicate: result.collect.skippedDuplicate,
     skippedInvalid: result.collect.skippedInvalid,
+    skippedStale: result.collect.skippedStale,
     skippedError: result.collect.skippedError,
     errorCount: result.collect.errors.length,
   };
@@ -204,6 +206,7 @@ async function runCollectionCycle(
     totalNew: 0,
     skippedDuplicate: 0,
     skippedInvalid: 0,
+    skippedStale: 0,
     skippedError: 0,
     errorCount: 0,
     lockedRuns: 0,
@@ -246,6 +249,7 @@ async function runCollectionCycle(
       summary.totalNew += result.collect.totalNew;
       summary.skippedDuplicate += result.collect.skippedDuplicate;
       summary.skippedInvalid += result.collect.skippedInvalid;
+      summary.skippedStale += result.collect.skippedStale;
       summary.skippedError += result.collect.skippedError;
       summary.errorCount += result.collect.errors.length;
 

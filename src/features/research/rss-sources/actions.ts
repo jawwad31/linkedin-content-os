@@ -55,6 +55,7 @@ function parseRssSourceForm(formData: FormData) {
     sourceName: formData.get("sourceName"),
     feedUrl: formData.get("feedUrl"),
     category: formData.get("category"),
+    recencyDays: formData.get("recencyDays") ?? "30",
   });
 }
 

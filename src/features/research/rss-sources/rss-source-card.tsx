@@ -82,6 +82,10 @@ export function RssSourceCard({
           </Badge>
         ) : null}
 
+        <Badge variant="outline" className="w-fit">
+          Last {source.recencyDays} day{source.recencyDays === 1 ? "" : "s"}
+        </Badge>
+
         {source.lastError ? (
           <p className="text-small text-danger">{source.lastError}</p>
         ) : null}
