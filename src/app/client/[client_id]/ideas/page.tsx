@@ -10,7 +10,9 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { ContentIdeasPanel } from "@/features/ideas/management/content-ideas-panel";
+import { IdeaSourceLauncher } from "@/features/ideas/management/idea-source-launcher";
 import { getContentIdeas } from "@/features/ideas/management/queries";
+import { getIdeaSources } from "@/features/ideas/management/source-queries";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function IdeasPage({
@@ -26,7 +28,9 @@ export default async function IdeasPage({
   }
 
   const role = await getCurrentUserRoleForClient(user.id, clientId);
-  const result = role ? await getContentIdeas(clientId) : null;
+  const [ideasResult, sourcesResult] = role
+    ? await Promise.all([getContentIdeas(clientId), getIdeaSources(clientId)])
+    : [null, null];
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,6 +41,31 @@ export default async function IdeasPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>Generate Ideas from Approved Sources</CardTitle>
+          <CardDescription>
+            Choose an approved TrendCard, Founder Experience, or Trend Reaction
+            to generate Content Ideas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {role && sourcesResult ? (
+            sourcesResult.ok ? (
+              <IdeaSourceLauncher
+                clientId={clientId}
+                role={role}
+                sources={sourcesResult.sources}
+              />
+            ) : (
+              <p className="text-small text-danger">
+                We could not load idea sources. Please try again.
+              </p>
+            )
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Content Ideas</CardTitle>
           <CardDescription>
             Ideas generated from Founder Experiences, approved TrendCards, and
@@ -44,18 +73,12 @@ export default async function IdeasPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {role === "viewer" ? (
-            <p className="mb-4 rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-              Your role is view-only for this client.
-            </p>
-          ) : null}
-
-          {role && result ? (
-            result.ok ? (
+          {role && ideasResult ? (
+            ideasResult.ok ? (
               <ContentIdeasPanel
                 clientId={clientId}
                 role={role}
-                ideas={result.ideas}
+                ideas={ideasResult.ideas}
               />
             ) : (
               <p className="text-small text-danger">
