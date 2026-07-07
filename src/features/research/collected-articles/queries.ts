@@ -30,26 +30,58 @@ export type RecentCollectedArticlesResult =
   | { ok: true; articles: CollectedArticle[] }
   | { ok: false };
 
+export type CollectedArticleStatusFilter = CollectedArticleStatus | "all";
+
+export type CollectedArticleCounts = Record<CollectedArticleStatus, number> & {
+  all: number;
+};
+
+export type CollectedArticleCountsResult =
+  | { ok: true; counts: CollectedArticleCounts }
+  | { ok: false };
+
+const ARTICLE_STATUSES: CollectedArticleStatus[] = [
+  "new",
+  "relevant",
+  "irrelevant",
+  "used",
+];
+
+export function parseArticleStatusFilter(
+  value: string | undefined,
+): CollectedArticleStatusFilter {
+  return value && (ARTICLE_STATUSES as string[]).includes(value)
+    ? (value as CollectedArticleStatus)
+    : "all";
+}
+
 /**
- * Most recently collected articles for one client, newest first. Read-only
- * — no mark relevant/irrelevant actions here yet. Scoped by client_id;
- * RLS's market_signal_items_select_accepted_access policy is the backstop,
- * not the primary access gate (the [client_id] layout already verifies
- * accepted access before this ever runs).
+ * Most recently collected articles for one client, newest first, optionally
+ * filtered to one status. Scoped by client_id; RLS's
+ * market_signal_items_select_accepted_access policy is the backstop, not
+ * the primary access gate (the [client_id] layout already verifies accepted
+ * access before this ever runs).
  */
 export async function getRecentCollectedArticles(
   clientId: string,
+  status: CollectedArticleStatusFilter = "all",
   limit = 20,
 ): Promise<RecentCollectedArticlesResult> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("market_signal_items")
     .select(
       "id, title, source_name, status, relevance_score, classification_reason, published_at, url",
     )
     .eq("client_id", clientId)
-    .is("deleted_at", null)
+    .is("deleted_at", null);
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query
     .order("collected_at", { ascending: false })
     .limit(limit)
     .returns<CollectedArticleRow[]>();
@@ -69,4 +101,38 @@ export async function getRecentCollectedArticles(
       url: row.url,
     })),
   };
+}
+
+/**
+ * Per-status counts for the Collected Articles filter chips. Four cheap
+ * head-only count queries; "all" is their sum.
+ */
+export async function getCollectedArticleCounts(
+  clientId: string,
+): Promise<CollectedArticleCountsResult> {
+  const supabase = await createClient();
+
+  const results = await Promise.all(
+    ARTICLE_STATUSES.map((status) =>
+      supabase
+        .from("market_signal_items")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId)
+        .eq("status", status)
+        .is("deleted_at", null),
+    ),
+  );
+
+  if (results.some((result) => result.error)) return { ok: false };
+
+  const counts = {
+    new: results[0].count ?? 0,
+    relevant: results[1].count ?? 0,
+    irrelevant: results[2].count ?? 0,
+    used: results[3].count ?? 0,
+    all: 0,
+  };
+  counts.all = counts.new + counts.relevant + counts.irrelevant + counts.used;
+
+  return { ok: true, counts };
 }

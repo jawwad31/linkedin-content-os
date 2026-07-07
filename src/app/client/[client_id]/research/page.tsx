@@ -10,10 +10,14 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { CollectedArticlesPanel } from "@/features/research/collected-articles/collected-articles-panel";
-import { getRecentCollectedArticles } from "@/features/research/collected-articles/queries";
-import { MarketSignalsPanel } from "@/features/research/market-signals/market-signals-panel";
-import { getRecentMarketSignals } from "@/features/research/market-signals/queries";
+import {
+  getCollectedArticleCounts,
+  getRecentCollectedArticles,
+  parseArticleStatusFilter,
+} from "@/features/research/collected-articles/queries";
 import { getRecentResearchRuns } from "@/features/research/research-runs/queries";
+import { getRecentTrendCards } from "@/features/research/trend-cards/queries";
+import { TrendCardsPanel } from "@/features/research/trend-cards/trend-cards-panel";
 import { ResearchRunsPanel } from "@/features/research/research-runs/research-runs-panel";
 import { RunResearchAgentButton } from "@/features/research/run-research-agent/run-research-agent-button";
 import { getRssSources } from "@/features/research/rss-sources/queries";
@@ -22,21 +26,31 @@ import { getServerUser } from "@/lib/supabase/session";
 
 export default async function ResearchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ client_id: string }>;
+  searchParams: Promise<{ articles?: string }>;
 }) {
   const { client_id: clientId } = await params;
+  const { articles: articlesParam } = await searchParams;
   const { user } = await getServerUser();
 
   if (!user) {
     redirect("/login");
   }
 
+  const articleStatus = parseArticleStatusFilter(articlesParam);
+
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   const result = role ? await getRssSources(clientId) : null;
   const runsResult = role ? await getRecentResearchRuns(clientId) : null;
-  const articlesResult = role ? await getRecentCollectedArticles(clientId) : null;
-  const signalsResult = role ? await getRecentMarketSignals(clientId) : null;
+  const articlesResult = role
+    ? await getRecentCollectedArticles(clientId, articleStatus)
+    : null;
+  const articleCountsResult = role
+    ? await getCollectedArticleCounts(clientId)
+    : null;
+  const cardsResult = role ? await getRecentTrendCards(clientId) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,7 +64,7 @@ export default async function ResearchPage({
           <CardTitle>Run Research Agent</CardTitle>
           <CardDescription>
             Collect the latest articles, classify them for ICP relevance,
-            then synthesize evidence-backed Market Signals.
+            then synthesize evidence-backed TrendCards.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,6 +137,10 @@ export default async function ResearchPage({
                   clientId={clientId}
                   role={role}
                   articles={articlesResult.articles}
+                  activeStatus={articleStatus}
+                  counts={
+                    articleCountsResult?.ok ? articleCountsResult.counts : null
+                  }
                 />
               ) : (
                 <p className="text-small text-danger">
@@ -135,22 +153,23 @@ export default async function ResearchPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Market Signals</CardTitle>
+            <CardTitle>TrendCards</CardTitle>
             <CardDescription>
-              Evidence-backed signals synthesized from collected articles.
+              Evidence-backed TrendCards synthesized from collected articles,
+              grouped by week.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {role && signalsResult ? (
-              signalsResult.ok ? (
-                <MarketSignalsPanel
+            {role && cardsResult ? (
+              cardsResult.ok ? (
+                <TrendCardsPanel
                   clientId={clientId}
                   role={role}
-                  signals={signalsResult.signals}
+                  cards={cardsResult.cards}
                 />
               ) : (
                 <p className="text-small text-danger">
-                  We could not load Market Signals. Please try again.
+                  We could not load TrendCards. Please try again.
                 </p>
               )
             ) : null}

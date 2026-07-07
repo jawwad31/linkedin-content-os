@@ -56,7 +56,7 @@ export type DashboardMetrics = {
   setupCompleteness: { completed: number; total: number; percent: number };
   latestResearchRun: LatestResearchRun | null;
   collectedArticlesCount: number;
-  marketSignalsCount: number;
+  trendCardsCount: number;
   ideasCount: number;
   postsNeedingReviewCount: number;
   approvedPostsCount: number;
@@ -104,7 +104,7 @@ export async function getDashboardMetrics(
       .eq("client_id", clientId)
       .is("deleted_at", null),
     supabase
-      .from("market_signals")
+      .from("trend_cards")
       .select("id", { count: "exact", head: true })
       .eq("client_id", clientId)
       .is("deleted_at", null),
@@ -164,7 +164,7 @@ export async function getDashboardMetrics(
           }
         : null,
       collectedArticlesCount: articlesResult.count ?? 0,
-      marketSignalsCount: signalsResult.count ?? 0,
+      trendCardsCount: signalsResult.count ?? 0,
       ideasCount: ideasResult.count ?? 0,
       postsNeedingReviewCount: needsReviewResult.count ?? 0,
       approvedPostsCount: approvedResult.count ?? 0,

@@ -6,9 +6,9 @@ import { z } from "zod";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import {
   NOT_CONFIGURED_ERROR as SYNTHESIS_NOT_CONFIGURED_ERROR,
-  synthesizeMarketSignalsForClient,
+  synthesizeTrendCardsForClient,
   type SynthesizeForClientResult,
-} from "@/features/research/agents/market-signal-synthesizer";
+} from "@/features/research/agents/trend-card-synthesizer";
 import {
   classifyForClient,
   NOT_CONFIGURED_ERROR,
@@ -158,7 +158,7 @@ export async function runResearchAgentManually(
     async () => {
       const collect = await collectForClient(clientIdResult.data);
       const classify = await classifyForClient(clientIdResult.data, user.id);
-      const synthesize = await synthesizeMarketSignalsForClient(
+      const synthesize = await synthesizeTrendCardsForClient(
         clientIdResult.data,
         user.id,
       );

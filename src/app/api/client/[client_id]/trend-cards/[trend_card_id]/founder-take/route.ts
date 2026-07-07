@@ -1,4 +1,4 @@
-import { saveFounderTake } from "@/features/research/market-signals/service";
+import { saveFounderTake } from "@/features/research/trend-cards/service";
 import {
   apiFailure,
   apiSuccess,
@@ -7,9 +7,9 @@ import {
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ client_id: string; signal_id: string }> },
+  { params }: { params: Promise<{ client_id: string; trend_card_id: string }> },
 ) {
-  const { client_id: clientId, signal_id: signalId } = await params;
+  const { client_id: clientId, trend_card_id: cardId } = await params;
 
   let founderTake: unknown;
   try {
@@ -22,12 +22,12 @@ export async function POST(
   if (typeof founderTake !== "string") {
     return apiFailure(
       "VALIDATION_ERROR",
-      "Could not update this Market Signal. Please try again.",
+      "Could not update this TrendCard. Please try again.",
       400,
     );
   }
 
-  const result = await saveFounderTake(clientId, signalId, founderTake);
+  const result = await saveFounderTake(clientId, cardId, founderTake);
 
   if (!result.ok) {
     return apiFailure(

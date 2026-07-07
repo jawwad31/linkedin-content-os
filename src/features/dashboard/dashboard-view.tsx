@@ -122,20 +122,20 @@ export function DashboardView({
     setupCompleteness,
     latestResearchRun,
     collectedArticlesCount,
-    marketSignalsCount,
+    trendCardsCount,
     ideasCount,
     postsNeedingReviewCount,
     approvedPostsCount,
   } = metrics;
 
   const setupIncomplete = setupCompleteness.completed < setupCompleteness.total;
-  const researchEmpty = collectedArticlesCount === 0 && marketSignalsCount === 0;
+  const researchEmpty = collectedArticlesCount === 0 && trendCardsCount === 0;
   const ideasEmpty = ideasCount === 0;
 
   const everythingEmpty =
     latestResearchRun === null &&
     collectedArticlesCount === 0 &&
-    marketSignalsCount === 0 &&
+    trendCardsCount === 0 &&
     ideasCount === 0 &&
     postsNeedingReviewCount === 0 &&
     approvedPostsCount === 0;
@@ -288,8 +288,8 @@ export function DashboardView({
           ctaLabel={researchEmpty ? "Open research" : undefined}
         />
         <MetricCard
-          title="Market Signals"
-          value={marketSignalsCount}
+          title="TrendCards"
+          value={trendCardsCount}
           icon={TrendingUp}
           tint="bg-warning/10 text-warning"
           ctaHref={researchEmpty ? `/client/${clientId}/research` : undefined}
@@ -325,7 +325,7 @@ export function DashboardView({
             Nothing here yet for this client.
           </p>
           <p className="mt-1 text-small text-muted-foreground">
-            Complete setup and run research to start building Market Signals,
+            Complete setup and run research to start building TrendCards,
             Ideas, and Posts.
           </p>
         </div>

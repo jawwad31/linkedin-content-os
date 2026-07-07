@@ -4,7 +4,7 @@
 // and register-hooks.mjs / ts-resolve-hook.mjs alongside this file — no
 // tsx/ts-node dependency was added). Collect-only by default
 // (RESEARCH_PIPELINE_FULL=false); set RESEARCH_PIPELINE_FULL=true to also
-// classify collected articles and synthesize Market Signals after each
+// classify collected articles and synthesize TrendCards after each
 // client's collection (Feature 17/18).
 
 // @next/env's bundled CJS output isn't statically analyzable for named ESM
@@ -16,7 +16,7 @@ import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
 
-import { synthesizeMarketSignalsForClient } from "@/features/research/agents/market-signal-synthesizer";
+import { synthesizeTrendCardsForClient } from "@/features/research/agents/trend-card-synthesizer";
 import { classifyForClient } from "@/features/research/agents/research-classifier";
 import { collectForClient } from "@/features/research/rss-collector";
 // Imported from the run-guard submodule directly, not the feature's
@@ -136,7 +136,7 @@ async function discoverEligibleClientIds(): Promise<string[]> {
 type CycleFnResult = {
   collect: Awaited<ReturnType<typeof collectForClient>>;
   classify: Awaited<ReturnType<typeof classifyForClient>> | null;
-  synthesize: Awaited<ReturnType<typeof synthesizeMarketSignalsForClient>> | null;
+  synthesize: Awaited<ReturnType<typeof synthesizeTrendCardsForClient>> | null;
 };
 
 function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
@@ -229,7 +229,7 @@ async function runCollectionCycle(
           ? await classifyForClient(clientId)
           : null;
         const synthesize = fullPipeline
-          ? await synthesizeMarketSignalsForClient(clientId)
+          ? await synthesizeTrendCardsForClient(clientId)
           : null;
         return { collect, classify, synthesize };
       },

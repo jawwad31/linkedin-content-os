@@ -1,11 +1,17 @@
 import { Layers } from "lucide-react";
+import Link from "next/link";
 
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ClientRole } from "@/features/clients/invitations/schemas";
 
 import { CollectedArticleActions } from "./collected-article-actions";
-import type { CollectedArticle, CollectedArticleStatus } from "./queries";
+import type {
+  CollectedArticle,
+  CollectedArticleCounts,
+  CollectedArticleStatus,
+  CollectedArticleStatusFilter,
+} from "./queries";
 
 const STATUS_BADGE_VARIANT: Record<CollectedArticleStatus, BadgeProps["variant"]> = {
   new: "neutral",
@@ -30,18 +36,68 @@ function formatDate(value: string | null): string {
   });
 }
 
+const FILTERS: Array<{ value: CollectedArticleStatusFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "new", label: "New" },
+  { value: "relevant", label: "Relevant" },
+  { value: "irrelevant", label: "Irrelevant" },
+  { value: "used", label: "Used" },
+];
+
+function StatusFilterChips({
+  clientId,
+  activeStatus,
+  counts,
+}: {
+  clientId: string;
+  activeStatus: CollectedArticleStatusFilter;
+  counts: CollectedArticleCounts | null;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {FILTERS.map((filter) => {
+        const isActive = filter.value === activeStatus;
+        const count = counts ? counts[filter.value] : null;
+        const href =
+          filter.value === "all"
+            ? `/client/${clientId}/research`
+            : `/client/${clientId}/research?articles=${filter.value}`;
+
+        return (
+          <Link
+            key={filter.value}
+            href={href}
+            className={
+              isActive
+                ? "rounded-full bg-brand-orange/10 px-2.5 py-0.5 text-caption font-medium text-brand-orange"
+                : "rounded-full border border-border-grey px-2.5 py-0.5 text-caption font-medium text-muted-foreground hover:bg-soft-white"
+            }
+          >
+            {filter.label}
+            {count !== null ? ` (${count})` : ""}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CollectedArticlesPanel({
   clientId,
   role,
   articles,
+  activeStatus,
+  counts,
 }: {
   clientId: string;
   role: ClientRole;
   articles: CollectedArticle[];
+  activeStatus: CollectedArticleStatusFilter;
+  counts: CollectedArticleCounts | null;
 }) {
   const canManage = role === "owner" || role === "editor";
 
-  if (articles.length === 0) {
+  if (articles.length === 0 && activeStatus === "all") {
     return (
       <EmptyState
         icon={Layers}
@@ -52,8 +108,22 @@ export function CollectedArticlesPanel({
   }
 
   return (
-    <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
-      {articles.map((article) => (
+    <div className="flex flex-col gap-3">
+      <StatusFilterChips
+        clientId={clientId}
+        activeStatus={activeStatus}
+        counts={counts}
+      />
+
+      {articles.length === 0 ? (
+        <p className="text-small text-muted-foreground">
+          No {STATUS_LABEL[activeStatus as CollectedArticleStatus]?.toLowerCase() ?? ""}{" "}
+          articles right now.
+        </p>
+      ) : null}
+
+      <div className="flex max-h-96 flex-col gap-3 overflow-y-auto">
+        {articles.map((article) => (
         <div
           key={article.id}
           className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
@@ -97,8 +167,9 @@ export function CollectedArticlesPanel({
               status={article.status}
             />
           ) : null}
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

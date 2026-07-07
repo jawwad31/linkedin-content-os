@@ -1,4 +1,4 @@
-import { approveMarketSignalForIdeas } from "@/features/research/market-signals/service";
+import { approveTrendCardForIdeas } from "@/features/research/trend-cards/service";
 import {
   apiFailure,
   apiSuccess,
@@ -7,11 +7,11 @@ import {
 
 export async function POST(
   _request: Request,
-  { params }: { params: Promise<{ client_id: string; signal_id: string }> },
+  { params }: { params: Promise<{ client_id: string; trend_card_id: string }> },
 ) {
-  const { client_id: clientId, signal_id: signalId } = await params;
+  const { client_id: clientId, trend_card_id: cardId } = await params;
 
-  const result = await approveMarketSignalForIdeas(clientId, signalId);
+  const result = await approveTrendCardForIdeas(clientId, cardId);
 
   if (!result.ok) {
     return apiFailure(
