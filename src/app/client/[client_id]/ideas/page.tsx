@@ -1,6 +1,5 @@
-import { Lightbulb, Sparkles, TrendingUp } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,83 +8,63 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { ContentIdeasPanel } from "@/features/ideas/management/content-ideas-panel";
+import { getContentIdeas } from "@/features/ideas/management/queries";
+import { getServerUser } from "@/lib/supabase/session";
 
-export default function IdeasPage() {
+export default async function IdeasPage({
+  params,
+}: {
+  params: Promise<{ client_id: string }>;
+}) {
+  const { client_id: clientId } = await params;
+  const { user } = await getServerUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRoleForClient(user.id, clientId);
+  const result = role ? await getContentIdeas(clientId) : null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Ideas"
-        description="Generate and manage Content Ideas for this client."
+        description="Review generated Content Ideas and add Founder Direction before drafting posts."
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <span
-              aria-hidden="true"
-              className="mb-2 flex h-9 w-9 items-center justify-center rounded-control bg-brand-orange/10 text-brand-orange"
-            >
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <CardTitle>Founder Experience</CardTitle>
-            <CardDescription>
-              Generate an idea from a real founder experience.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" size="sm" disabled>
-              Generate — Coming later
-            </Button>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Ideas</CardTitle>
+          <CardDescription>
+            Ideas generated from Founder Experiences, approved TrendCards, and
+            Trend Reactions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {role === "viewer" ? (
+            <p className="mb-4 rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
+              Your role is view-only for this client.
+            </p>
+          ) : null}
 
-        <Card>
-          <CardHeader>
-            <span
-              aria-hidden="true"
-              className="mb-2 flex h-9 w-9 items-center justify-center rounded-control bg-info/10 text-info"
-            >
-              <TrendingUp className="h-5 w-5" />
-            </span>
-            <CardTitle>TrendCard</CardTitle>
-            <CardDescription>
-              Generate an idea from an approved TrendCard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" size="sm" disabled>
-              Generate — Coming later
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <span
-              aria-hidden="true"
-              className="mb-2 flex h-9 w-9 items-center justify-center rounded-control bg-brand-purple/10 text-brand-purple"
-            >
-              <Lightbulb className="h-5 w-5" />
-            </span>
-            <CardTitle>Trend Reaction / Founder Take</CardTitle>
-            <CardDescription>
-              Generate an idea led by a founder take on a TrendCard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" size="sm" disabled>
-              Generate — Coming later
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="rounded-card border border-border-grey bg-white p-8 text-center">
-        <p className="text-body font-medium">No ideas yet for this client.</p>
-        <p className="mt-1 text-small text-muted-foreground">
-          Idea management is coming next.
-        </p>
-      </div>
+          {role && result ? (
+            result.ok ? (
+              <ContentIdeasPanel
+                clientId={clientId}
+                role={role}
+                ideas={result.ideas}
+              />
+            ) : (
+              <p className="text-small text-danger">
+                We could not load Content Ideas. Please try again.
+              </p>
+            )
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
