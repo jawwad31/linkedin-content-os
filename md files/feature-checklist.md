@@ -152,7 +152,7 @@ Tables:
 - client_access
 - rss_sources
 - market_signal_items
-- market_signals
+- trend_cards
 - founder_experiences
 - content_ideas
 - posts
@@ -382,7 +382,7 @@ Metrics:
 - setup completeness
 - latest research run
 - collected articles count
-- Market Signals count
+- TrendCards count
 - ideas count
 - posts needing review
 - approved posts ready to publish
@@ -536,7 +536,7 @@ Logic:
 - normalize URLs
 - hash content
 - dedupe by `client_id + content_hash`
-- store Market Signal Items
+- store Collected Article rows
 
 Acceptance Criteria:
 
@@ -709,11 +709,11 @@ feat: add research classification agent
 
 ---
 
-## Feature 18 — Market Signal Synthesis
+## Feature 18 — TrendCard Synthesis
 
 Goal:
 
-Create evidence-backed Market Signals.
+Create evidence-backed TrendCards.
 
 Dependencies:
 
@@ -745,7 +745,7 @@ Test:
 Commit:
 
 ```text
-feat: add market signal synthesis
+feat: add TrendCard synthesis
 ```
 
 ---
@@ -754,7 +754,7 @@ feat: add market signal synthesis
 
 Goal:
 
-Build review UI for collected articles and Market Signals.
+Build review UI for collected articles and TrendCards.
 
 Dependencies:
 
@@ -770,7 +770,7 @@ UI actions:
 Acceptance Criteria:
 
 - Collected Articles table works.
-- Market Signal cards/table works.
+- TrendCard cards/table works.
 - Founder Take saves.
 - Approve for Ideas works.
 - Viewer read-only.
@@ -805,8 +805,8 @@ Dependencies:
 Modes:
 
 - founder_experience
-- market_signal
-- signal_reaction
+- trend_card
+- trend_reaction
 
 Acceptance Criteria:
 
@@ -819,7 +819,7 @@ Acceptance Criteria:
 Test:
 
 - Generate from Founder Experience.
-- Generate from Market Signal.
+- Generate from TrendCard.
 - Generate from Founder Take.
 - Confirm unsupported modes do not exist.
 

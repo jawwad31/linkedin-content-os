@@ -1,6 +1,6 @@
 ---
 name: aixelerate-content-os
-description: AIXelerate Content OS for creating ICP-first LinkedIn posts for B2B founders and operators. Use when the user asks to interpret a provided market signal for content, plan LinkedIn post ideas from founder experience, market signals, or signal reactions, or write a final LinkedIn post from an approved idea. Focuses on buyer relevance, operator-led insight, commercial sharpness, and strict proof-safety. Does not handle LinkedIn ads, outbound DM campaigns, profile optimization, scheduling, RSS ingestion, or generic creator growth content.
+description: AIXelerate Content OS for creating ICP-first LinkedIn posts for B2B founders and operators. Use when the user asks to interpret a provided TrendCard for content, plan LinkedIn post ideas from founder experience, TrendCards, or TrendCard reactions, or write a final LinkedIn post from an approved idea. Focuses on buyer relevance, operator-led insight, commercial sharpness, and strict proof-safety. Does not handle LinkedIn ads, outbound DM campaigns, profile optimization, scheduling, RSS ingestion, or generic creator growth content.
 ---
 
 # AIXelerate Content OS
@@ -20,7 +20,7 @@ Before loading any agent workflow or resource:
 
 | User intent | Agent workflow | Path |
 |---|---|---|
-| Interpret a provided market signal or research note for content use | Research Agent | `{SKILL_BASE}/.agents/skills/research/SKILL.md` |
+| Interpret a provided TrendCard or research note for content use | Research Agent | `{SKILL_BASE}/.agents/skills/research/SKILL.md` |
 | Generate multiple ranked LinkedIn post ideas | Planning Agent | `{SKILL_BASE}/.agents/skills/planning/SKILL.md` |
 | Turn one approved idea into a final LinkedIn post | Content Agent | `{SKILL_BASE}/.agents/skills/content/SKILL.md` |
 
@@ -61,7 +61,7 @@ Never invent proof, metrics, founder stories, client results, customer quotes, m
 
 ## Default Output Rules
 
-- Research Agent returns: `Signal summary`, `Why buyers care`, `Content angles`, `Proof notes`.
+- Research Agent returns: `TrendCard summary`, `Why buyers care`, `Content angles`, `Proof notes`.
 - Planning Agent returns multiple ranked ideas. Each idea includes: `Angle`, `Buyer pain`, `Commercial relevance`.
 - Content Agent returns: `Final LinkedIn post`, `Buyer belief shift`, `Proof notes`.
 - Keep posts focused on one idea.

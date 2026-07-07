@@ -192,7 +192,7 @@ Avoid internal implementation terms in UI:
 
 - classifier
 - synthesis
-- MarketSignalItem
+- Collected Article
 - source_ids_json
 - prompt chain
 - research_reactions
@@ -202,7 +202,7 @@ Avoid internal implementation terms in UI:
 Use user-facing terms:
 
 - Collected Article
-- Market Signal
+- TrendCard
 - Founder Experience
 - Idea
 - Post
@@ -261,7 +261,7 @@ Card types:
 - Client Card
 - Setup Section Card
 - Founder Experience Card
-- Market Signal Card
+- TrendCard
 - Idea Card
 - Post Review Card
 - Publish Queue Card
@@ -273,7 +273,7 @@ Use for:
 
 - RSS Sources
 - Collected Articles
-- Market Signals
+- TrendCards
 - Content Ideas
 - Posts
 - Audit Logs
@@ -406,7 +406,7 @@ Eventually search:
 - clients
 - founder experiences
 - collected articles
-- Market Signals
+- TrendCards
 - ideas
 - posts
 
@@ -473,7 +473,7 @@ Cards:
 - Setup completeness
 - Latest research run
 - Collected Articles
-- Market Signals
+- TrendCards
 - Ideas ready
 - Posts needing review
 - Approved posts ready to publish
@@ -537,7 +537,7 @@ Viewer:
 
 Purpose:
 
-- collect and process market signals
+- collect articles and synthesize TrendCards
 
 Sections:
 
@@ -545,13 +545,13 @@ Sections:
 2. Run Research Agent
 3. Research Runs
 4. Collected Articles
-5. Market Signals
+5. TrendCards
 
 Primary action:
 
 - Run Research Agent
 
-Market Signal card fields:
+TrendCard card fields:
 
 - title
 - summary
@@ -573,7 +573,7 @@ Purpose:
 Three primary actions:
 
 - Generate from Founder Experience
-- Generate from Market Signal
+- Generate from TrendCard
 - Generate from Founder Take
 
 Idea card fields:
@@ -678,7 +678,7 @@ Use this prompt in Google Stitch:
 ```text
 Create a Material 3-inspired B2B SaaS web app UI for AIXelerate Content OS.
 
-The app is an ICP-first LinkedIn content operating system for B2B operators and founders. It helps users move from business context to research, Market Signals, Content Ideas, reviewed LinkedIn posts, and a manual publish queue.
+The app is an ICP-first LinkedIn content operating system for B2B operators and founders. It helps users move from business context to research, TrendCards, Content Ideas, reviewed LinkedIn posts, and a manual publish queue.
 
 Visual direction:
 - Clean GTM/content operating system

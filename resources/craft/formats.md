@@ -9,7 +9,7 @@ Use for:
 - Founder POV
 - Buyer belief shifts
 - Operator lessons
-- Market signal reactions
+- TrendCard reactions
 - Practical short frameworks
 
 Guidelines:

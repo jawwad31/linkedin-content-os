@@ -176,7 +176,7 @@ Enable RLS on:
 - `client_access`
 - `rss_sources`
 - `market_signal_items`
-- `market_signals`
+- `trend_cards`
 - `founder_experiences`
 - `content_ideas`
 - `posts`
@@ -423,7 +423,7 @@ Record lightweight audit logs for:
 - RSS source created/edited/deleted
 - research run started/completed/failed
 - article marked relevant/irrelevant
-- Market Signal approved
+- TrendCard approved
 - founder take added
 - idea generated
 - founder direction updated
@@ -460,7 +460,7 @@ Soft delete business records:
 - clients
 - rss_sources
 - market_signal_items
-- market_signals
+- trend_cards
 - founder_experiences
 - content_ideas
 - posts

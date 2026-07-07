@@ -1,6 +1,6 @@
 ---
 name: aixelerate-planning
-description: Generate multiple ranked LinkedIn post ideas for AIXelerate Content OS from founder experience, provided market signals, or founder reactions to signals. Use when the user wants content ideas, angles, or a planning pass before writing. Each idea includes Angle, Buyer pain, and Commercial relevance.
+description: Generate multiple ranked LinkedIn post ideas for AIXelerate Content OS from founder experience, provided TrendCards, or founder reactions to TrendCards. Use when the user wants content ideas, angles, or a planning pass before writing. Each idea includes Angle, Buyer pain, and Commercial relevance.
 ---
 
 # Planning Agent
@@ -18,8 +18,8 @@ Turn inputs into ranked LinkedIn post ideas for B2B founders and operators. Do n
 Use one of three modes:
 
 1. `founder_experience`: ideas from real founder/operator experience.
-2. `market_signal`: ideas from an approved market signal.
-3. `signal_reaction`: ideas from an approved market signal plus the founder's take or opinion.
+2. `trend_card`: ideas from an approved TrendCard.
+3. `trend_reaction`: ideas from an approved TrendCard plus the founder's take or opinion.
 
 If the mode is not stated, infer the closest mode from the input and mention the assumption.
 

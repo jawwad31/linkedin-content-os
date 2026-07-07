@@ -26,13 +26,13 @@ See `CONTRIBUTING.md` for the full Git workflow (pulling before starting, one ch
 
 AIXelerate Content OS is an ICP-first LinkedIn content operating system for B2B founders, operators, consultants, GTM experts, and client-facing experts.
 
-It turns structured business context, founder experience, RSS research, Market Signals, and founder takes into buyer-relevant LinkedIn content.
+It turns structured business context, founder experience, RSS research, TrendCards, and founder takes into buyer-relevant LinkedIn content.
 
 It is not a generic LinkedIn AI writer.
 
 The product helps internal operators produce:
 
-- Market Signals
+- TrendCards
 - Content Ideas
 - LinkedIn Post Drafts
 - Reviewed / Approved Posts
@@ -65,7 +65,7 @@ The app should be simple on the surface and structured underneath.
 User-facing workflow:
 
 ```text
-Setup → Research → Market Signals → Ideas → Posts → Review → Publish
+Setup → Research → TrendCards → Ideas → Posts → Review → Publish
 ```
 
 Internal intelligence workflow:
@@ -73,7 +73,7 @@ Internal intelligence workflow:
 ```text
 Business Context
 → Research Agent
-→ Market Signals
+→ TrendCards
 → Planning Agent
 → Content Ideas
 → Content Agent
@@ -186,13 +186,13 @@ Build in v1:
 8. Persistent Railway worker for RSS collection.
 9. Manual Run Research Agent button.
 10. Article classification.
-11. Market Signal synthesis.
-12. Founder Take on Market Signals.
-13. Approve Market Signals for Ideas.
+11. TrendCard synthesis.
+12. Founder Take on TrendCards.
+13. Approve TrendCards for Ideas.
 14. Content Idea generation from exactly three modes:
     - `founder_experience`
-    - `market_signal`
-    - `signal_reaction`
+    - `trend_card`
+    - `trend_reaction`
 15. Founder Direction on ideas.
 16. Post generation from ideas.
 17. Post review workflow:
@@ -273,7 +273,7 @@ Railway services:
 2. `research-worker`
    - separate persistent worker service
    - collects RSS on interval
-   - optionally classifies and synthesizes Market Signals
+   - optionally classifies and synthesizes TrendCards
    - uses distributed run guard
    - writes to Supabase
 
@@ -304,7 +304,7 @@ Full pipeline behavior:
 RESEARCH_PIPELINE_FULL=true
 → collect RSS
 → classify articles
-→ synthesize Market Signals
+→ synthesize TrendCards
 ```
 
 Manual research button:
@@ -318,7 +318,7 @@ Manual run behavior:
 ```text
 Collect RSS
 → classify articles
-→ synthesize Market Signals
+→ synthesize TrendCards
 ```
 
 Run guard rules:
@@ -376,13 +376,13 @@ Do not create:
 
 Purpose:
 
-Turn collected RSS/research signals into Market Signals.
+Turn collected RSS/research signals into TrendCards.
 
 Responsibilities:
 
 - classify collected articles
 - identify buyer-relevant signals
-- produce market signal summaries
+- produce TrendCard summaries
 - explain why buyers care
 - suggest content angles
 - produce proof notes
@@ -391,13 +391,13 @@ Inputs:
 
 - business context
 - research keywords
-- RSS articles / MarketSignalItems
-- existing Market Signals
+- RSS articles / Collected Articles
+- existing TrendCards
 
 Outputs:
 
-- MarketSignalItem status updates
-- MarketSignal records
+- Collected Article status updates
+- TrendCard records
 
 Output contract:
 
@@ -410,9 +410,9 @@ Output contract:
 
 Rules:
 
-- no source evidence = no Market Signal
+- no source evidence = no TrendCard
 - RSS claims are context, not verified proof
-- do not duplicate existing Market Signals
+- do not duplicate existing TrendCards
 - do not expose raw prompts
 - do not flash raw LLM errors
 
@@ -437,16 +437,16 @@ Always receives business context:
 Allowed modes only:
 
 1. `founder_experience`
-2. `market_signal`
-3. `signal_reaction`
+2. `trend_card`
+3. `trend_reaction`
 
 There is no `business_context_only` mode.
 
 Mode rules:
 
 - `founder_experience`: must use real founder experience; do not invent lived experience.
-- `market_signal`: must connect to approved Market Signal; do not claim founder lived experience.
-- `signal_reaction`: founder_take is the primary POV; Market Signal provides timing/context.
+- `trend_card`: must connect to approved TrendCard; do not claim founder lived experience.
+- `trend_reaction`: founder_take is the primary POV; TrendCard provides timing/context.
 
 Output contract:
 
@@ -694,8 +694,8 @@ DELETE /api/client/[client_id]/rss-sources/[source_id]
 POST   /api/client/[client_id]/run-research-agent
 POST   /api/client/[client_id]/market-items/[item_id]/mark-relevant
 POST   /api/client/[client_id]/market-items/[item_id]/mark-irrelevant
-POST   /api/client/[client_id]/market-signals/[signal_id]/founder-take
-POST   /api/client/[client_id]/market-signals/[signal_id]/approve-for-ideas
+POST   /api/client/[client_id]/trend-cards/[trend_card_id]/founder-take
+POST   /api/client/[client_id]/trend-cards/[trend_card_id]/approve-for-ideas
 ```
 
 Ideas:
@@ -731,7 +731,7 @@ Tables:
 - `client_access`
 - `rss_sources`
 - `market_signal_items`
-- `market_signals`
+- `trend_cards`
 - `founder_experiences`
 - `content_ideas`
 - `posts`
@@ -841,9 +841,9 @@ Rules:
 - normalize URLs before hashing
 - do not expose raw RSS JSON by default
 
-### market_signals
+### trend_cards
 
-Synthesized Market Signals.
+Synthesized TrendCards.
 
 Key fields:
 
@@ -886,7 +886,7 @@ Generated ideas.
 Key fields:
 
 - `client_id`
-- `source_type`: founder_experience | market_signal | signal_reaction
+- `source_type`: founder_experience | trend_card | trend_reaction
 - `source_ids_json`
 - `angle`
 - `buyer_pain`
@@ -1047,13 +1047,13 @@ The MVP is done when:
 - Worker can collect RSS articles.
 - User can manually run research.
 - App classifies collected articles.
-- App generates Market Signals.
+- App generates TrendCards.
 - User can add founder_take.
-- User can approve Market Signals for ideas.
+- User can approve TrendCards for ideas.
 - Planning Agent generates ideas from:
   - founder_experience
-  - market_signal
-  - signal_reaction
+  - trend_card
+  - trend_reaction
 - User can add founder_direction.
 - Content Agent drafts a LinkedIn post.
 - User can review/redraft/approve/reject post.

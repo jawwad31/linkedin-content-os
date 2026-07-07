@@ -2,7 +2,7 @@
 
 AIXelerate Content OS is an ICP-first LinkedIn content operating system for B2B operators, founders, consultants, and client-facing experts.
 
-It helps turn business context, founder experience, RSS research, Market Signals, and founder takes into buyer-relevant LinkedIn content.
+It helps turn business context, founder experience, RSS research, TrendCards, and founder takes into buyer-relevant LinkedIn content.
 
 ## Stack
 
