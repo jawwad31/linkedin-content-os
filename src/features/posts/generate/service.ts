@@ -23,6 +23,7 @@ export type ServiceResult<T> =
 
 export type GeneratePostData = {
   postId: string;
+  alreadyGenerated?: boolean;
 };
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -243,7 +244,6 @@ async function getContentIdea(
     .maybeSingle<ContentIdeaRow>();
 
   if (error || !data) return null;
-  if (data.status !== "ready") return null;
   return data;
 }
 
@@ -264,6 +264,44 @@ async function getExistingPostId(
 
   if (error || !data) return null;
   return data.id;
+}
+
+async function markContentIdeaUsed(input: {
+  clientId: string;
+  ideaId: string;
+}): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("content_ideas")
+    .update({ status: "used" })
+    .eq("id", input.ideaId)
+    .eq("client_id", input.clientId)
+    .is("deleted_at", null)
+    .neq("status", "archived")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  return !error && Boolean(data);
+}
+
+async function auditIdeaMarkedUsed(input: {
+  clientId: string;
+  userId: string;
+  ideaId: string;
+  postId: string;
+}) {
+  await writeAuditLog({
+    clientId: input.clientId,
+    userId: input.userId,
+    action: "content_idea_marked_used",
+    entityType: "content_idea",
+    entityId: input.ideaId,
+    metadata: {
+      idea_id: input.ideaId,
+      post_id: input.postId,
+    },
+  });
 }
 
 async function getTrendCard(
@@ -496,7 +534,33 @@ export async function generatePostFromIdea(
 
   if (!businessContext) return NO_ACCESS;
   if (!idea) return IDEA_NOT_AVAILABLE;
-  if (existingPostId) return { ok: true, data: { postId: existingPostId } };
+  if (idea.status === "archived") return IDEA_NOT_AVAILABLE;
+
+  if (existingPostId) {
+    if (idea.status !== "used") {
+      const markedUsed = await markContentIdeaUsed({
+        clientId: clientIdResult.data,
+        ideaId: idea.id,
+      });
+
+      if (!markedUsed) return GENERIC_FAILURE;
+
+      await auditIdeaMarkedUsed({
+        clientId: clientIdResult.data,
+        userId: user.id,
+        ideaId: idea.id,
+        postId: existingPostId,
+      });
+    }
+
+    revalidatePath(`/client/${clientIdResult.data}/ideas`);
+    return {
+      ok: true,
+      data: { postId: existingPostId, alreadyGenerated: true },
+    };
+  }
+
+  if (idea.status !== "ready") return IDEA_NOT_AVAILABLE;
 
   const source = await loadSourceContext(admin, clientIdResult.data, idea);
   if (!source.ok) return source.failure;
@@ -543,6 +607,13 @@ export async function generatePostFromIdea(
 
   if (insertError || !inserted) return GENERIC_FAILURE;
 
+  const markedUsed = await markContentIdeaUsed({
+    clientId: clientIdResult.data,
+    ideaId: idea.id,
+  });
+
+  if (!markedUsed) return GENERIC_FAILURE;
+
   await writeAuditLog({
     clientId: clientIdResult.data,
     userId: user.id,
@@ -556,8 +627,15 @@ export async function generatePostFromIdea(
     },
   });
 
+  await auditIdeaMarkedUsed({
+    clientId: clientIdResult.data,
+    userId: user.id,
+    ideaId: idea.id,
+    postId: inserted.id,
+  });
+
   revalidatePath(`/client/${clientIdResult.data}/ideas`);
   revalidatePath(`/client/${clientIdResult.data}/posts/${inserted.id}/review`);
 
-  return { ok: true, data: { postId: inserted.id } };
+  return { ok: true, data: { postId: inserted.id, alreadyGenerated: false } };
 }

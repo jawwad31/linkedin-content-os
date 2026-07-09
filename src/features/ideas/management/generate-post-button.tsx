@@ -13,7 +13,7 @@ type RequestState =
   | { status: "idle" }
   | { status: "pending" }
   | { status: "error"; message: string }
-  | { status: "success"; postId: string };
+  | { status: "success"; postId: string; alreadyGenerated: boolean };
 
 const IDLE: RequestState = { status: "idle" };
 
@@ -61,7 +61,11 @@ export function GeneratePostButton({
         return;
       }
 
-      setState({ status: "success", postId });
+      setState({
+        status: "success",
+        postId,
+        alreadyGenerated: payload?.data?.alreadyGenerated === true,
+      });
       router.refresh();
     } catch {
       setState({ status: "error", message: GENERIC_ERROR_COPY });
@@ -88,7 +92,9 @@ export function GeneratePostButton({
 
       {state.status === "success" ? (
         <p role="status" className="text-small text-success">
-          Post draft created.{" "}
+          {state.alreadyGenerated
+            ? "Post already generated."
+            : "Post draft created."}{" "}
           <Link
             href={`/client/${clientId}/posts/${state.postId}/review`}
             className="font-medium underline"
