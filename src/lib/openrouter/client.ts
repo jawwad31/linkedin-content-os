@@ -33,6 +33,27 @@ export async function requestOpenRouterCompletion(
   config: OpenRouterConfig,
   messages: OpenRouterChatMessage[],
 ): Promise<OpenRouterCompletionResult> {
+  const firstAttempt = await requestOpenRouterCompletionOnce(config, messages);
+  if (firstAttempt.ok || !isRetryableOpenRouterFailure(firstAttempt.errorType)) {
+    return firstAttempt;
+  }
+
+  return requestOpenRouterCompletionOnce(config, messages);
+}
+
+function isRetryableOpenRouterFailure(errorType: string): boolean {
+  return (
+    errorType === "timeout" ||
+    errorType === "network_error" ||
+    errorType === "http_429" ||
+    /^http_5\d\d$/.test(errorType)
+  );
+}
+
+async function requestOpenRouterCompletionOnce(
+  config: OpenRouterConfig,
+  messages: OpenRouterChatMessage[],
+): Promise<OpenRouterCompletionResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
 
