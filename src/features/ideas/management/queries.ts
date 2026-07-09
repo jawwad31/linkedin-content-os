@@ -24,6 +24,7 @@ export type ContentIdea = {
   proofNotes: string | null;
   founderDirection: string | null;
   status: ContentIdeaStatus;
+  existingPostId: string | null;
   createdAt: string;
 };
 
@@ -107,6 +108,30 @@ export async function getContentIdeas(
 
   if (error) return { ok: false };
 
+  const ideaIds = data.map((row) => row.id);
+  const postIdByIdeaId = new Map<string, string>();
+
+  if (ideaIds.length > 0) {
+    const { data: postRows, error: postsError } = await supabase
+      .from("posts")
+      .select("id, content_idea_id, created_at")
+      .eq("client_id", clientId)
+      .in("content_idea_id", ideaIds)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .returns<
+        Array<{ id: string; content_idea_id: string | null; created_at: string }>
+      >();
+
+    if (postsError) return { ok: false };
+
+    for (const row of postRows) {
+      if (row.content_idea_id && !postIdByIdeaId.has(row.content_idea_id)) {
+        postIdByIdeaId.set(row.content_idea_id, row.id);
+      }
+    }
+  }
+
   return {
     ok: true,
     ideas: data.map((row) => {
@@ -126,6 +151,7 @@ export async function getContentIdeas(
         proofNotes: row.proof_notes,
         founderDirection: row.founder_direction,
         status: row.status,
+        existingPostId: postIdByIdeaId.get(row.id) ?? null,
         createdAt: row.created_at,
       };
     }),

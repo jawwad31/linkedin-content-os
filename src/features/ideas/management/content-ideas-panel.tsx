@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { ClientRole } from "@/features/clients/invitations/schemas";
 
 import { FounderDirectionControls } from "./founder-direction-controls";
+import { GeneratePostButton } from "./generate-post-button";
 import type { ContentIdea, ContentIdeaStatus } from "./queries";
 
 const STATUS_LABELS: Record<ContentIdeaStatus, string> = {
@@ -95,67 +96,79 @@ export function ContentIdeasPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {ideas.map((idea) => (
-        <article
-          key={idea.id}
-          className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4"
-        >
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge variant="accent-purple">{idea.sourceLabel}</Badge>
-                <Badge variant={STATUS_BADGE_VARIANT[idea.status]}>
-                  {STATUS_LABELS[idea.status] ?? idea.status}
-                </Badge>
-                <span className="font-mono text-caption text-muted-foreground">
-                  {formatDate(idea.createdAt)}
-                </span>
+      {ideas.map((idea) => {
+        const canGeneratePost =
+          canManage && idea.status === "ready" && !idea.existingPostId;
+
+        return (
+          <article
+            key={idea.id}
+            className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4"
+          >
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="accent-purple">{idea.sourceLabel}</Badge>
+                  <Badge variant={STATUS_BADGE_VARIANT[idea.status]}>
+                    {STATUS_LABELS[idea.status] ?? idea.status}
+                  </Badge>
+                  {idea.existingPostId ? (
+                    <Badge variant="warning">Post Drafted</Badge>
+                  ) : null}
+                  <span className="font-mono text-caption text-muted-foreground">
+                    {formatDate(idea.createdAt)}
+                  </span>
+                </div>
+                <h2 className="break-words font-heading text-card-title text-near-black">
+                  {idea.angle}
+                </h2>
+                {idea.contentPillar ? (
+                  <p className="mt-1 text-small text-muted-foreground">
+                    Pillar: {idea.contentPillar}
+                  </p>
+                ) : null}
               </div>
-              <h2 className="break-words font-heading text-card-title text-near-black">
-                {idea.angle}
-              </h2>
-              {idea.contentPillar ? (
-                <p className="mt-1 text-small text-muted-foreground">
-                  Pillar: {idea.contentPillar}
-                </p>
+
+              {canGeneratePost ? (
+                <GeneratePostButton clientId={clientId} ideaId={idea.id} />
               ) : null}
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <IdeaField label="Buyer pain" value={idea.buyerPain} />
-            <IdeaField
-              label="Commercial relevance"
-              value={idea.commercialRelevance}
-            />
-            <IdeaField label="Belief shift" value={idea.beliefShift} />
-            <IdeaField label="Angle boundary" value={idea.angleBoundary} />
-            <IdeaField label="Source context" value={idea.sourceContext} />
-            <IdeaField label="Proof notes" value={idea.proofNotes} />
-          </div>
-
-          {idea.sourceTitle ? (
-            <div className="rounded-control border border-border-grey bg-soft-white px-3 py-2">
-              <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                Source title
-              </p>
-              <p className="mt-0.5 break-words text-small text-near-black">
-                {idea.sourceTitle}
-              </p>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <IdeaField label="Buyer pain" value={idea.buyerPain} />
+              <IdeaField
+                label="Commercial relevance"
+                value={idea.commercialRelevance}
+              />
+              <IdeaField label="Belief shift" value={idea.beliefShift} />
+              <IdeaField label="Angle boundary" value={idea.angleBoundary} />
+              <IdeaField label="Source context" value={idea.sourceContext} />
+              <IdeaField label="Proof notes" value={idea.proofNotes} />
             </div>
-          ) : null}
 
-          {canManage ? (
-            <FounderDirectionControls
-              clientId={clientId}
-              ideaId={idea.id}
-              founderDirection={idea.founderDirection}
-            />
-          ) : (
-            <ReadOnlyDirection value={idea.founderDirection} />
-          )}
-        </article>
-      ))}
+            {idea.sourceTitle ? (
+              <div className="rounded-control border border-border-grey bg-soft-white px-3 py-2">
+                <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
+                  Source title
+                </p>
+                <p className="mt-0.5 break-words text-small text-near-black">
+                  {idea.sourceTitle}
+                </p>
+              </div>
+            ) : null}
+
+            {canManage ? (
+              <FounderDirectionControls
+                clientId={clientId}
+                ideaId={idea.id}
+                founderDirection={idea.founderDirection}
+              />
+            ) : (
+              <ReadOnlyDirection value={idea.founderDirection} />
+            )}
+          </article>
+        );
+      })}
     </div>
   );
 }
