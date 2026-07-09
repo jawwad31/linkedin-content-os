@@ -1,59 +1,50 @@
-import { CheckCircle2, Copy } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { PostReviewPanel } from "@/features/posts/review/post-review-panel";
+import { getReviewPosts } from "@/features/posts/review/queries";
+import { getServerUser } from "@/lib/supabase/session";
 
-export default function PublishPage() {
+export default async function PublishPage({
+  params,
+}: {
+  params: Promise<{ client_id: string }>;
+}) {
+  const { client_id: clientId } = await params;
+  const { user } = await getServerUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const role = await getCurrentUserRoleForClient(user.id, clientId);
+  const postsResult = role ? await getReviewPosts(clientId) : null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Publish"
-        description="Approved posts ready to copy and publish history."
+        title="Post Review"
+        description="Review generated LinkedIn drafts before approval. Publishing is not enabled yet."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Approved posts ready to copy</CardTitle>
-          <CardDescription>
-            Copy approved post text and mark it as published once you have
-            posted it on LinkedIn manually.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={Copy}
-            title="No approved posts yet"
-            description="Approved posts will appear here, ready to copy."
-            action={
-              <Button variant="outline" size="sm" disabled>
-                Copy post text — Coming later
-              </Button>
-            }
+      {role && postsResult ? (
+        postsResult.ok ? (
+          <PostReviewPanel
+            clientId={clientId}
+            role={role}
+            posts={postsResult.posts}
           />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Published history</CardTitle>
-          <CardDescription>Posts you have marked as published.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={CheckCircle2}
-            title="Nothing published yet"
-            description="Published posts will appear here."
-          />
-        </CardContent>
-      </Card>
+        ) : (
+          <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+            We could not load post drafts. Please try again.
+          </div>
+        )
+      ) : (
+        <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+          You do not have access to this client.
+        </div>
+      )}
     </div>
   );
 }
