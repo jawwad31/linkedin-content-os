@@ -91,7 +91,7 @@ export async function startResearchRun(
 
   await writeAuditLog({
     clientId,
-    userId: null,
+    userId: triggeredByUserId,
     action: "research_run_started",
     entityType: "research_run",
     entityId: data.id,
@@ -136,7 +136,7 @@ export async function completeResearchRun(
     .from("research_runs")
     .update(updatePayload)
     .eq("id", runId)
-    .select("client_id, lock_key, trigger_type")
+    .select("client_id, triggered_by_user_id, lock_key, trigger_type")
     .single();
 
   if (error || !data) {
@@ -146,7 +146,7 @@ export async function completeResearchRun(
 
   await writeAuditLog({
     clientId: data.client_id,
-    userId: null,
+    userId: data.triggered_by_user_id,
     action: "research_run_completed",
     entityType: "research_run",
     entityId: runId,
@@ -175,7 +175,7 @@ export async function failResearchRun(
       error_message: safeError,
     })
     .eq("id", runId)
-    .select("client_id, lock_key, trigger_type")
+    .select("client_id, triggered_by_user_id, lock_key, trigger_type")
     .single();
 
   if (error || !data) {
@@ -185,7 +185,7 @@ export async function failResearchRun(
 
   await writeAuditLog({
     clientId: data.client_id,
-    userId: null,
+    userId: data.triggered_by_user_id,
     action: "research_run_failed",
     entityType: "research_run",
     entityId: runId,
@@ -225,7 +225,7 @@ export async function withResearchRunGuard<T>(
 
       await writeAuditLog({
         clientId,
-        userId: null,
+        userId: triggeredByUserId,
         action: "research_run_skipped_locked",
         entityType: "research_run",
         metadata: { trigger_type: triggerType, lock_key: lockKey },

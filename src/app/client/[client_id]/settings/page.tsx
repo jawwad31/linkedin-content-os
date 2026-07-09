@@ -15,6 +15,8 @@ import {
   getCurrentUserRoleForClient,
 } from "@/features/clients/invitations/queries";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
+import { OperationalLogsPanel } from "@/features/setup/operational-logs-panel";
+import { getOperationalLogs } from "@/features/setup/operational-logs-queries";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -54,6 +56,10 @@ export default async function SetupPage({
               </CardContent>
             </Card>
           ) : null}
+
+          {role === "owner" ? (
+            <OperationalLogsSection clientId={clientId} />
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -72,4 +78,34 @@ async function TeamAccessList({ clientId }: { clientId: string }) {
   }
 
   return <AccessList clientId={clientId} members={result.members} />;
+}
+
+async function OperationalLogsSection({ clientId }: { clientId: string }) {
+  const result = await getOperationalLogs(clientId);
+
+  if (!result.ok) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity & AI Logs</CardTitle>
+          <CardDescription>
+            Owner-only operational view of recent client activity and safe AI
+            usage metadata.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-small text-danger">
+            We could not load operational logs. Please try again.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <OperationalLogsPanel
+      auditLogs={result.auditLogs}
+      llmLogs={result.llmLogs}
+    />
+  );
 }

@@ -18,9 +18,7 @@ import {
 
 const MAX_ITEMS_PER_RUN = 30;
 const RECENT_CARDS_LIMIT = 20;
-// Feature key kept from the market_signals era so llm_logs history stays
-// filterable as one continuous series across the TrendCard rename.
-const SYNTHESIZER_FEATURE = "research_signal_synthesis";
+const SYNTHESIZER_FEATURE = "trend_card_synthesis";
 const SYNTHESIZER_PROVIDER = "openrouter";
 
 export const NOT_CONFIGURED_ERROR = "AI synthesis is not configured.";
