@@ -189,8 +189,8 @@ export function PostReviewPanel({
       <div className="rounded-card border border-border-grey bg-white p-6">
         <EmptyState
           icon={FileText}
-          title="No post drafts yet"
-          description="Generated post drafts will appear here after you generate posts from Content Ideas."
+          title="No posts waiting for review"
+          description="Generated post drafts will appear here until they are approved, rejected, or archived."
         />
       </div>
     );

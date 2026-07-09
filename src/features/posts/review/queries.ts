@@ -29,6 +29,7 @@ export type ReviewPost = {
   status: ReviewPostStatus;
   editNote: string | null;
   approvedAt: string | null;
+  publishedAt: string | null;
   createdAt: string;
   idea: ReviewPostIdea | null;
 };
@@ -45,6 +46,7 @@ type ReviewPostRow = {
   status: ReviewPostStatus;
   edit_note: string | null;
   approved_at: string | null;
+  published_at: string | null;
   created_at: string;
 };
 
@@ -84,7 +86,7 @@ export async function getReviewPosts(
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, created_at",
+      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -140,6 +142,7 @@ export async function getReviewPosts(
         status: row.status,
         editNote: row.edit_note,
         approvedAt: row.approved_at,
+        publishedAt: row.published_at,
         createdAt: row.created_at,
         idea: row.content_idea_id
           ? (ideaById.get(row.content_idea_id) ?? null)

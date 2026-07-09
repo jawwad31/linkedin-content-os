@@ -60,6 +60,12 @@ const GENERIC_FAILURE = {
   message: "Could not update this post. Please try again.",
 };
 
+const ONLY_APPROVED_CAN_PUBLISH = {
+  ok: false as const,
+  code: "VALIDATION_ERROR",
+  message: "Only approved posts can be marked as published.",
+};
+
 type AuthorizedMutation =
   | { ok: true; userId: string; clientId: string; postId: string }
   | { ok: false; failure: ServiceResult<never> };
@@ -305,6 +311,47 @@ export async function archivePost(
   revalidatePath(
     `/client/${result.auth.clientId}/posts/${result.auth.postId}/review`,
   );
+
+  return { ok: true, data: {} };
+}
+
+export async function markPostPublished(
+  clientId: string,
+  postId: string,
+): Promise<ServiceResult<Record<string, never>>> {
+  const auth = await authorizeMutation(clientId, postId);
+  if (!auth.ok) return auth.failure;
+
+  const post = await getPostStatus(auth.clientId, auth.postId);
+  if (!post) return POST_NOT_AVAILABLE;
+  if (post.status !== "approved") return ONLY_APPROVED_CAN_PUBLISH;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("posts")
+    .update({
+      status: "published",
+      published_at: new Date().toISOString(),
+    })
+    .eq("id", auth.postId)
+    .eq("client_id", auth.clientId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (error || !data) return GENERIC_FAILURE;
+
+  await auditPostStatusChange({
+    clientId: auth.clientId,
+    userId: auth.userId,
+    postId: auth.postId,
+    action: "post_marked_published",
+    previousStatus: post.status,
+    nextStatus: "published",
+  });
+
+  revalidatePath(`/client/${auth.clientId}/publish`);
+  revalidatePath(`/client/${auth.clientId}/posts/${auth.postId}/review`);
 
   return { ok: true, data: {} };
 }
