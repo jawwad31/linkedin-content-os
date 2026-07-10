@@ -6,24 +6,23 @@ import { Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  EFFECTIVE_ROLE_LABELS,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { getNavItems } from "./nav-items";
-
-const ROLE_LABELS: Record<ClientRole, string> = {
-  owner: "Owner",
-  editor: "Editor",
-  viewer: "Viewer",
-};
 
 export function AppHeader({
   clientId,
   clientName,
+  agencyName,
   role,
 }: {
   clientId: string;
   clientName: string;
-  role: ClientRole;
+  agencyName: string | null;
+  role: EffectiveClientRole;
 }) {
   const pathname = usePathname();
   const params = useParams<{ post_id?: string }>();
@@ -31,7 +30,9 @@ export function AppHeader({
   const activeItem = getNavItems(clientId).find(
     (item) => item.href === pathname,
   );
-  const pageTitle = params?.post_id ? "Post Review" : (activeItem?.label ?? "Dashboard");
+  const pageTitle = params?.post_id
+    ? "Post Review"
+    : (activeItem?.label ?? "Dashboard");
 
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white/90 px-6 py-4 backdrop-blur-md lg:px-8">
@@ -48,9 +49,9 @@ export function AppHeader({
             className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange"
           />
           <span className="truncate text-caption font-mono font-medium">
-            {clientName}
+            {agencyName ? `${agencyName} | ${clientName}` : clientName}
           </span>
-          <Badge variant="neutral">{ROLE_LABELS[role]}</Badge>
+          <Badge variant="neutral">{EFFECTIVE_ROLE_LABELS[role]}</Badge>
         </div>
       </div>
 

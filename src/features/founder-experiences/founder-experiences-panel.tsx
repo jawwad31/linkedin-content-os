@@ -1,4 +1,7 @@
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { FounderExperienceCard } from "./founder-experience-card";
 import { FounderExperienceForm } from "./founder-experience-form";
@@ -10,16 +13,17 @@ export function FounderExperiencesPanel({
   experiences,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   experiences: FounderExperience[];
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleMutateClientWorkflow(role);
 
   return (
     <div className="flex flex-col gap-6">
       {!canManage ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Your role is view-only for this client.
+          You do not have permission to update workflow content for this
+          Client Workspace.
         </p>
       ) : null}
 

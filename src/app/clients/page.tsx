@@ -23,8 +23,8 @@ export default async function ClientsPage() {
   return (
     <main className="mx-auto w-full max-w-[1440px] p-6 lg:p-8">
       <PageHeader
-        title="Clients"
-        description="Choose which client to work on."
+        title="Client Workspaces"
+        description="Choose which Client Workspace to work on."
         action={<LogoutButton />}
       />
 
@@ -36,7 +36,7 @@ export default async function ClientsPage() {
         <ClientList clients={clientsResult.clients} />
       ) : (
         <p className="mt-6 text-small text-danger">
-          We could not load your clients. Please try again.
+          We could not load your Client Workspaces. Please try again.
         </p>
       )}
     </main>

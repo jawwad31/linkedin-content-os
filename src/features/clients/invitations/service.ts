@@ -1,8 +1,8 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { canManageClientUsers } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -27,16 +27,10 @@ const GENERIC_FAILURE = {
   message: "Something went wrong. Please try again.",
 };
 
-const NOT_OWNER_FOR_INVITE = {
+const CANNOT_MANAGE_USERS = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "You do not have permission to invite users for this client.",
-};
-
-const NOT_OWNER_FOR_REVOKE = {
-  ok: false as const,
-  code: "FORBIDDEN",
-  message: "You do not have permission to revoke this invitation.",
+  message: "You do not have permission to manage users for this Client Workspace.",
 };
 
 const INVITE_NOT_FOUND = {
@@ -44,30 +38,6 @@ const INVITE_NOT_FOUND = {
   code: "NOT_FOUND",
   message: "This invitation could not be found or has already been used.",
 };
-
-/**
- * Explicit application-level authorization check: does this user have
- * accepted owner access for this client? This is a deliberate check in
- * addition to (not a replacement for) the matching RLS policy — RLS is the
- * backstop, this is the primary gate so intent is readable in the code and
- * doesn't depend on interpreting a Postgres error code.
- */
-async function hasAcceptedOwnerAccess(
-  supabase: SupabaseClient,
-  clientId: string,
-  userId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("client_access")
-    .select("id")
-    .eq("client_id", clientId)
-    .eq("user_id", userId)
-    .eq("role", "owner")
-    .eq("invitation_status", "accepted")
-    .maybeSingle();
-
-  return !error && !!data;
-}
 
 export type CreatedInvitation = {
   id: string;
@@ -91,7 +61,7 @@ export async function createInvitation(
     return {
       ok: false,
       code: "VALIDATION_ERROR",
-      message: "This client could not be found.",
+      message: "This Client Workspace could not be found.",
     };
   }
 
@@ -104,14 +74,10 @@ export async function createInvitation(
     };
   }
 
-  const supabase = await createClient();
+  const canManage = await canManageClientUsers(user.id, clientIdResult.data);
+  if (!canManage) return CANNOT_MANAGE_USERS;
 
-  const isOwner = await hasAcceptedOwnerAccess(
-    supabase,
-    clientIdResult.data,
-    user.id,
-  );
-  if (!isOwner) return NOT_OWNER_FOR_INVITE;
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("client_access")
@@ -209,7 +175,6 @@ export async function acceptInvitation(
     .maybeSingle();
 
   if (error) return GENERIC_FAILURE;
-
   if (!data) return INVITE_NOT_FOUND;
 
   await writeAuditLog({
@@ -239,7 +204,7 @@ export async function revokeInvitation(
   if (!user) return AUTH_REQUIRED;
 
   const inviteIdResult = uuidSchema.safeParse(inviteId);
-  if (!inviteIdResult.success) return NOT_OWNER_FOR_REVOKE;
+  if (!inviteIdResult.success) return CANNOT_MANAGE_USERS;
 
   const supabase = await createClient();
 
@@ -249,14 +214,10 @@ export async function revokeInvitation(
     .eq("id", inviteIdResult.data)
     .maybeSingle();
 
-  if (fetchError || !inviteRow) return NOT_OWNER_FOR_REVOKE;
+  if (fetchError || !inviteRow) return CANNOT_MANAGE_USERS;
 
-  const isOwner = await hasAcceptedOwnerAccess(
-    supabase,
-    inviteRow.client_id,
-    user.id,
-  );
-  if (!isOwner) return NOT_OWNER_FOR_REVOKE;
+  const canManage = await canManageClientUsers(user.id, inviteRow.client_id);
+  if (!canManage) return CANNOT_MANAGE_USERS;
 
   const { data, error } = await supabase
     .from("client_access")
@@ -270,8 +231,7 @@ export async function revokeInvitation(
     .maybeSingle();
 
   if (error) return GENERIC_FAILURE;
-
-  if (!data) return NOT_OWNER_FOR_REVOKE;
+  if (!data) return CANNOT_MANAGE_USERS;
 
   await writeAuditLog({
     clientId: data.client_id,

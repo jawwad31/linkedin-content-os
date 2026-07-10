@@ -22,6 +22,7 @@ import { ResearchRunsPanel } from "@/features/research/research-runs/research-ru
 import { RunResearchAgentButton } from "@/features/research/run-research-agent/run-research-agent-button";
 import { getRssSources } from "@/features/research/rss-sources/queries";
 import { RssSourcesPanel } from "@/features/research/rss-sources/rss-sources-panel";
+import { canRoleRunResearchAgent } from "@/lib/access/roles";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function ResearchPage({
@@ -56,7 +57,7 @@ export default async function ResearchPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Research"
-        description="Collect and process market signals for this client."
+        description="Collect and process market signals for this Client Workspace."
       />
 
       <Card>
@@ -68,11 +69,11 @@ export default async function ResearchPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {role === "owner" || role === "editor" ? (
+          {role && canRoleRunResearchAgent(role) ? (
             <RunResearchAgentButton clientId={clientId} />
-          ) : role === "viewer" ? (
+          ) : role ? (
             <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-              Your role is view-only for this client.
+              Client Users cannot run the Research Agent.
             </p>
           ) : null}
         </CardContent>
@@ -83,7 +84,7 @@ export default async function ResearchPage({
           <CardHeader>
             <CardTitle>RSS Sources</CardTitle>
             <CardDescription>
-              Feeds this client&apos;s research pulls from.
+              Feeds this Client Workspace&apos;s research pulls from.
             </CardDescription>
           </CardHeader>
           <CardContent>

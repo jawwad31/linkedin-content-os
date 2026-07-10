@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
 import {
   runContentAgent,
   type ContentAgentBusinessContext,
@@ -126,10 +126,10 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const WORKFLOW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to generate posts for this Client Workspace.",
 };
 
 const IDEA_NOT_AVAILABLE = {
@@ -521,9 +521,11 @@ export async function generatePostFromIdea(
   const parsed = generatePostRequestSchema.safeParse(input ?? {});
   if (!parsed.success) return INVALID_INPUT;
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return NO_ACCESS;
-  if (role !== "owner" && role !== "editor") return VIEWER_FORBIDDEN;
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return NO_ACCESS;
+
+  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  if (!canMutate) return WORKFLOW_FORBIDDEN;
 
   const admin = createAdminClient();
   const [businessContext, idea, existingPostId] = await Promise.all([

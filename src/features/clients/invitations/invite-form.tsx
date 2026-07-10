@@ -37,12 +37,11 @@ export function InviteForm({ clientId }: { clientId: string }) {
         <select
           id="role"
           name="role"
-          defaultValue="editor"
+          defaultValue="client_user"
           className="h-10 w-full rounded-control border border-border-grey bg-white px-3 text-body text-near-black outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50"
         >
-          <option value="owner">Owner</option>
-          <option value="editor">Editor</option>
-          <option value="viewer">Viewer</option>
+          <option value="client_admin">Client Admin</option>
+          <option value="client_user">Client User</option>
         </select>
       </div>
 

@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -36,10 +36,10 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const WORKFLOW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to update workflow content for this Client Workspace.",
 };
 
 const NOT_FOUND = {
@@ -61,8 +61,8 @@ type MarkResult = { id: string; status: CollectedArticleStatus };
 /**
  * Marks a collected article relevant or irrelevant. Application-level auth
  * is the primary gate here (not RLS): authenticated user, accepted client
- * access, owner/editor role. RLS's market_signal_items_update_owner_editor
- * policy (Feature 04, not tightened for this table) is the backstop, so the
+ * access, and workflow contributor permission. RLS's market signal item
+ * policy is the backstop, so the
  * regular session-bound client is used, not the admin client.
  *
  * "used" articles (already consumed by a synthesized TrendCard) are
@@ -80,9 +80,11 @@ async function markCollectedArticleStatus(
   const itemIdResult = uuidSchema.safeParse(itemId);
   if (!clientIdResult.success || !itemIdResult.success) return INVALID_INPUT;
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return NO_ACCESS;
-  if (role !== "owner" && role !== "editor") return VIEWER_FORBIDDEN;
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return NO_ACCESS;
+
+  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  if (!canMutate) return WORKFLOW_FORBIDDEN;
 
   const supabase = await createClient();
 

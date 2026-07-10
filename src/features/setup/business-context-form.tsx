@@ -5,7 +5,10 @@ import { type ReactNode, useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleManageClientSetup,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 import { cn } from "@/lib/utils";
 
 import { saveBusinessContextAction, type SaveBusinessContextState } from "./actions";
@@ -57,7 +60,7 @@ export function BusinessContextForm({
   context,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   context: ClientBusinessContext;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
@@ -66,13 +69,13 @@ export function BusinessContextForm({
     initialState,
   );
 
-  const isReadOnly = role === "viewer";
+  const isReadOnly = !canRoleManageClientSetup(role);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {isReadOnly ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Your role is view-only for this client.
+          Client Users cannot edit Setup or business context.
         </p>
       ) : null}
 
@@ -98,7 +101,7 @@ export function BusinessContextForm({
       </p>
 
       <div hidden={activeTab !== "profile"} className="flex flex-col gap-4">
-        <Field label="Client / business name" htmlFor="name">
+        <Field label="Client Workspace / business name" htmlFor="name">
           <Input
             id="name"
             name="name"
@@ -289,7 +292,7 @@ export function BusinessContextForm({
         <Field
           label="Publishing preferences"
           htmlFor="publishingPreferencesNotes"
-          helperText="Notes on cadence, tone, or formatting preferences for this client."
+          helperText="Notes on cadence, tone, or formatting preferences for this Client Workspace."
         >
           <Textarea
             id="publishingPreferencesNotes"

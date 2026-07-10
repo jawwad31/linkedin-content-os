@@ -13,14 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { EFFECTIVE_ROLE_LABELS } from "@/lib/access/roles";
 
 import type { AccessibleClient } from "./queries";
-
-const ROLE_LABELS: Record<AccessibleClient["role"], string> = {
-  owner: "Owner",
-  editor: "Editor",
-  viewer: "Viewer",
-};
 
 function formatUpdatedAt(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -36,10 +31,12 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
   if (clients.length === 0) {
     return (
       <div className="mt-6 rounded-card border border-border-grey bg-white p-8 text-center">
-        <p className="text-body font-medium">You have no clients yet.</p>
+        <p className="text-body font-medium">
+          You have no Client Workspaces yet.
+        </p>
         <p className="mt-1 text-small text-muted-foreground">
-          Ask an owner to invite you, or check back once a client has been
-          set up for you.
+          Ask an admin to invite you, or check back once a Client Workspace has
+          been set up for you.
         </p>
       </div>
     );
@@ -48,7 +45,7 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
   const query = search.trim().toLowerCase();
   const filteredClients = query
     ? clients.filter((client) =>
-        [client.name, client.founderName, client.industry]
+        [client.name, client.agencyName, client.founderName, client.industry]
           .filter(Boolean)
           .some((value) => value!.toLowerCase().includes(query)),
       )
@@ -65,15 +62,17 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search clients..."
-          aria-label="Search clients"
+          placeholder="Search workspaces..."
+          aria-label="Search Client Workspaces"
           className="rounded-full pl-9"
         />
       </div>
 
       {filteredClients.length === 0 ? (
         <div className="rounded-card border border-border-grey bg-white p-8 text-center">
-          <p className="text-body font-medium">No clients match your search.</p>
+          <p className="text-body font-medium">
+            No Client Workspaces match your search.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -92,14 +91,16 @@ export function ClientList({ clients }: { clients: AccessibleClient[] }) {
                     >
                       <Building2 className="h-5 w-5" />
                     </span>
-                    <Badge variant="neutral">{ROLE_LABELS[client.role]}</Badge>
+                    <Badge variant="neutral">
+                      {EFFECTIVE_ROLE_LABELS[client.role]}
+                    </Badge>
                   </div>
                   <CardTitle className="mt-1">{client.name}</CardTitle>
                   <CardDescription>
-                    {client.founderName || client.industry
-                      ? [client.founderName, client.industry]
+                    {client.agencyName || client.founderName || client.industry
+                      ? [client.agencyName, client.founderName, client.industry]
                           .filter(Boolean)
-                          .join(" · ")
+                          .join(" | ")
                       : "No business details yet"}
                   </CardDescription>
                 </CardHeader>

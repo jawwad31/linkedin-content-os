@@ -3,7 +3,10 @@ import Link from "next/link";
 
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { CollectedArticleActions } from "./collected-article-actions";
 import type {
@@ -90,12 +93,12 @@ export function CollectedArticlesPanel({
   counts,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   articles: CollectedArticle[];
   activeStatus: CollectedArticleStatusFilter;
   counts: CollectedArticleCounts | null;
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleMutateClientWorkflow(role);
 
   if (articles.length === 0 && activeStatus === "all") {
     return (

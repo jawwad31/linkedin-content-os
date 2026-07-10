@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const clientRoleSchema = z.enum(["owner", "editor", "viewer"]);
+export const clientRoleSchema = z.enum(["client_admin", "client_user"]);
 export type ClientRole = z.infer<typeof clientRoleSchema>;
 
 export const createInvitationSchema = z.object({

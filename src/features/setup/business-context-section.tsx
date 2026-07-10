@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { BusinessContextForm } from "./business-context-form";
 import { getClientBusinessContext } from "./queries";
@@ -15,7 +15,7 @@ export async function BusinessContextSection({
   role,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
 }) {
   const result = await getClientBusinessContext(clientId);
 
@@ -25,7 +25,7 @@ export async function BusinessContextSection({
         <CardTitle>Business Context</CardTitle>
         <CardDescription>
           Always-on context used across research, ideas, and post drafts for
-          this client.
+          this Client Workspace.
         </CardDescription>
       </CardHeader>
       <CardContent>

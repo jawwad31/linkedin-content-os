@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canManageResearchSources } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -27,7 +27,8 @@ const SAVE_ERROR_COPY =
   "Could not save this RSS source. Check the fields and try again.";
 const TOGGLE_ERROR_COPY = "Could not update this RSS source. Try again.";
 const ARCHIVE_ERROR_COPY = "Could not archive this RSS source. Try again.";
-const VIEWER_ERROR_COPY = "Your role is view-only for this client.";
+const RSS_FORBIDDEN_COPY =
+  "You do not have permission to manage RSS sources for this Client Workspace.";
 
 const uuidSchema = z.string().uuid();
 
@@ -35,17 +36,16 @@ type RssSourceColumnValues = Record<string, unknown>;
 
 /**
  * Explicit application-level role gate — the primary check, not RLS.
- * RLS's rss_sources_insert_owner_editor / rss_sources_update_owner_editor
- * policies are the backstop.
+ * RLS's workspace-admin RSS source policies are the backstop.
  */
-async function verifyOwnerEditor(
+async function verifyResearchSourceManager(
   clientId: string,
 ): Promise<{ ok: true; userId: string } | { ok: false }> {
   const { user } = await getServerUser();
   if (!user) return { ok: false };
 
-  const role = await getCurrentUserRoleForClient(user.id, clientId);
-  if (role !== "owner" && role !== "editor") return { ok: false };
+  const canManage = await canManageResearchSources(user.id, clientId);
+  if (!canManage) return { ok: false };
 
   return { ok: true, userId: user.id };
 }
@@ -74,9 +74,9 @@ export async function createRssSourceAction(
     return { error: parsed.error.issues[0]?.message ?? SAVE_ERROR_COPY, success: null };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyResearchSourceManager(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY, success: null };
+    return { error: RSS_FORBIDDEN_COPY, success: null };
   }
 
   const supabase = await createClient();
@@ -125,9 +125,9 @@ export async function updateRssSourceAction(
     return { error: parsed.error.issues[0]?.message ?? SAVE_ERROR_COPY, success: null };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyResearchSourceManager(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY, success: null };
+    return { error: RSS_FORBIDDEN_COPY, success: null };
   }
 
   const supabase = await createClient();
@@ -195,9 +195,9 @@ export async function toggleRssSourceActiveAction(
     return { error: TOGGLE_ERROR_COPY };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyResearchSourceManager(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY };
+    return { error: RSS_FORBIDDEN_COPY };
   }
 
   const supabase = await createClient();
@@ -255,9 +255,9 @@ export async function archiveRssSourceAction(
     return { error: ARCHIVE_ERROR_COPY };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyResearchSourceManager(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY };
+    return { error: RSS_FORBIDDEN_COPY };
   }
 
   const supabase = await createClient();

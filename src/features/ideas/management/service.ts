@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -34,10 +34,10 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const WORKFLOW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to update workflow content for this Client Workspace.",
 };
 
 const IDEA_NOT_AVAILABLE = {
@@ -75,10 +75,12 @@ async function authorizeMutation(
     return { ok: false, failure: INVALID_INPUT };
   }
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return { ok: false, failure: NO_ACCESS };
-  if (role !== "owner" && role !== "editor") {
-    return { ok: false, failure: VIEWER_FORBIDDEN };
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return { ok: false, failure: NO_ACCESS };
+
+  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  if (!canMutate) {
+    return { ok: false, failure: WORKFLOW_FORBIDDEN };
   }
 
   return {

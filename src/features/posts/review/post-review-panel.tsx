@@ -2,7 +2,10 @@ import { FileText } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleManageWorkflowReview,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { PostReviewActions } from "./post-review-actions";
 import type { ReviewPost, ReviewPostStatus } from "./queries";
@@ -115,10 +118,10 @@ function PostCard({
   post,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   post: ReviewPost;
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleManageWorkflowReview(role);
 
   return (
     <article className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
@@ -181,7 +184,7 @@ export function PostReviewPanel({
   posts,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   posts: ReviewPost[];
 }) {
   if (posts.length === 0) {
@@ -198,9 +201,10 @@ export function PostReviewPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {role === "viewer" ? (
+      {!canRoleManageWorkflowReview(role) ? (
         <div className="rounded-control border border-border-grey bg-white px-4 py-3 text-small text-muted-foreground">
-          Your role is view-only for this client.
+          Client Users can view drafts but cannot approve, reject, archive, or
+          publish posts.
         </div>
       ) : null}
 

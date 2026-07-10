@@ -9,7 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import {
   archiveFounderExperienceAction,
@@ -47,7 +50,7 @@ export function FounderExperienceCard({
   experience,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   experience: FounderExperience;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-archive">(
@@ -58,7 +61,7 @@ export function FounderExperienceCard({
     archiveInitialState,
   );
 
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleMutateClientWorkflow(role);
 
   if (mode === "edit") {
     return (

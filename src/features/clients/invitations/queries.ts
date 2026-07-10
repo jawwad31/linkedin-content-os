@@ -1,32 +1,11 @@
 import "server-only";
 
+import { getCurrentUserRoleForClient } from "@/lib/access/client-access";
 import { createClient } from "@/lib/supabase/server";
 
 import type { ClientRole } from "./schemas";
 
-/**
- * The current user's role for one client, or null if they have no
- * accepted access. Always scoped by both client_id and user_id together —
- * never by client_id alone.
- */
-export async function getCurrentUserRoleForClient(
-  userId: string,
-  clientId: string,
-): Promise<ClientRole | null> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("client_access")
-    .select("role")
-    .eq("client_id", clientId)
-    .eq("user_id", userId)
-    .eq("invitation_status", "accepted")
-    .maybeSingle<{ role: ClientRole }>();
-
-  if (error || !data) return null;
-
-  return data.role;
-}
+export { getCurrentUserRoleForClient };
 
 export type ClientAccessMember = {
   id: string;
@@ -41,9 +20,9 @@ export type ClientAccessListResult =
   | { ok: false };
 
 /**
- * All non-revoked access rows for one client (pending + accepted), for the
- * owner-only "Team Access" section. Explicitly scoped by client_id; RLS
- * additionally requires the caller to be an accepted owner of that client.
+ * All non-revoked direct Client Workspace access rows for one workspace.
+ * Agency admins have implicit access through agency_members and are not
+ * duplicated into this list.
  */
 export async function getClientAccessList(
   clientId: string,
@@ -81,11 +60,6 @@ export type PendingInvitationsResult =
   | { ok: true; invitations: PendingInvitation[] }
   | { ok: false };
 
-/**
- * Pending, unclaimed invitations for the current session's own verified
- * email. Relies entirely on RLS (client_access_select_pending_by_email) to
- * scope the result — there is no client-supplied identifier here at all.
- */
 export async function getPendingInvitationsForCurrentUser(): Promise<PendingInvitationsResult> {
   const supabase = await createClient();
 

@@ -1,14 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CLIENT_ROLE_LABELS } from "@/lib/access/roles";
 
 import { revokeInvitationAction } from "./actions";
 import type { ClientAccessMember } from "./queries";
-
-const ROLE_LABELS: Record<ClientAccessMember["role"], string> = {
-  owner: "Owner",
-  editor: "Editor",
-  viewer: "Viewer",
-};
 
 const STATUS_VARIANT: Record<
   ClientAccessMember["invitationStatus"],
@@ -50,7 +45,7 @@ export function AccessList({
               {member.invitedEmail ?? "Unknown email"}
             </span>
             <div className="flex items-center gap-2">
-              <Badge variant="neutral">{ROLE_LABELS[member.role]}</Badge>
+              <Badge variant="neutral">{CLIENT_ROLE_LABELS[member.role]}</Badge>
               <Badge variant={STATUS_VARIANT[member.invitationStatus]}>
                 {STATUS_LABELS[member.invitationStatus]}
               </Badge>

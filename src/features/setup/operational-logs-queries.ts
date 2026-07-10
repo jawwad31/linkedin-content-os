@@ -67,9 +67,9 @@ function toMetadata(value: unknown): Record<string, unknown> {
 }
 
 /**
- * Recent operational logs for one client. Callers must already have enforced
- * owner-only visibility; this query is still scoped by client_id and remains
- * subject to RLS for accepted client access.
+ * Recent operational logs for one Client Workspace. Callers must already have
+ * enforced agency-admin visibility; this query is still scoped by client_id
+ * and remains subject to RLS.
  */
 export async function getOperationalLogs(
   clientId: string,

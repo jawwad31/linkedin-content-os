@@ -2,7 +2,11 @@ import { TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleManageWorkflowReview,
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { TrendCardReviewControls } from "./trend-card-review-controls";
 import type { TrendCard } from "./queries";
@@ -66,10 +70,11 @@ export function TrendCardsPanel({
   cards,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   cards: TrendCard[];
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canMutateWorkflow = canRoleMutateClientWorkflow(role);
+  const canManageReview = canRoleManageWorkflowReview(role);
 
   if (cards.length === 0) {
     return (
@@ -142,13 +147,14 @@ export function TrendCardsPanel({
                 </details>
               ) : null}
 
-              {canManage ? (
+              {canMutateWorkflow ? (
                 <TrendCardReviewControls
                   clientId={clientId}
                   cardId={card.id}
                   founderTake={card.founderTake}
                   approvedForIdeas={card.approvedForIdeas}
                   reactionCount={card.reactionCount}
+                  canManageReview={canManageReview}
                 />
               ) : (
                 <CardSection label="Founder take" text={card.founderTake} />

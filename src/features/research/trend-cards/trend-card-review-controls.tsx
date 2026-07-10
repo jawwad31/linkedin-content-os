@@ -29,12 +29,14 @@ export function TrendCardReviewControls({
   founderTake,
   approvedForIdeas,
   reactionCount,
+  canManageReview,
 }: {
   clientId: string;
   cardId: string;
   founderTake: string | null;
   approvedForIdeas: boolean;
   reactionCount: number;
+  canManageReview: boolean;
 }) {
   const router = useRouter();
 
@@ -266,7 +268,7 @@ export function TrendCardReviewControls({
 
         {approvedForIdeas ? (
           <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
-        ) : (
+        ) : canManageReview ? (
           <Button
             type="button"
             variant="accent-purple"
@@ -276,7 +278,7 @@ export function TrendCardReviewControls({
           >
             {isApproving ? "Approving..." : "Approve for Ideas"}
           </Button>
-        )}
+        ) : null}
 
         <Button
           type="button"
@@ -287,7 +289,7 @@ export function TrendCardReviewControls({
           React
         </Button>
 
-        {canArchive ? (
+        {canManageReview && canArchive ? (
           <Button
             type="button"
             variant="ghost"

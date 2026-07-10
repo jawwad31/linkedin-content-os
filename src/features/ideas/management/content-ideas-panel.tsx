@@ -2,7 +2,10 @@ import { Lightbulb } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { FounderDirectionControls } from "./founder-direction-controls";
 import { GeneratePostButton } from "./generate-post-button";
@@ -79,10 +82,10 @@ export function ContentIdeasPanel({
   ideas,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   ideas: ContentIdea[];
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleMutateClientWorkflow(role);
 
   if (ideas.length === 0) {
     return (

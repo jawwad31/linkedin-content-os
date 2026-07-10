@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canMutateClientWorkflow } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -27,7 +27,8 @@ const SAVE_ERROR_COPY =
   "Could not save this founder experience. Check the fields and try again.";
 const ARCHIVE_ERROR_COPY =
   "Could not archive this founder experience. Try again.";
-const VIEWER_ERROR_COPY = "Your role is view-only for this client.";
+const ACCESS_ERROR_COPY =
+  "You do not have permission to update workflow content for this Client Workspace.";
 
 const uuidSchema = z.string().uuid();
 
@@ -35,17 +36,16 @@ type FounderExperienceColumnValues = Record<string, unknown>;
 
 /**
  * Explicit application-level role gate — the primary check, not RLS.
- * RLS's founder_experiences_insert_owner_editor /
- * founder_experiences_update_owner_editor policies are the backstop.
+ * RLS's workflow-contributor founder_experiences policies are the backstop.
  */
-async function verifyOwnerEditor(
+async function verifyWorkflowContributor(
   clientId: string,
 ): Promise<{ ok: true; userId: string } | { ok: false }> {
   const { user } = await getServerUser();
   if (!user) return { ok: false };
 
-  const role = await getCurrentUserRoleForClient(user.id, clientId);
-  if (role !== "owner" && role !== "editor") return { ok: false };
+  const canMutate = await canMutateClientWorkflow(user.id, clientId);
+  if (!canMutate) return { ok: false };
 
   return { ok: true, userId: user.id };
 }
@@ -75,9 +75,9 @@ export async function createFounderExperienceAction(
     return { error: SAVE_ERROR_COPY, success: null };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyWorkflowContributor(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY, success: null };
+    return { error: ACCESS_ERROR_COPY, success: null };
   }
 
   const supabase = await createClient();
@@ -126,9 +126,9 @@ export async function updateFounderExperienceAction(
     return { error: SAVE_ERROR_COPY, success: null };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyWorkflowContributor(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY, success: null };
+    return { error: ACCESS_ERROR_COPY, success: null };
   }
 
   const supabase = await createClient();
@@ -196,9 +196,9 @@ export async function archiveFounderExperienceAction(
     return { error: ARCHIVE_ERROR_COPY };
   }
 
-  const auth = await verifyOwnerEditor(clientIdResult.data);
+  const auth = await verifyWorkflowContributor(clientIdResult.data);
   if (!auth.ok) {
-    return { error: VIEWER_ERROR_COPY };
+    return { error: ACCESS_ERROR_COPY };
   }
 
   const supabase = await createClient();

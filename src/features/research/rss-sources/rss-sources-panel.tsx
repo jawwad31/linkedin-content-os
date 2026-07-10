@@ -1,7 +1,10 @@
 import { Rss } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleManageResearchSources,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { RssSourceCard } from "./rss-source-card";
 import { RssSourceForm } from "./rss-source-form";
@@ -13,16 +16,16 @@ export function RssSourcesPanel({
   sources,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   sources: RssSource[];
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleManageResearchSources(role);
 
   return (
     <div className="flex flex-col gap-4">
       {!canManage ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Your role is view-only for this client.
+          Client Users cannot manage RSS sources.
         </p>
       ) : null}
 

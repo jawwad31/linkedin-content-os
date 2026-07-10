@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canManageClientSetup } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -21,7 +21,8 @@ export type SaveBusinessContextState = {
 
 const SAVE_ERROR_COPY =
   "Could not save business context. Check the fields and try again.";
-const VIEWER_ERROR_COPY = "Your role is view-only for this client.";
+const SETUP_FORBIDDEN_COPY =
+  "You do not have permission to edit Setup for this Client Workspace.";
 
 const uuidSchema = z.string().uuid();
 
@@ -65,11 +66,9 @@ export async function saveBusinessContextAction(
     return { error: SAVE_ERROR_COPY, success: null };
   }
 
-  // Explicit application-level role gate — the primary check, not RLS.
-  // RLS's clients_update_owner_editor policy is the backstop.
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (role !== "owner" && role !== "editor") {
-    return { error: VIEWER_ERROR_COPY, success: null };
+  const canManage = await canManageClientSetup(user.id, clientIdResult.data);
+  if (!canManage) {
+    return { error: SETUP_FORBIDDEN_COPY, success: null };
   }
 
   const supabase = await createClient();

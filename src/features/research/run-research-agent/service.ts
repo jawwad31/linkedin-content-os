@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canAccessClient, canRunResearchAgent } from "@/lib/access/client-access";
 import {
   NOT_CONFIGURED_ERROR as SYNTHESIS_NOT_CONFIGURED_ERROR,
   synthesizeTrendCardsForClient,
@@ -108,10 +108,10 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const RESEARCH_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to run research for this Client Workspace.",
 };
 
 const RUN_IN_PROGRESS = {
@@ -135,7 +135,7 @@ const GENERIC_FAILURE = {
  * implemented yet.
  *
  * Application-level auth is the primary gate here (not RLS): authenticated
- * user, accepted client access, owner/editor role. RLS's
+ * user, Client Workspace access, and research-run permission. RLS's
  * research_runs_select_accepted_access policy plus the tightened
  * insert/update restrictions are the backstop, not the primary check.
  */
@@ -148,9 +148,11 @@ export async function runResearchAgentManually(
   const clientIdResult = uuidSchema.safeParse(clientId);
   if (!clientIdResult.success) return INVALID_CLIENT;
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return NO_ACCESS;
-  if (role !== "owner" && role !== "editor") return VIEWER_FORBIDDEN;
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return NO_ACCESS;
+
+  const canRun = await canRunResearchAgent(user.id, clientIdResult.data);
+  if (!canRun) return RESEARCH_FORBIDDEN;
 
   const guardResult = await withResearchRunGuard(
     clientIdResult.data,

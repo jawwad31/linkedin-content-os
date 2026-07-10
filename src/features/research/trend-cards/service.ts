@@ -3,7 +3,11 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import {
+  canAccessClient,
+  canManageWorkflowReview,
+  canMutateClientWorkflow,
+} from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -37,10 +41,16 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const WORKFLOW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to update workflow content for this Client Workspace.",
+};
+
+const REVIEW_FORBIDDEN = {
+  ok: false as const,
+  code: "FORBIDDEN",
+  message: "You do not have permission to approve or archive TrendCards.",
 };
 
 const NOT_FOUND = {
@@ -68,7 +78,7 @@ type AuthorizedMutation =
 
 /**
  * Application-level auth is the primary gate here (not RLS): authenticated
- * user, accepted client access, owner/editor role.
+ * user, Client Workspace access, and the requested permission category.
  *
  * trend_cards (renamed from market_signals) kept the tightened RLS posture
  * from the Feature 18 security correction: no insert/update policies for
@@ -76,17 +86,29 @@ type AuthorizedMutation =
  * createAdminClient(), with this check standing in for the RLS backstop
  * that intentionally does not exist for writes on that table.
  */
-async function authorizeMutation(clientId: string): Promise<AuthorizedMutation> {
+async function authorizeMutation(
+  clientId: string,
+  permission: "workflow" | "review",
+): Promise<AuthorizedMutation> {
   const { user } = await getServerUser();
   if (!user) return { ok: false, failure: AUTH_REQUIRED };
 
   const clientIdResult = uuidSchema.safeParse(clientId);
   if (!clientIdResult.success) return { ok: false, failure: INVALID_INPUT };
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return { ok: false, failure: NO_ACCESS };
-  if (role !== "owner" && role !== "editor") {
-    return { ok: false, failure: VIEWER_FORBIDDEN };
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return { ok: false, failure: NO_ACCESS };
+
+  const isAllowed =
+    permission === "workflow"
+      ? await canMutateClientWorkflow(user.id, clientIdResult.data)
+      : await canManageWorkflowReview(user.id, clientIdResult.data);
+
+  if (!isAllowed) {
+    return {
+      ok: false,
+      failure: permission === "workflow" ? WORKFLOW_FORBIDDEN : REVIEW_FORBIDDEN,
+    };
   }
 
   return { ok: true, userId: user.id, clientId: clientIdResult.data };
@@ -105,7 +127,7 @@ export async function saveFounderTake(
   });
   if (!parsed.success) return INVALID_INPUT;
 
-  const auth = await authorizeMutation(clientId);
+  const auth = await authorizeMutation(clientId, "workflow");
   if (!auth.ok) return auth.failure;
 
   const admin = createAdminClient();
@@ -154,7 +176,7 @@ export async function approveTrendCardForIdeas(
   const cardIdResult = uuidSchema.safeParse(cardId);
   if (!cardIdResult.success) return INVALID_INPUT;
 
-  const auth = await authorizeMutation(clientId);
+  const auth = await authorizeMutation(clientId, "review");
   if (!auth.ok) return auth.failure;
 
   const admin = createAdminClient();
@@ -212,7 +234,7 @@ export async function archiveTrendCard(
   const cardIdResult = uuidSchema.safeParse(cardId);
   if (!cardIdResult.success) return INVALID_INPUT;
 
-  const auth = await authorizeMutation(clientId);
+  const auth = await authorizeMutation(clientId, "review");
   if (!auth.ok) return auth.failure;
 
   const admin = createAdminClient();
@@ -276,8 +298,8 @@ export async function archiveTrendCard(
  * Records a founder's reaction to one TrendCard as a founder_experiences
  * row (entry_type='trend_reaction', linked via source_trend_card_id). The
  * insert uses the session-bound client — founder_experiences kept its
- * owner/editor insert RLS policy, so RLS is the backstop here just like the
- * Founder Experiences feature itself.
+ * workflow-contributor insert RLS policy, so RLS is the backstop here just
+ * like the Founder Experiences feature itself.
  */
 export async function addTrendReaction(
   clientId: string,
@@ -296,7 +318,7 @@ export async function addTrendReaction(
     };
   }
 
-  const auth = await authorizeMutation(clientId);
+  const auth = await authorizeMutation(clientId, "workflow");
   if (!auth.ok) return auth.failure;
 
   const supabase = await createClient();

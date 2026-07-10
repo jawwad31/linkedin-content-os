@@ -5,7 +5,10 @@ import { useActionState, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleManageResearchSources,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import {
   archiveRssSourceAction,
@@ -35,7 +38,7 @@ export function RssSourceCard({
   source,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   source: RssSource;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-archive">("view");
@@ -48,7 +51,7 @@ export function RssSourceCard({
     toggleInitialState,
   );
 
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleManageResearchSources(role);
 
   if (mode === "edit") {
     return (

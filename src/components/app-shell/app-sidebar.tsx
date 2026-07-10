@@ -2,24 +2,23 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/features/auth/logout-button";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  EFFECTIVE_ROLE_LABELS,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { AppNav } from "./app-nav";
-
-const ROLE_LABELS: Record<ClientRole, string> = {
-  owner: "Owner",
-  editor: "Editor",
-  viewer: "Viewer",
-};
 
 export function AppSidebar({
   clientId,
   clientName,
+  agencyName,
   role,
 }: {
   clientId: string;
   clientName: string;
-  role: ClientRole;
+  agencyName: string | null;
+  role: EffectiveClientRole;
 }) {
   return (
     <aside className="flex flex-col gap-4 bg-near-black p-4 text-soft-white lg:h-screen lg:w-64 lg:shrink-0 lg:sticky lg:top-0 lg:gap-6 lg:p-6">
@@ -38,14 +37,22 @@ export function AppSidebar({
       <div className="flex flex-col gap-2 rounded-control border border-white/10 bg-white/5 p-3.5">
         <div className="flex items-center justify-between">
           <span className="text-caption font-mono uppercase tracking-wide text-soft-white/50">
-            Current client
+            Current workspace
           </span>
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-success"
+          />
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-body font-medium">{clientName}</span>
-          <Badge variant="neutral">{ROLE_LABELS[role]}</Badge>
+          <Badge variant="neutral">{EFFECTIVE_ROLE_LABELS[role]}</Badge>
         </div>
+        {agencyName ? (
+          <p className="truncate text-caption text-soft-white/50">
+            Agency: {agencyName}
+          </p>
+        ) : null}
         <Link
           href="/clients"
           className="mt-1 rounded-full border border-white/10 px-3 py-1.5 text-center text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black"

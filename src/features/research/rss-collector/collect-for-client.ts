@@ -19,7 +19,7 @@ export type CollectForClientSummary = {
  * Collects every active, non-archived RSS source for one client. Uses the
  * service-role client: this has no end-user session (it's called by a
  * worker or a trusted server route, not directly by browser code), so RLS's
- * owner/editor write policies don't apply — this function is the trusted
+ * authenticated write policies do not apply; this function is the trusted
  * caller, scoped to one client_id throughout.
  */
 export async function collectForClient(

@@ -2,8 +2,11 @@ import { CheckCircle2, ClipboardList } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
 import type { ReviewPost } from "@/features/posts/review/queries";
+import {
+  canRoleManageWorkflowReview,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 
 import { PublishPostActions } from "./publish-post-actions";
 
@@ -99,11 +102,11 @@ function PublishPostCard({
   variant,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   post: ReviewPost;
   variant: "ready" | "published";
 }) {
-  const canManage = role === "owner" || role === "editor";
+  const canManage = canRoleManageWorkflowReview(role);
   const canMarkPublished = variant === "ready" && canManage;
 
   return (
@@ -188,7 +191,7 @@ function PublishSection({
   variant,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   title: string;
   description: string;
   emptyTitle: string;
@@ -237,7 +240,7 @@ export function PublishQueuePanel({
   publishedPosts,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   approvedPosts: ReviewPost[];
   publishedPosts: ReviewPost[];
 }) {

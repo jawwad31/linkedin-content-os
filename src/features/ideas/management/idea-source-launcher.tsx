@@ -1,5 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import type { ClientRole } from "@/features/clients/invitations/schemas";
+import {
+  canRoleMutateClientWorkflow,
+  type EffectiveClientRole,
+} from "@/lib/access/roles";
 import { Children, type ReactNode } from "react";
 
 import { IdeaSourceGenerateButton } from "./idea-source-generate-button";
@@ -253,16 +256,17 @@ export function IdeaSourceLauncher({
   sources,
 }: {
   clientId: string;
-  role: ClientRole;
+  role: EffectiveClientRole;
   sources: IdeaSources;
 }) {
-  const canGenerate = role === "owner" || role === "editor";
+  const canGenerate = canRoleMutateClientWorkflow(role);
 
   return (
     <div className="flex flex-col gap-5">
-      {role === "viewer" ? (
+      {!canGenerate ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Your role is view-only for this client.
+          You do not have permission to generate ideas for this Client
+          Workspace.
         </p>
       ) : null}
 

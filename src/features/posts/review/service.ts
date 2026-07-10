@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { canAccessClient, canManageWorkflowReview } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -42,10 +42,10 @@ const NO_ACCESS = {
   message: "You do not have access to this client.",
 };
 
-const VIEWER_FORBIDDEN = {
+const REVIEW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "Your role is view-only for this client.",
+  message: "You do not have permission to review or publish posts for this Client Workspace.",
 };
 
 const POST_NOT_AVAILABLE = {
@@ -83,10 +83,12 @@ async function authorizeMutation(
     return { ok: false, failure: INVALID_INPUT };
   }
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return { ok: false, failure: NO_ACCESS };
-  if (role !== "owner" && role !== "editor") {
-    return { ok: false, failure: VIEWER_FORBIDDEN };
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return { ok: false, failure: NO_ACCESS };
+
+  const canReview = await canManageWorkflowReview(user.id, clientIdResult.data);
+  if (!canReview) {
+    return { ok: false, failure: REVIEW_FORBIDDEN };
   }
 
   return {

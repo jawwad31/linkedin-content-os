@@ -17,6 +17,10 @@ import {
 import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { OperationalLogsPanel } from "@/features/setup/operational-logs-panel";
 import { getOperationalLogs } from "@/features/setup/operational-logs-queries";
+import {
+  canRoleManageClientUsers,
+  canRoleViewOperationalLogs,
+} from "@/lib/access/roles";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -35,19 +39,22 @@ export default async function SetupPage({
 
   return (
     <div>
-      <PageHeader title="Setup" description="Business context for this client." />
+      <PageHeader
+        title="Setup"
+        description="Business context for this Client Workspace."
+      />
 
       {role ? (
         <div className="mt-6 flex flex-col gap-6">
           <BusinessContextSection clientId={clientId} role={role} />
 
-          {role === "owner" ? (
+          {canRoleManageClientUsers(role) ? (
             <Card>
               <CardHeader>
                 <CardTitle>Team Access</CardTitle>
                 <CardDescription>
                   Invite collaborators and manage who has access to this
-                  client.
+                  Client Workspace.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
@@ -57,7 +64,7 @@ export default async function SetupPage({
             </Card>
           ) : null}
 
-          {role === "owner" ? (
+          {canRoleViewOperationalLogs(role) ? (
             <OperationalLogsSection clientId={clientId} />
           ) : null}
         </div>
