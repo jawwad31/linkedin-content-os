@@ -43,7 +43,7 @@ v1 signup model:
 
 - no public signup
 - invited users only
-- owners invite collaborators by email
+- agency admins and client admins invite collaborators by email, subject to client scope
 
 Session:
 
@@ -55,31 +55,34 @@ Session:
 
 ## Roles
 
-### Owner
+### agency_admin
 
 Can:
 
-- view all client data
+- access all Client Workspaces under the Agency
 - edit client settings
 - invite users
 - revoke users
 - manage roles
 - create/edit/delete business records
-- run research
+- manage RSS sources
+- run Research Agent
 - generate ideas
 - generate posts
 - approve/reject posts
 - mark posts as published
+- view operational logs
 
-### Editor
+### client_admin
 
 Can:
 
-- view client data
-- edit most workflow records
-- create/edit Founder Experiences
-- create/edit RSS Sources
-- run research
+- access only assigned Client Workspaces
+- edit client settings
+- invite users for assigned Client Workspaces
+- revoke users for assigned Client Workspaces
+- manage RSS sources
+- run Research Agent
 - generate ideas
 - generate posts
 - approve/reject posts
@@ -87,29 +90,36 @@ Can:
 
 Cannot:
 
+- access Agency-level pages
+- access other Client Workspaces
+- view agency-admin-only operational logs
+
+### client_user
+
+Can:
+
+- access only assigned Client Workspaces
+- create/edit safe workflow content records
+- mark articles relevant/irrelevant
+- add Founder Take / Trend Reaction
+- generate Ideas
+- add Founder Direction
+- generate Posts
+- copy approved posts
+
+Cannot:
+
+- edit Setup/business context
 - manage users
-- change ownership
-- revoke access
-- perform owner-only settings changes
-
-### Viewer
-
-Can:
-
-- view client data only
-
-Cannot:
-
-- create records
-- edit records
-- delete records
-- invite users
-- run research
-- generate ideas
-- generate posts
-- approve posts
-- reject posts
+- manage RSS sources
+- run Research Agent
+- approve/reject/archive posts
 - mark posts published
+- view operational logs
+- access Agency-level pages
+- access other Client Workspaces
+
+There is no viewer-level product role. Legacy `owner`, `editor`, and `viewer` `client_access` rows were migrated to `client_admin` or `client_user` before real external client onboarding.
 
 ---
 
@@ -172,6 +182,8 @@ Always include `client_id` in mutations.
 Enable RLS on:
 
 - `profiles`
+- `agencies`
+- `agency_members`
 - `clients`
 - `client_access`
 - `rss_sources`
@@ -196,7 +208,7 @@ exists (
 )
 ```
 
-Owner/editor write pattern:
+Client contributor write pattern:
 
 ```sql
 exists (
@@ -204,12 +216,12 @@ exists (
   from public.client_access ca
   where ca.client_id = <table>.client_id
   and ca.user_id = auth.uid()
-  and ca.role in ('owner', 'editor')
+  and ca.role in ('client_admin', 'client_user')
   and ca.invitation_status = 'accepted'
 )
 ```
 
-Owner-only pattern:
+Client admin pattern:
 
 ```sql
 exists (
@@ -217,21 +229,35 @@ exists (
   from public.client_access ca
   where ca.client_id = <table>.client_id
   and ca.user_id = auth.uid()
-  and ca.role = 'owner'
+  and ca.role = 'client_admin'
   and ca.invitation_status = 'accepted'
 )
 ```
 
-Viewer:
+Agency admin pattern:
 
-- select/read only
-- no insert/update/delete
+```sql
+exists (
+  select 1
+  from public.agency_members am
+  join public.clients c on c.agency_id = am.agency_id
+  where c.id = <table>.client_id
+  and am.user_id = auth.uid()
+  and am.role = 'agency_admin'
+)
+```
+
+Restricted `client_user` actions:
+
+- can write only safe workflow content records
+- cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces
 
 TrendCard writes:
 
 - `trend_cards` read access follows accepted client access.
 - `trend_cards` create/update/archive actions run through trusted server-side code and route handlers.
-- Viewer remains read-only; owner/editor permissions are checked server-side before mutation.
+- `agency_admin` and `client_admin` permissions are checked server-side before approve/archive mutations.
+- `client_user` may add Founder Take / Trend Reaction but cannot approve or archive TrendCards.
 
 ---
 
@@ -296,7 +322,7 @@ Rules:
 
 - store secrets in Railway environment variables
 - worker uses `WORKER_SECRET` if calling protected app endpoints
-- manual research endpoint requires authenticated owner/editor
+- manual research endpoint requires authenticated `agency_admin` or `client_admin`
 - background worker should not expose public endpoints unless protected
 - logs must never contain:
   - API keys
@@ -394,11 +420,11 @@ Content safety rules:
 
 ## Invitations
 
-Owners can invite users by email.
+Agency admins and client admins can invite users by email, subject to client scope.
 
 Invitation flow:
 
-1. Owner enters email and role.
+1. Admin enters email and role.
 2. App creates pending access/invitation record.
 3. Email invitation is sent.
 4. User accepts.
@@ -411,8 +437,8 @@ v1 fallback:
 
 Rules:
 
-- only owner can invite/revoke
-- invited role must be owner/editor/viewer
+- only `agency_admin` or scoped `client_admin` can invite/revoke
+- invited `client_access.role` must be `client_admin` or `client_user`
 - user cannot self-assign access
 
 ---
@@ -489,7 +515,7 @@ Hard delete allowed for:
 - transient worker artifacts
 - development seed/test data
 
-Never hard delete client business records in normal v1 UI unless owner confirms a future admin-only destructive action.
+Never hard delete client business records in normal v1 UI unless an authorized admin confirms a future admin-only destructive action.
 
 ---
 
@@ -511,10 +537,10 @@ No client access:
 You do not have access to this client.
 ```
 
-Viewer trying to edit:
+Restricted client user trying to edit:
 
 ```text
-Your role is view-only for this client.
+You do not have permission to perform this action.
 ```
 
 Research duplicate:
@@ -582,7 +608,8 @@ Use secure cookie/session defaults through Supabase SSR helpers.
 ## Pre-Launch Security Checklist
 
 - [ ] RLS enabled on all protected tables.
-- [ ] Viewer role is read-only.
+- [ ] No viewer-level role exists in schemas, UI, API validation, RLS helpers, or tests.
+- [ ] `client_user` contributor limits are enforced server-side.
 - [ ] Cross-client access tested.
 - [ ] No service role key in browser bundle.
 - [ ] No OpenRouter key in browser bundle.

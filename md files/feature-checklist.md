@@ -197,15 +197,17 @@ Acceptance Criteria:
 
 - RLS enabled.
 - Read policies use `client_access`.
-- Owner/editor write policies exist.
-- Viewer read-only.
+- `agency_admin`, `client_admin`, and limited `client_user` write policies exist.
+- No viewer-level role exists.
+- Restricted `client_user` actions are blocked server-side.
 - Cross-client access blocked.
 
 Test:
 
 - Two users, two clients.
 - Confirm isolation.
-- Confirm viewer cannot write.
+- Confirm `client_user` can contribute safe workflow content.
+- Confirm `client_user` cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, logs, Agency-level pages, or other Client Workspaces.
 
 Commit:
 
@@ -292,7 +294,7 @@ feat: add client selector
 
 Goal:
 
-Allow owners to invite users by email.
+Allow admins to invite users by email.
 
 Dependencies:
 
@@ -306,18 +308,20 @@ API:
 
 Acceptance Criteria:
 
-- Owner can invite.
-- Editor/viewer cannot invite.
+- `agency_admin` and scoped `client_admin` can invite.
+- `client_user` cannot invite.
 - Role is validated.
+- Role validation allows only `client_admin` and `client_user`.
 - Status tracked.
 - Audit log written.
 - Manual fallback works if email provider is not configured.
 
 Test:
 
-- Invite editor.
+- Invite `client_admin`.
+- Invite `client_user`.
 - Accept invite.
-- Try invite as editor/viewer.
+- Try invite as `client_user`.
 
 Commit:
 
@@ -391,14 +395,15 @@ Acceptance Criteria:
 
 - Metrics are client-scoped.
 - Empty state works.
-- Viewer can read.
+- `client_admin` and `client_user` can read assigned Client Workspace dashboard.
 - No cross-client data.
 
 Test:
 
 - Seed records.
 - Confirm counts.
-- Test viewer.
+- Test `client_user` assigned-workspace access.
+- Test cross-client URL access is blocked.
 
 Commit:
 
@@ -425,8 +430,8 @@ UI:
 Acceptance Criteria:
 
 - All client context fields exist.
-- Owner/editor can edit.
-- Viewer read-only.
+- `agency_admin` and `client_admin` can edit.
+- `client_user` cannot edit Setup/business context.
 - Zod validation.
 - Audit log on update.
 - Safe toasts.
@@ -435,7 +440,8 @@ Test:
 
 - Save settings.
 - Refresh.
-- Test viewer.
+- Test `client_admin`.
+- Test `client_user` restriction.
 
 Commit:
 
@@ -461,8 +467,8 @@ UI:
 
 Acceptance Criteria:
 
-- Owner/editor can create/edit/soft-delete.
-- Viewer read-only.
+- `agency_admin`, `client_admin`, and `client_user` can create/edit safe Founder Experience records.
+- Cross-client access is blocked.
 - Deleted records hidden.
 - Audit logs written.
 - Empty state works.
@@ -472,7 +478,8 @@ Test:
 - Create.
 - Edit.
 - Soft delete.
-- Test viewer.
+- Test `client_user`.
+- Test cross-client access.
 
 Commit:
 
@@ -502,7 +509,8 @@ Acceptance Criteria:
 - Validate feed URL.
 - Configure per-source recency window.
 - Store feed errors safely.
-- Viewer read-only.
+- `agency_admin` and `client_admin` can manage RSS sources.
+- `client_user` cannot manage RSS sources.
 - Audit logs written.
 
 Test:
@@ -511,7 +519,8 @@ Test:
 - Add invalid feed.
 - Toggle active.
 - Delete.
-- Test viewer.
+- Test `client_admin`.
+- Test `client_user` restriction.
 
 Commit:
 
@@ -651,17 +660,17 @@ POST /api/client/[client_id]/run-research-agent
 
 Acceptance Criteria:
 
-- Owner/editor can run.
-- Viewer cannot.
+- `agency_admin` and `client_admin` can run.
+- `client_user` cannot run.
 - Duplicate clicks blocked.
 - Status shown.
 - Safe errors.
 
 Test:
 
-- Run as owner.
-- Run as editor.
-- Try as viewer.
+- Run as `agency_admin`.
+- Run as `client_admin`.
+- Try as `client_user`.
 - Double-click.
 
 Commit:
@@ -785,7 +794,8 @@ Acceptance Criteria:
 - Archive soft-deletes TrendCards that are not linked to reactions or ideas.
 - Weekly grouping works.
 - Source links render from cited collected articles.
-- Viewer read-only.
+- `client_user` can mark articles relevant/irrelevant and add Founder Take / Trend Reaction.
+- `client_user` cannot approve/archive TrendCards.
 - Audit logs written.
 
 Test:
@@ -795,7 +805,8 @@ Test:
 - Add Trend Reaction.
 - Approve TrendCard.
 - Archive unused TrendCard.
-- Test viewer.
+- Test `client_user` allowed contribution actions.
+- Test `client_user` approval/archive restrictions.
 
 Commit:
 
@@ -859,7 +870,7 @@ Acceptance Criteria:
 
 - Idea cards/table display required fields.
 - Founder Direction can be saved.
-- Viewer read-only.
+- `client_user` can save Founder Direction.
 - Direction is passed to post generation.
 - Audit logs written.
 
@@ -867,7 +878,7 @@ Test:
 
 - Save founder direction.
 - Refresh.
-- Test viewer.
+- Test `client_user`.
 
 Commit:
 
@@ -1015,7 +1026,7 @@ Acceptance Criteria:
 - LLM logs store metadata only.
 - No raw prompts stored.
 - Logs are client-scoped.
-- Viewer can read only if intended.
+- Operational logs are visible to `agency_admin` only unless explicitly widened.
 
 Test:
 
@@ -1068,7 +1079,7 @@ Test:
 - Invalid RSS.
 - OpenRouter failure.
 - Unauthorized access.
-- Viewer actions.
+- `client_user` restricted actions.
 - Production build.
 
 Commit:

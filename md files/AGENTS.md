@@ -131,9 +131,48 @@ Do not design for public self-serve signup in v1.
 | Signup | No public signup |
 | Collaboration | One user can access multiple clients; multiple users can access one client |
 | Invitations | Email invitations |
+| Access model | Agency model with `agency_admin`, `client_admin`, and `client_user` only |
 | Audit logs | Lightweight logs: user, action, timestamp, client |
 | Delete policy | Soft delete business records; hard delete temporary logs |
 | Publishing | Manual only; no LinkedIn API |
+
+---
+
+## Agency Access Model
+
+Final product roles are exactly:
+
+- `agency_admin`
+- `client_admin`
+- `client_user`
+
+There is no viewer-level user in the product. Do not add `viewer` to schemas, role selectors, badges, copy, RLS helpers, role union types, API schemas, or tests.
+
+Legacy `client_access` roles were migrated as:
+
+- `owner` -> `client_admin`
+- `editor` -> `client_user`
+- `viewer` -> `client_user`
+
+Migration note:
+
+```text
+Legacy viewer read-only semantics were retired before onboarding real clients. Existing viewer rows are test/dev-era access and are mapped to client_user.
+```
+
+Verified live migration state on 2026-07-10:
+
+- `client_access.role` contains only `client_admin` and `client_user`.
+- `agency_members.role` contains only `agency_admin`.
+- Active clients all have `agency_id`.
+- No legacy `owner`, `editor`, or `viewer` rows remain in `client_access`.
+
+Role rules:
+
+- `agency_admin` can access all Client Workspaces under the Agency, manage Setup, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
+- `client_admin` can access only assigned Client Workspaces, manage Setup, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
+- `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add Founder Take / Trend Reaction, generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
+- `client_user` cannot edit Setup/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
 
 ---
 
@@ -179,7 +218,7 @@ Build in v1:
 1. Supabase Auth login with no public signup.
 2. Email invitations for client collaboration.
 3. Client selector with many users ↔ many clients.
-4. Owner/editor/viewer roles.
+4. Agency access roles: `agency_admin`, `client_admin`, and `client_user`.
 5. Client setup / always-on business context.
 6. Founder Experience records.
 7. RSS source management.
@@ -596,8 +635,8 @@ The Setup page is the always-on business context editor for a client.
 
 - User-facing nav label: **Setup**. Route stays `/client/[client_id]/settings`.
 - Business context lives on the `clients` table — no separate business-context table.
-- Owner and editor can edit; viewer is read-only.
-- Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted client access, and owner/editor role.
+- `agency_admin` and `client_admin` can edit; `client_user` cannot edit Setup/business context.
+- Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted access, and `agency_admin` or `client_admin` permission.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
 - Team Access / invitations remain part of Setup and must not be broken by business-context changes.
@@ -732,6 +771,8 @@ Use Supabase Postgres.
 Tables:
 
 - `profiles`
+- `agencies`
+- `agency_members`
 - `clients`
 - `client_access`
 - `rss_sources`
@@ -766,12 +807,34 @@ Key fields:
 - `role`
 - `active`
 
+### agencies
+
+Agency account container.
+
+Key fields:
+
+- `id`
+- `name`
+- `created_at`
+- `updated_at`
+
+### agency_members
+
+Agency-level membership.
+
+Key fields:
+
+- `agency_id`
+- `user_id`
+- `role`: agency_admin
+
 ### clients
 
 Client/business context.
 
 Key fields:
 
+- `agency_id`
 - `owner_user_id`
 - `name`
 - `founder_name`
@@ -799,7 +862,7 @@ Key fields:
 
 - `client_id`
 - `user_id`
-- `role`: owner | editor | viewer
+- `role`: client_admin | client_user
 - `invited_email`
 - `invitation_status`: pending | accepted | revoked
 - `invited_by_user_id`
@@ -1051,9 +1114,10 @@ The MVP is done when:
 
 - User can log in.
 - User can select a client.
-- Owner can invite collaborators by email.
+- Agency admins and client admins can invite collaborators by email, subject to client scope.
 - User roles are enforced.
-- Viewer is read-only.
+- No viewer-level role exists.
+- `client_user` can contribute to safe workflow content but cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
 - Client data is scoped by `client_id`.
 - User can create/update business context.
 - User can create Founder Experiences.

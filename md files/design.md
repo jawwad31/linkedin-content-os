@@ -324,9 +324,9 @@ Statuses:
 - Running
 - Failed
 - Completed
-- Owner
-- Editor
-- Viewer
+- Agency Admin
+- Client Admin
+- Client User
 
 Badge style:
 
@@ -497,7 +497,7 @@ Sections:
 - Proof and reference material
 - Banned topics
 - Publishing preferences
-- Team Access (owner only)
+- Team Access (admin only)
 
 Primary action:
 
@@ -513,7 +513,7 @@ Purpose:
 
 Layout:
 
-- founder entry form at the top (owner/editor only)
+- founder entry form at the top for users with workflow contribution permission
 - Founder Experience Log below
 
 Founder Experience card fields:
@@ -529,9 +529,10 @@ Primary action:
 
 - Add Founder Experience
 
-Viewer:
+Client User:
 
-- read-only log, no entry form, no edit/archive controls
+- can add safe workflow entries when assigned to the Client Workspace
+- cannot access another Client Workspace
 
 ### Research
 

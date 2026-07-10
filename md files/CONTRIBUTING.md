@@ -104,7 +104,9 @@ For every feature:
 
 Security rules in `security-access.md` are mandatory.
 
-Viewer is read-only.
+Final roles are `agency_admin`, `client_admin`, and `client_user`.
+
+There is no viewer-level product role. `client_user` can contribute to safe workflow content but cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
 
 Every mutation requires:
 
