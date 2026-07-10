@@ -21,6 +21,8 @@ create table if not exists public.agencies (
   deleted_at timestamptz
 );
 
+drop trigger if exists set_updated_at on public.agencies;
+
 create trigger set_updated_at
   before update on public.agencies
   for each row
@@ -50,6 +52,8 @@ create index if not exists agency_members_user_id_idx
 create unique index if not exists agency_members_accepted_agency_user_key
   on public.agency_members (agency_id, user_id)
   where invitation_status = 'accepted';
+
+drop trigger if exists set_updated_at on public.agency_members;
 
 create trigger set_updated_at
   before update on public.agency_members
@@ -110,6 +114,9 @@ on conflict do nothing;
 -- client_access role migration
 -- ---------------------------------------------------------------------------
 
+alter table public.client_access
+  drop constraint if exists client_access_role_check;
+
 update public.client_access
 set role = case role
   when 'owner' then 'client_admin'
@@ -118,9 +125,6 @@ set role = case role
   else role
 end
 where role in ('owner', 'editor', 'viewer');
-
-alter table public.client_access
-  drop constraint if exists client_access_role_check;
 
 alter table public.client_access
   add constraint client_access_role_check
