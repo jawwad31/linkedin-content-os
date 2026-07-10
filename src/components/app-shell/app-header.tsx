@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 
@@ -12,17 +11,20 @@ import {
 } from "@/lib/access/roles";
 
 import { getNavItems } from "./nav-items";
+import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
 export function AppHeader({
   clientId,
   clientName,
   agencyName,
   role,
+  accessibleClientCount,
 }: {
   clientId: string;
   clientName: string;
   agencyName: string | null;
   role: EffectiveClientRole;
+  accessibleClientCount: number;
 }) {
   const pathname = usePathname();
   const params = useParams<{ post_id?: string }>();
@@ -32,7 +34,7 @@ export function AppHeader({
   );
   const pageTitle = params?.post_id
     ? "Post Review"
-    : (activeItem?.label ?? "Dashboard");
+    : (activeItem?.label ?? "Overview");
 
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white/90 px-6 py-4 backdrop-blur-md lg:px-8">
@@ -69,12 +71,11 @@ export function AppHeader({
             className="w-48 rounded-full pl-9 text-caption"
           />
         </div>
-        <Link
-          href="/clients"
-          className="rounded-full border border-border-grey px-4 py-2 text-small font-medium text-near-black transition-colors hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
-        >
-          Switch workspace
-        </Link>
+        <WorkspaceSwitchLink
+          role={role}
+          accessibleClientCount={accessibleClientCount}
+          variant="light"
+        />
       </div>
     </header>
   );

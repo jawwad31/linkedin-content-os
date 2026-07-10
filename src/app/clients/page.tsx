@@ -6,6 +6,7 @@ import { ClientList } from "@/features/clients/client-list";
 import { PendingInvitations } from "@/features/clients/invitations/pending-invitations";
 import { getPendingInvitationsForCurrentUser } from "@/features/clients/invitations/queries";
 import { getAccessibleClients } from "@/features/clients/queries";
+import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function ClientsPage() {
@@ -13,6 +14,16 @@ export default async function ClientsPage() {
 
   if (!user) {
     redirect("/login");
+  }
+
+  const destination = await resolveAuthenticatedDestination(user.id);
+
+  if (destination === "/agency") {
+    redirect("/agency/workspaces");
+  }
+
+  if (destination !== "/clients") {
+    redirect(destination);
   }
 
   const [clientsResult, invitationsResult] = await Promise.all([
@@ -23,8 +34,8 @@ export default async function ClientsPage() {
   return (
     <main className="mx-auto w-full max-w-[1440px] p-6 lg:p-8">
       <PageHeader
-        title="Client Workspaces"
-        description="Choose which Client Workspace to work on."
+        title="Choose a Client Workspace"
+        description="Select an assigned Client Workspace to continue."
         action={<LogoutButton />}
       />
 

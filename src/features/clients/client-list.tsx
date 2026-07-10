@@ -25,18 +25,25 @@ function formatUpdatedAt(value: string) {
   });
 }
 
-export function ClientList({ clients }: { clients: AccessibleClient[] }) {
+export function ClientList({
+  clients,
+  emptyTitle = "You have no Client Workspaces yet.",
+  emptyDescription = "Ask an admin to invite you, or check back once a Client Workspace has been set up for you.",
+}: {
+  clients: AccessibleClient[];
+  emptyTitle?: string;
+  emptyDescription?: string;
+}) {
   const [search, setSearch] = useState("");
 
   if (clients.length === 0) {
     return (
       <div className="mt-6 rounded-card border border-border-grey bg-white p-8 text-center">
         <p className="text-body font-medium">
-          You have no Client Workspaces yet.
+          {emptyTitle}
         </p>
         <p className="mt-1 text-small text-muted-foreground">
-          Ask an admin to invite you, or check back once a Client Workspace has
-          been set up for you.
+          {emptyDescription}
         </p>
       </div>
     );

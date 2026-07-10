@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/features/auth/logout-button";
 import {
@@ -8,17 +6,20 @@ import {
 } from "@/lib/access/roles";
 
 import { AppNav } from "./app-nav";
+import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
 export function AppSidebar({
   clientId,
   clientName,
   agencyName,
   role,
+  accessibleClientCount,
 }: {
   clientId: string;
   clientName: string;
   agencyName: string | null;
   role: EffectiveClientRole;
+  accessibleClientCount: number;
 }) {
   return (
     <aside className="flex flex-col gap-4 bg-near-black p-4 text-soft-white lg:h-screen lg:w-64 lg:shrink-0 lg:sticky lg:top-0 lg:gap-6 lg:p-6">
@@ -53,12 +54,10 @@ export function AppSidebar({
             Agency: {agencyName}
           </p>
         ) : null}
-        <Link
-          href="/clients"
-          className="mt-1 rounded-full border border-white/10 px-3 py-1.5 text-center text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black"
-        >
-          Switch workspace
-        </Link>
+        <WorkspaceSwitchLink
+          role={role}
+          accessibleClientCount={accessibleClientCount}
+        />
       </div>
 
       <AppNav clientId={clientId} />

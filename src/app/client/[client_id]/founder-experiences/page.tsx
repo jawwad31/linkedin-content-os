@@ -24,7 +24,7 @@ export default async function FounderExperiencesPage({
   return (
     <div>
       <PageHeader
-        title="Founder Experiences"
+        title="Founder Knowledge"
         description="Log real operator moments so future ideas can use lived experience instead of generic prompts."
       />
 

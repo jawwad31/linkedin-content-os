@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
@@ -32,13 +33,16 @@ export async function login(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.signInWithPassword(parsed.data);
 
-  if (error) {
+  if (error || !user) {
     return { error: "The email or password is incorrect." };
   }
 
-  redirect("/clients");
+  redirect(await resolveAuthenticatedDestination(user.id));
 }
 
 export async function logout() {

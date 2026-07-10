@@ -5,7 +5,7 @@ import { createServerClient } from "@supabase/ssr";
 
 import { getSupabasePublicEnv } from "./env";
 
-const PROTECTED_PREFIXES = ["/clients", "/client/"];
+const PROTECTED_PREFIXES = ["/agency", "/clients", "/client/", "/no-access"];
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PREFIXES.some(

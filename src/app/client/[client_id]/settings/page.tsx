@@ -40,7 +40,7 @@ export default async function SetupPage({
   return (
     <div>
       <PageHeader
-        title="Setup"
+        title="Settings"
         description="Business context for this Client Workspace."
       />
 

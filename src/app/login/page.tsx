@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { getServerUser } from "@/lib/supabase/session";
 import { LoginForm } from "@/features/auth/login-form";
 
@@ -14,7 +15,7 @@ export default async function LoginPage() {
   const { user } = await getServerUser();
 
   if (user) {
-    redirect("/clients");
+    redirect(await resolveAuthenticatedDestination(user.id));
   }
 
   return (

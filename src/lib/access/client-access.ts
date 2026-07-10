@@ -28,6 +28,7 @@ export type ClientShellAccess =
       agencyId: string;
       agencyName: string | null;
       role: EffectiveClientRole;
+      accessibleClientCount: number;
     }
   | { ok: false };
 
@@ -205,6 +206,11 @@ export async function getClientShellAccess(
 
   if (error || !data) return { ok: false };
 
+  const accessibleClientCount =
+    role === "agency_admin"
+      ? 0
+      : await getDirectClientAccessCount(user.id);
+
   return {
     ok: true,
     clientId: data.id,
@@ -212,5 +218,21 @@ export async function getClientShellAccess(
     agencyId: data.agency_id,
     agencyName: data.agencies?.name ?? null,
     role,
+    accessibleClientCount,
   };
+}
+
+async function getDirectClientAccessCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("client_access")
+    .select("client_id")
+    .eq("user_id", userId)
+    .eq("invitation_status", "accepted")
+    .returns<{ client_id: string }[]>();
+
+  if (error) return 0;
+
+  return new Set(data.map((row) => row.client_id)).size;
 }

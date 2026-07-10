@@ -5,7 +5,7 @@ import {
   Lightbulb,
   Radar,
   Send,
-  SlidersHorizontal,
+  Settings,
 } from "lucide-react";
 
 export type NavItem = {
@@ -17,13 +17,13 @@ export type NavItem = {
 /**
  * Single source of truth for sidebar nav links and the header's
  * current-page title lookup. Route hrefs stay on their existing paths
- * (e.g. "Setup" still points at /settings) — only the user-facing label
+ * (e.g. "Settings" still points at /settings) — only the user-facing label
  * changes here.
  */
 export function getNavItems(clientId: string): NavItem[] {
   return [
     {
-      label: "Dashboard",
+      label: "Overview",
       href: `/client/${clientId}/dashboard`,
       icon: LayoutDashboard,
     },
@@ -33,7 +33,7 @@ export function getNavItems(clientId: string): NavItem[] {
       icon: Radar,
     },
     {
-      label: "Founder Experiences",
+      label: "Founder Knowledge",
       href: `/client/${clientId}/founder-experiences`,
       icon: BookOpen,
     },
@@ -48,9 +48,9 @@ export function getNavItems(clientId: string): NavItem[] {
       icon: Send,
     },
     {
-      label: "Setup",
+      label: "Settings",
       href: `/client/${clientId}/settings`,
-      icon: SlidersHorizontal,
+      icon: Settings,
     },
   ];
 }

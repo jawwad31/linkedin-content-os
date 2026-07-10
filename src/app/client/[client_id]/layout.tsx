@@ -25,6 +25,7 @@ export default async function ClientLayout({
       clientName={access.clientName}
       agencyName={access.agencyName}
       role={access.role}
+      accessibleClientCount={access.accessibleClientCount}
     >
       {children}
     </AppShell>
