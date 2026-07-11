@@ -155,7 +155,7 @@ export function TrendCardReviewControls({
           </p>
         ) : null}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="gradient"
@@ -206,7 +206,7 @@ export function TrendCardReviewControls({
             {archiveState.message}
           </p>
         ) : null}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="destructive"

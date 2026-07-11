@@ -7,27 +7,10 @@ import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatDateOnly, formatUtcDate } from "@/lib/format/date";
 
 import { TrendCardReviewControls } from "./trend-card-review-controls";
 import type { TrendCard } from "./queries";
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatWeekOf(value: string): string {
-  // week_of is a plain date (Monday of the week); parse as UTC noon so the
-  // rendered label can't slip a day in western timezones.
-  return new Date(`${value}T12:00:00Z`).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function groupByWeek(cards: TrendCard[]): Array<[string, TrendCard[]]> {
   const groups = new Map<string, TrendCard[]>();
@@ -91,7 +74,7 @@ export function TrendCardsPanel({
       {groupByWeek(cards).map(([weekOf, weekCards]) => (
         <div key={weekOf} className="flex flex-col gap-3">
           <p className="font-mono text-caption font-medium uppercase tracking-wide text-muted-foreground">
-            Week of {formatWeekOf(weekOf)}
+            Week of {formatDateOnly(weekOf)}
           </p>
 
           {weekCards.map((card) => (
@@ -170,7 +153,7 @@ export function TrendCardsPanel({
                   {card.sourceItemCount === 1 ? "" : "s"}
                 </span>
                 <span>·</span>
-                <span>{formatDate(card.createdAt)}</span>
+                <span>{formatUtcDate(card.createdAt)}</span>
               </div>
             </div>
           ))}

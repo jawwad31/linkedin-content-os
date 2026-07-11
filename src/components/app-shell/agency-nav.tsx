@@ -17,7 +17,7 @@ type AgencyNavItem = {
   icon: LucideIcon;
 };
 
-const AGENCY_NAV_ITEMS: AgencyNavItem[] = [
+export const AGENCY_NAV_ITEMS: AgencyNavItem[] = [
   { label: "Overview", href: "/agency", icon: LayoutDashboard },
   { label: "Client Workspaces", href: "/agency/workspaces", icon: Building2 },
   { label: "Agency Team", href: "/agency/team", icon: Users },
@@ -27,7 +27,7 @@ export function AgencyNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+    <nav className="flex flex-col gap-1">
       {AGENCY_NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;

@@ -2,6 +2,7 @@ import { History } from "lucide-react";
 
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatUtcDateTime } from "@/lib/format/date";
 
 import type { ResearchRun, ResearchRunStatus } from "./types";
 
@@ -23,13 +24,7 @@ const STATUS_LABEL: Record<ResearchRunStatus, string> = {
 
 function formatDateTime(value: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatUtcDateTime(value);
 }
 
 /**
@@ -55,7 +50,7 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
           className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant={STATUS_BADGE_VARIANT[run.status]}>
                 {STATUS_LABEL[run.status]}
               </Badge>
@@ -64,7 +59,7 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
                 {run.stage ? ` · ${run.stage}` : ""}
               </span>
             </div>
-            <span className="font-mono text-caption text-muted-foreground">
+            <span className="break-words font-mono text-caption text-muted-foreground">
               {formatDateTime(run.startedAt)}
               {run.finishedAt ? ` → ${formatDateTime(run.finishedAt)}` : ""}
             </span>

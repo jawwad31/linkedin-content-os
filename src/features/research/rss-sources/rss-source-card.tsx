@@ -9,6 +9,7 @@ import {
   canRoleManageResearchSources,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDateTime } from "@/lib/format/date";
 
 import {
   archiveRssSourceAction,
@@ -21,16 +22,6 @@ import type { RssSource } from "./queries";
 
 const archiveInitialState: ArchiveRssSourceState = { error: null };
 const toggleInitialState: ToggleRssSourceState = { error: null };
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export function RssSourceCard({
   clientId,
@@ -95,9 +86,9 @@ export function RssSourceCard({
 
         {source.lastCheckedAt ? (
           <span className="font-mono text-caption text-muted-foreground">
-            Last checked {formatDateTime(source.lastCheckedAt)}
+            Last checked {formatUtcDateTime(source.lastCheckedAt)}
             {source.lastSuccessAt
-              ? ` · Last success ${formatDateTime(source.lastSuccessAt)}`
+              ? ` · Last success ${formatUtcDateTime(source.lastSuccessAt)}`
               : ""}
           </span>
         ) : null}
@@ -123,7 +114,7 @@ export function RssSourceCard({
                   {archiveState.error}
                 </p>
               ) : null}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="submit"
                   variant="destructive"
@@ -144,7 +135,7 @@ export function RssSourceCard({
               </div>
             </form>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"

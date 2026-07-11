@@ -68,6 +68,7 @@ export function CollectedArticleActions({
           size="sm"
           onClick={() => handleMark("relevant")}
           disabled={state.status === "pending" || status === "relevant"}
+          className="max-sm:flex-1"
         >
           {isPending("relevant") ? "Marking..." : "Mark relevant"}
         </Button>
@@ -77,6 +78,7 @@ export function CollectedArticleActions({
           size="sm"
           onClick={() => handleMark("irrelevant")}
           disabled={state.status === "pending" || status === "irrelevant"}
+          className="max-sm:flex-1"
         >
           {isPending("irrelevant") ? "Marking..." : "Mark irrelevant"}
         </Button>

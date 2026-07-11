@@ -10,18 +10,18 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-2xl font-heading font-semibold text-near-black">
+        <h1 className="break-words text-2xl font-heading font-semibold text-near-black">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-small text-muted-foreground">
+          <p className="mt-1 max-w-3xl text-small text-muted-foreground">
             {description}
           </p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="sm:shrink-0">{action}</div> : null}
     </div>
   );
 }

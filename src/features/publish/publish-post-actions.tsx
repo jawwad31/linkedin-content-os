@@ -97,6 +97,7 @@ export function PublishPostActions({
           size="sm"
           onClick={copyPost}
           disabled={isPublishing}
+          className="max-sm:flex-1"
         >
           <Clipboard aria-hidden="true" className="h-4 w-4" />
           Copy Text
@@ -109,6 +110,7 @@ export function PublishPostActions({
             size="sm"
             onClick={markPublished}
             disabled={isPublishing}
+            className="max-sm:flex-1"
           >
             <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
             {isPublishing ? "Marking..." : "Mark Published"}

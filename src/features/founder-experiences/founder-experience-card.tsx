@@ -13,6 +13,7 @@ import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import {
   archiveFounderExperienceAction,
@@ -22,14 +23,6 @@ import { FounderExperienceForm } from "./founder-experience-form";
 import type { FounderExperience } from "./queries";
 
 const archiveInitialState: ArchiveFounderExperienceState = { error: null };
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function Detail({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
@@ -87,9 +80,9 @@ export function FounderExperienceCard({
         <Detail label="Why it matters" value={experience.whyItMatters} />
 
         <span className="font-mono text-caption text-muted-foreground">
-          Added {formatDate(experience.createdAt)}
+          Added {formatUtcDate(experience.createdAt)}
           {experience.updatedAt !== experience.createdAt
-            ? ` · Updated ${formatDate(experience.updatedAt)}`
+            ? ` · Updated ${formatUtcDate(experience.updatedAt)}`
             : ""}
         </span>
 
@@ -108,7 +101,7 @@ export function FounderExperienceCard({
                   {archiveState.error}
                 </p>
               ) : null}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="submit"
                   variant="destructive"
@@ -129,7 +122,7 @@ export function FounderExperienceCard({
               </div>
             </form>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"

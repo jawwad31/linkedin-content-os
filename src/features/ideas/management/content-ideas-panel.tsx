@@ -6,6 +6,7 @@ import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import { FounderDirectionControls } from "./founder-direction-controls";
 import { GeneratePostButton } from "./generate-post-button";
@@ -27,14 +28,6 @@ const STATUS_BADGE_VARIANT: Record<
   used: "warning",
   archived: "outline",
 };
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function IdeaField({
   label,
@@ -119,7 +112,7 @@ export function ContentIdeasPanel({
                     <Badge variant="warning">Post Drafted</Badge>
                   ) : null}
                   <span className="font-mono text-caption text-muted-foreground">
-                    {formatDate(idea.createdAt)}
+                    {formatUtcDate(idea.createdAt)}
                   </span>
                 </div>
                 <h2 className="break-words font-heading text-card-title text-near-black">

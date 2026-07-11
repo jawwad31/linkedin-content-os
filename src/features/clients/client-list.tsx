@@ -14,16 +14,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EFFECTIVE_ROLE_LABELS } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import type { AccessibleClient } from "./queries";
-
-function formatUpdatedAt(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function ClientList({
   clients,
@@ -113,7 +106,7 @@ export function ClientList({
                 </CardHeader>
                 <CardContent className="flex items-center justify-between gap-2">
                   <span className="font-mono text-caption text-muted-foreground">
-                    Updated {formatUpdatedAt(client.updatedAt)}
+                    Updated {formatUtcDate(client.updatedAt)}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-control border border-border-grey px-3 py-1.5 text-small font-medium text-near-black">
                     Open

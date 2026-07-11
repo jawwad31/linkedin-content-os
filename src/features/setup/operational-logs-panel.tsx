@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatUtcDateTime } from "@/lib/format/date";
 
 import type {
   OperationalAuditLog,
@@ -69,16 +70,6 @@ function titleize(value: string): string {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-}
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 function shortId(value: unknown): string | null {
@@ -211,7 +202,7 @@ function ActivityRows({ logs }: { logs: OperationalAuditLog[] }) {
               ) : null}
             </div>
             <time className="font-mono text-caption text-muted-foreground lg:text-right">
-              {formatDateTime(log.createdAt)}
+              {formatUtcDateTime(log.createdAt)}
             </time>
           </article>
         );
@@ -270,7 +261,7 @@ function AiUsageRows({ logs }: { logs: OperationalLlmLog[] }) {
             </div>
           </div>
           <time className="font-mono text-caption text-muted-foreground xl:text-right">
-            {formatDateTime(log.createdAt)}
+            {formatUtcDateTime(log.createdAt)}
           </time>
         </article>
       ))}

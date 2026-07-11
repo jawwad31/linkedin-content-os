@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatUtcDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 import type { DashboardMetrics } from "./queries";
@@ -41,16 +42,6 @@ const RUN_STATUS_BADGE_VARIANT: Record<
   failed: "danger",
   cancelled: "neutral",
 };
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function MetricIcon({
   icon: Icon,
@@ -266,7 +257,7 @@ export function DashboardView({
                   ) : null}
                 </div>
                 <span className="font-mono text-caption text-muted-foreground">
-                  {formatDateTime(latestResearchRun.timestamp)}
+                  {formatUtcDateTime(latestResearchRun.timestamp)}
                 </span>
               </>
             ) : (

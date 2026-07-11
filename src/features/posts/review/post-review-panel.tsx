@@ -6,6 +6,7 @@ import {
   canRoleManageWorkflowReview,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import { PostReviewActions } from "./post-review-actions";
 import type { ReviewPost, ReviewPostStatus } from "./queries";
@@ -34,14 +35,6 @@ const SOURCE_LABELS: Record<string, string> = {
   trend_card: "TrendCard",
   trend_reaction: "Trend Reaction",
 };
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function compactJson(value: unknown): string | null {
   if (
@@ -132,7 +125,7 @@ function PostCard({
               {STATUS_LABELS[post.status] ?? post.status}
             </Badge>
             <span className="font-mono text-caption text-muted-foreground">
-              {formatDate(post.createdAt)}
+              {formatUtcDate(post.createdAt)}
             </span>
           </div>
           <h2 className="break-words font-heading text-card-title text-near-black">

@@ -7,6 +7,7 @@ import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import { CollectedArticleActions } from "./collected-article-actions";
 import type {
@@ -32,11 +33,7 @@ const STATUS_LABEL: Record<CollectedArticleStatus, string> = {
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatUtcDate(value);
 }
 
 const FILTERS: Array<{ value: CollectedArticleStatusFilter; label: string }> = [

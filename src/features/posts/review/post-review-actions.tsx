@@ -141,6 +141,7 @@ export function PostReviewActions({
           size="sm"
           disabled={!canNeedsEdit || isPending}
           onClick={() => submitAction("needs-edit")}
+          className="max-sm:flex-1"
         >
           <PenSquare aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "needs-edit"
@@ -153,6 +154,7 @@ export function PostReviewActions({
           size="sm"
           disabled={!canApprove || isPending}
           onClick={() => submitAction("approve")}
+          className="max-sm:flex-1"
         >
           <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "approve"
@@ -165,6 +167,7 @@ export function PostReviewActions({
           size="sm"
           disabled={!canReject || isPending}
           onClick={() => submitAction("reject")}
+          className="max-sm:flex-1"
         >
           <XCircle aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "reject"
@@ -177,6 +180,7 @@ export function PostReviewActions({
           size="sm"
           disabled={!canArchive || isPending}
           onClick={() => submitAction("archive")}
+          className="max-sm:flex-1"
         >
           <Archive aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "archive"

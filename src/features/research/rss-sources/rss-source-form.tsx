@@ -132,7 +132,7 @@ export function RssSourceForm({
         </p>
       ) : null}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" variant="gradient" size="sm" disabled={isPending}>
           {isPending ? "Saving..." : source ? "Save changes" : "Add RSS source"}
         </Button>

@@ -4,6 +4,7 @@ import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { AppHeader } from "./app-header";
 import { AppSidebar } from "./app-sidebar";
+import { MobileClientNav } from "./mobile-client-nav";
 
 export function AppShell({
   clientId,
@@ -22,6 +23,13 @@ export function AppShell({
 }) {
   return (
     <div className="lg:flex lg:min-h-screen">
+      <MobileClientNav
+        clientId={clientId}
+        clientName={clientName}
+        agencyName={agencyName}
+        role={role}
+        accessibleClientCount={accessibleClientCount}
+      />
       <AppSidebar
         clientId={clientId}
         clientName={clientName}
@@ -36,8 +44,9 @@ export function AppShell({
           agencyName={agencyName}
           role={role}
           accessibleClientCount={accessibleClientCount}
+          className="hidden lg:flex"
         />
-        <main className="w-full flex-1 bg-background p-6 lg:p-8">
+        <main className="w-full flex-1 bg-background p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>
         </main>
       </div>

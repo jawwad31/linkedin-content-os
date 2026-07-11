@@ -38,20 +38,23 @@ export function AccessList({
       {members.map((member) => (
         <li
           key={member.id}
-          className="flex items-center justify-between gap-3 rounded-card border border-border-grey bg-white p-4"
+          className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div className="flex flex-col gap-1">
-            <span className="text-body font-medium">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="break-words text-body font-medium">
               {member.invitedEmail ?? "Unknown email"}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="neutral">{CLIENT_ROLE_LABELS[member.role]}</Badge>
               <Badge variant={STATUS_VARIANT[member.invitationStatus]}>
                 {STATUS_LABELS[member.invitationStatus]}
               </Badge>
             </div>
           </div>
-          <form action={revokeInvitationAction.bind(null, clientId, member.id)}>
+          <form
+            action={revokeInvitationAction.bind(null, clientId, member.id)}
+            className="sm:shrink-0"
+          >
             <Button type="submit" variant="ghost" size="sm">
               Revoke
             </Button>

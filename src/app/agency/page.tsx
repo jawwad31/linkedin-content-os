@@ -12,15 +12,8 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAgencyOverview } from "@/features/agency/queries";
+import { formatUtcDate } from "@/lib/format/date";
 import { getServerUser } from "@/lib/supabase/session";
-
-function formatUpdatedAt(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default async function AgencyPage() {
   const { user } = await getServerUser();
@@ -129,7 +122,7 @@ export default async function AgencyPage() {
                       <Badge variant="neutral">Agency Admin</Badge>
                     </div>
                     <p className="mt-1 truncate font-mono text-caption text-muted-foreground">
-                      Updated {formatUpdatedAt(workspace.updatedAt)}
+                      Updated {formatUtcDate(workspace.updatedAt)}
                     </p>
                   </div>
                   <Link

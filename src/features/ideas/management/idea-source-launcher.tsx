@@ -3,6 +3,7 @@ import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatDateOnly, formatUtcDate } from "@/lib/format/date";
 import { Children, type ReactNode } from "react";
 
 import { IdeaSourceGenerateButton } from "./idea-source-generate-button";
@@ -14,21 +15,9 @@ import type {
   TrendReactionSource,
 } from "./source-queries";
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function formatWeekOf(value: string | null): string | null {
   if (!value) return null;
-  return new Date(`${value}T12:00:00Z`).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateOnly(value);
 }
 
 function SourceText({
@@ -90,7 +79,7 @@ function SourceCard({
         </div>
 
         {canGenerate ? (
-          <div className="shrink-0">
+        <div className="sm:shrink-0">
             <IdeaSourceGenerateButton
               clientId={clientId}
               mode={mode}
@@ -174,7 +163,7 @@ function FounderExperiencesGroup({
           <SourceText label="What was learned" value={source.whatWasLearned} />
           <SourceText label="What changed" value={source.whatChanged} />
           <SourceText label="Why it matters" value={source.whyItMatters} />
-          <SourceText label="Created" value={formatDate(source.createdAt)} />
+            <SourceText label="Created" value={formatUtcDate(source.createdAt)} />
         </SourceCard>
       ))}
     </SourceGroup>
@@ -212,7 +201,7 @@ function TrendReactionsGroup({
             label="Linked TrendCard"
             value={source.linkedTrendCardTitle}
           />
-          <SourceText label="Created" value={formatDate(source.createdAt)} />
+          <SourceText label="Created" value={formatUtcDate(source.createdAt)} />
         </SourceCard>
       ))}
     </SourceGroup>

@@ -19,7 +19,7 @@ export function AppNav({ clientId }: { clientId: string }) {
   }
 
   return (
-    <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+    <nav className="flex flex-col gap-1">
       {items.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;

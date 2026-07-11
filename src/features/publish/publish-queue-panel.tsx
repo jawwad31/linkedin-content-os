@@ -7,6 +7,7 @@ import {
   canRoleManageWorkflowReview,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
+import { formatUtcDate } from "@/lib/format/date";
 
 import { PublishPostActions } from "./publish-post-actions";
 
@@ -18,12 +19,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function formatDate(value: string | null): string {
   if (!value) return "Not set";
-
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatUtcDate(value);
 }
 
 function compactJson(value: unknown): string | null {

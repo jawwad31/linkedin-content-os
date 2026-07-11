@@ -8,15 +8,8 @@ import {
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAgencyTeam } from "@/features/agency/queries";
+import { formatUtcDate } from "@/lib/format/date";
 import { getServerUser } from "@/lib/supabase/session";
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function getMemberDisplayName(member: {
   invitedEmail: string | null;
@@ -70,7 +63,7 @@ export default async function AgencyTeamPage() {
                       </p>
                       <p className="mt-1 truncate font-mono text-caption text-muted-foreground">
                         {member.agencyName ?? result.access.agencyName} | Joined{" "}
-                        {formatDate(member.createdAt)}
+                        {formatUtcDate(member.createdAt)}
                       </p>
                     </div>
                     <Badge variant="neutral">Agency Admin</Badge>
