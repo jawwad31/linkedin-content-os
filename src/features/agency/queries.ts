@@ -44,12 +44,31 @@ export type AgencyTeamResult =
     }
   | { ok: false; reason?: string };
 
+export type WorkspaceAttention = {
+  clientId: string;
+  clientName: string;
+  postsAwaitingReviewCount: number;
+  approvedPostCount: number;
+  latestResearchStatus: string | null;
+  latestResearchTimestamp: string | null;
+  latestResearchFailed: boolean;
+};
+
+export type AgencyAttentionMetrics = {
+  totalPostsAwaitingReview: number;
+  totalApprovedPostsReady: number;
+  failedResearchWorkspaceCount: number;
+  uniqueAttentionWorkspaceCount: number;
+  attentionWorkspaces: WorkspaceAttention[];
+};
+
 export type AgencyOverviewResult =
   | {
       ok: true;
       access: AgencyAccess;
       workspaces: AgencyWorkspace[];
       teamMemberCount: number;
+      attentionMetrics: AgencyAttentionMetrics;
     }
   | { ok: false; reason?: string };
 
@@ -175,6 +194,19 @@ async function getSafelyReadableProfileNames(
   );
 }
 
+type MinimalPostRow = {
+  client_id: string;
+  status: string;
+};
+
+type MinimalResearchRunRow = {
+  client_id: string;
+  status: string;
+  stage: string | null;
+  started_at: string | null;
+  created_at: string;
+};
+
 export async function getAgencyOverview(
   userId: string,
 ): Promise<AgencyOverviewResult> {
@@ -191,10 +223,144 @@ export async function getAgencyOverview(
     return { ok: false, reason: teamResult.reason };
   }
 
+  const workspaces = workspacesResult.workspaces;
+  const workspaceIds = workspaces.map((w) => w.id);
+
+  // Default empty metrics if no workspaces exist
+  const defaultMetrics: AgencyAttentionMetrics = {
+    totalPostsAwaitingReview: 0,
+    totalApprovedPostsReady: 0,
+    failedResearchWorkspaceCount: 0,
+    uniqueAttentionWorkspaceCount: 0,
+    attentionWorkspaces: [],
+  };
+
+  if (workspaceIds.length === 0) {
+    return {
+      ok: true,
+      access: workspacesResult.access,
+      workspaces,
+      teamMemberCount: teamResult.members.length,
+      attentionMetrics: defaultMetrics,
+    };
+  }
+
+  const supabase = await createClient();
+
+  // Query only the minimal fields required from posts
+  const { data: postsData, error: postsError } = await supabase
+    .from("posts")
+    .select("client_id, status")
+    .in("client_id", workspaceIds)
+    .is("deleted_at", null)
+    .in("status", ["review", "needs_edit", "approved"])
+    .returns<MinimalPostRow[]>();
+
+  if (postsError) {
+    return { ok: false };
+  }
+
+  // Query only minimal required fields from research_runs
+  const { data: runsData, error: runsError } = await supabase
+    .from("research_runs")
+    .select("client_id, status, stage, started_at, created_at")
+    .in("client_id", workspaceIds)
+    .order("created_at", { ascending: false })
+    .returns<MinimalResearchRunRow[]>();
+
+  if (runsError) {
+    return { ok: false };
+  }
+
+  // Compute posts counts per client
+  const postsAwaitingReviewByClient = new Map<string, number>();
+  const approvedPostsByClient = new Map<string, number>();
+  let totalPostsAwaitingReview = 0;
+  let totalApprovedPostsReady = 0;
+
+  for (const post of postsData) {
+    const cid = post.client_id;
+    if (post.status === "review" || post.status === "needs_edit") {
+      postsAwaitingReviewByClient.set(cid, (postsAwaitingReviewByClient.get(cid) ?? 0) + 1);
+      totalPostsAwaitingReview++;
+    } else if (post.status === "approved") {
+      approvedPostsByClient.set(cid, (approvedPostsByClient.get(cid) ?? 0) + 1);
+      totalApprovedPostsReady++;
+    }
+  }
+
+  // Group research runs by client to find the newest run for each workspace in application code
+  const latestRunByClient = new Map<string, MinimalResearchRunRow>();
+  for (const run of runsData) {
+    const cid = run.client_id;
+    if (!latestRunByClient.has(cid)) {
+      latestRunByClient.set(cid, run);
+    }
+  }
+
+  let failedResearchWorkspaceCount = 0;
+  const attentionWorkspaces: WorkspaceAttention[] = [];
+
+  for (const workspace of workspaces) {
+    const cid = workspace.id;
+    const reviewCount = postsAwaitingReviewByClient.get(cid) ?? 0;
+    const approvedCount = approvedPostsByClient.get(cid) ?? 0;
+    const latestRun = latestRunByClient.get(cid) ?? null;
+
+    const latestResearchStatus = latestRun?.status ?? null;
+    const latestResearchTimestamp = latestRun ? (latestRun.started_at ?? latestRun.created_at) : null;
+    const latestResearchFailed = latestResearchStatus === "failed";
+
+    if (latestResearchFailed) {
+      failedResearchWorkspaceCount++;
+    }
+
+    const hasAttention = reviewCount > 0 || approvedCount > 0 || latestResearchFailed;
+
+    if (hasAttention) {
+      attentionWorkspaces.push({
+        clientId: cid,
+        clientName: workspace.name,
+        postsAwaitingReviewCount: reviewCount,
+        approvedPostCount: approvedCount,
+        latestResearchStatus,
+        latestResearchTimestamp,
+        latestResearchFailed,
+      });
+    }
+  }
+
+  // Sort attention rows deterministically:
+  // 1. latest research failed first;
+  // 2. highest posts-awaiting-review count;
+  // 3. highest approved-post count;
+  // 4. workspace name alphabetically.
+  attentionWorkspaces.sort((a, b) => {
+    if (a.latestResearchFailed !== b.latestResearchFailed) {
+      return a.latestResearchFailed ? -1 : 1;
+    }
+    if (a.postsAwaitingReviewCount !== b.postsAwaitingReviewCount) {
+      return b.postsAwaitingReviewCount - a.postsAwaitingReviewCount;
+    }
+    if (a.approvedPostCount !== b.approvedPostCount) {
+      return b.approvedPostCount - a.approvedPostCount;
+    }
+    return a.clientName.localeCompare(b.clientName);
+  });
+
+  const uniqueAttentionWorkspaceCount = attentionWorkspaces.length;
+
   return {
     ok: true,
     access: workspacesResult.access,
-    workspaces: workspacesResult.workspaces,
+    workspaces,
     teamMemberCount: teamResult.members.length,
+    attentionMetrics: {
+      totalPostsAwaitingReview,
+      totalApprovedPostsReady,
+      failedResearchWorkspaceCount,
+      uniqueAttentionWorkspaceCount,
+      attentionWorkspaces,
+    },
   };
 }

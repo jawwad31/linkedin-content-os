@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Users } from "lucide-react";
+import { ArrowRight, Building2, Users, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default async function AgencyPage() {
   }
 
   const recentWorkspaces = result.workspaces.slice(0, 6);
+  const { attentionMetrics } = result;
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,6 +42,7 @@ export default async function AgencyPage() {
         description="Agency overview for Client Workspace access."
       />
 
+      {/* Main Agency Overview Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -95,6 +97,144 @@ export default async function AgencyPage() {
         </Card>
       </div>
 
+      {/* Compact Real-Data Attention Metrics Cards */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription>Posts awaiting review</CardDescription>
+              </div>
+              <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <span className="font-mono text-3xl">
+              {attentionMetrics.totalPostsAwaitingReview}
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription>Approved posts ready</CardDescription>
+              </div>
+              <CheckCircle2 aria-hidden="true" className="h-5 w-5 text-success" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <span className="font-mono text-3xl">
+              {attentionMetrics.totalApprovedPostsReady}
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardDescription>Research failures</CardDescription>
+              </div>
+              <AlertCircle aria-hidden="true" className="h-5 w-5 text-danger" />
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <span className="font-mono text-3xl">
+              {attentionMetrics.failedResearchWorkspaceCount}
+            </span>
+            {attentionMetrics.failedResearchWorkspaceCount > 0 && (
+              <Badge variant="danger">Attention Needed</Badge>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Workspaces Needing Attention Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Workspaces needing attention</CardTitle>
+          <CardDescription>
+            Client Workspaces with failed research runs, posts awaiting review, or approved posts ready to publish.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {attentionMetrics.attentionWorkspaces.length === 0 ? (
+            <p className="text-small text-muted-foreground">
+              No Client Workspaces need attention right now.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {attentionMetrics.attentionWorkspaces.map((workspace) => {
+                let ctaLink = "";
+                let ctaLabel = "";
+                if (workspace.latestResearchFailed) {
+                  ctaLink = `/client/${workspace.clientId}/research`;
+                  ctaLabel = "Review research";
+                } else if (workspace.postsAwaitingReviewCount > 0) {
+                  ctaLink = `/client/${workspace.clientId}/posts`;
+                  ctaLabel = "Review posts";
+                } else if (workspace.approvedPostCount > 0) {
+                  ctaLink = `/client/${workspace.clientId}/publish`;
+                  ctaLabel = "Open publish queue";
+                }
+
+                return (
+                  <li
+                    key={workspace.clientId}
+                    className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-near-black">
+                          {workspace.clientName}
+                        </span>
+                        {workspace.latestResearchFailed && (
+                          <Badge variant="danger">Research Failed</Badge>
+                        )}
+                        {workspace.postsAwaitingReviewCount > 0 && (
+                          <Badge variant="warning">
+                            {workspace.postsAwaitingReviewCount} review
+                          </Badge>
+                        )}
+                        {workspace.approvedPostCount > 0 && (
+                          <Badge variant="success">
+                            {workspace.approvedPostCount} approved
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 font-mono text-caption text-muted-foreground">
+                        {workspace.latestResearchFailed && workspace.latestResearchTimestamp ? (
+                          `Failed run: ${formatUtcDate(workspace.latestResearchTimestamp)}`
+                        ) : workspace.latestResearchTimestamp ? (
+                          `Latest run: ${formatUtcDate(workspace.latestResearchTimestamp)}`
+                        ) : (
+                          "No research runs yet"
+                        )}
+                      </p>
+                    </div>
+                    {ctaLink && ctaLabel && (
+                      <Link
+                        href={ctaLink}
+                        className={buttonVariants({
+                          variant: "secondary",
+                          size: "sm",
+                        })}
+                      >
+                        {ctaLabel}
+                        <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Available Client Workspaces */}
       <Card>
         <CardHeader>
           <CardTitle>Available Client Workspaces</CardTitle>

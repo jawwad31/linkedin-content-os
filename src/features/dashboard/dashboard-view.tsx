@@ -22,6 +22,7 @@ import {
 import { formatUtcDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
+import type { EffectiveClientRole } from "@/lib/access/roles";
 import type { DashboardMetrics } from "./queries";
 
 const RUN_STATUS_LABELS: Record<string, string> = {
@@ -104,9 +105,11 @@ function MetricCard({
 export function DashboardView({
   clientId,
   metrics,
+  role,
 }: {
   clientId: string;
   metrics: DashboardMetrics;
+  role: EffectiveClientRole;
 }) {
   const {
     clientName,
@@ -131,32 +134,82 @@ export function DashboardView({
     postsNeedingReviewCount === 0 &&
     approvedPostsCount === 0;
 
-  // A single, real-state-driven "what's next" action. Priority mirrors the
-  // Setup -> Research -> Ideas -> Publish workflow order from AGENTS.md.
+  // A single, real-state-driven "what's next" action.
+  // Rules for role-aware and permission-safe CTA resolution.
   let statusMessage: string;
   let nextAction: { label: string; href: string } | null = null;
 
-  if (setupIncomplete) {
-    statusMessage =
-      "Finish setting up business context to improve research and ideas.";
-    nextAction = {
-      label: "Complete setup",
-      href: `/client/${clientId}/settings`,
-    };
-  } else if (researchEmpty) {
-    statusMessage = "No research collected yet for this client.";
-    nextAction = { label: "Open research", href: `/client/${clientId}/research` };
-  } else if (ideasEmpty) {
-    statusMessage = "Research is in. Ready to generate content ideas.";
-    nextAction = { label: "Open ideas", href: `/client/${clientId}/ideas` };
-  } else if (postsNeedingReviewCount > 0) {
-    statusMessage = `${postsNeedingReviewCount} post${postsNeedingReviewCount === 1 ? "" : "s"} waiting for review.`;
-    nextAction = { label: "Review posts", href: `/client/${clientId}/posts` };
-  } else if (approvedPostsCount > 0) {
-    statusMessage = `${approvedPostsCount} post${approvedPostsCount === 1 ? "" : "s"} approved and ready to publish.`;
-    nextAction = { label: "Open publish queue", href: `/client/${clientId}/publish` };
+  const isUserAdmin = role === "agency_admin" || role === "client_admin";
+
+  if (isUserAdmin) {
+    if (latestResearchRun?.status === "failed") {
+      statusMessage = "Research requires attention.";
+      nextAction = {
+        label: "Open research",
+        href: `/client/${clientId}/research`,
+      };
+    } else if (postsNeedingReviewCount > 0) {
+      statusMessage = `${postsNeedingReviewCount} post${postsNeedingReviewCount === 1 ? "" : "s"} waiting for review.`;
+      nextAction = {
+        label: "Review posts",
+        href: `/client/${clientId}/posts`,
+      };
+    } else if (approvedPostsCount > 0) {
+      statusMessage = `${approvedPostsCount} post${approvedPostsCount === 1 ? "" : "s"} approved and ready to publish.`;
+      nextAction = {
+        label: "Open publish queue",
+        href: `/client/${clientId}/publish`,
+      };
+    } else if (setupIncomplete) {
+      statusMessage = "Finish setting up business context to improve research and ideas.";
+      nextAction = {
+        label: "Complete setup",
+        href: `/client/${clientId}/settings`,
+      };
+    } else if (researchEmpty) {
+      statusMessage = "No research collected yet for this client.";
+      nextAction = {
+        label: "Open research",
+        href: `/client/${clientId}/research`,
+      };
+    } else if (ideasEmpty) {
+      statusMessage = "Research is in. Ready to generate content ideas.";
+      nextAction = {
+        label: "Open ideas",
+        href: `/client/${clientId}/ideas`,
+      };
+    } else {
+      statusMessage = "This client is fully caught up.";
+    }
   } else {
-    statusMessage = "This client is fully caught up.";
+    // client_user has limited permissions: no setup edits, research runs, post actions
+    if (approvedPostsCount > 0) {
+      statusMessage = `${approvedPostsCount} post${approvedPostsCount === 1 ? "" : "s"} approved and ready to copy.`;
+      nextAction = {
+        label: "View approved posts",
+        href: `/client/${clientId}/publish`,
+      };
+    } else if (postsNeedingReviewCount > 0) {
+      statusMessage = `${postsNeedingReviewCount} post${postsNeedingReviewCount === 1 ? "" : "s"} awaiting administrator review.`;
+      nextAction = {
+        label: "View posts",
+        href: `/client/${clientId}/posts`,
+      };
+    } else if (ideasEmpty) {
+      statusMessage = "No content ideas generated yet.";
+      nextAction = {
+        label: "Open ideas",
+        href: `/client/${clientId}/ideas`,
+      };
+    } else if (latestResearchRun?.status === "failed") {
+      statusMessage = "Latest research run failed and requires administrator attention.";
+    } else if (setupIncomplete) {
+      statusMessage = "Business setup is incomplete and requires administrator completion.";
+    } else if (researchEmpty) {
+      statusMessage = "No research data collected. An administrator must run research.";
+    } else {
+      statusMessage = "This client is fully caught up.";
+    }
   }
 
   return (
