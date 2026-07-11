@@ -151,6 +151,7 @@ export function DashboardView({
     nextAction = { label: "Open ideas", href: `/client/${clientId}/ideas` };
   } else if (postsNeedingReviewCount > 0) {
     statusMessage = `${postsNeedingReviewCount} post${postsNeedingReviewCount === 1 ? "" : "s"} waiting for review.`;
+    nextAction = { label: "Review posts", href: `/client/${clientId}/posts` };
   } else if (approvedPostsCount > 0) {
     statusMessage = `${approvedPostsCount} post${approvedPostsCount === 1 ? "" : "s"} approved and ready to publish.`;
     nextAction = { label: "Open publish queue", href: `/client/${clientId}/publish` };
@@ -299,6 +300,8 @@ export function DashboardView({
           value={postsNeedingReviewCount}
           icon={FileClock}
           tint="bg-warning/10 text-warning"
+          ctaHref={postsNeedingReviewCount > 0 ? `/client/${clientId}/posts` : undefined}
+          ctaLabel={postsNeedingReviewCount > 0 ? "Review posts" : undefined}
         />
         <MetricCard
           title="Approved posts"

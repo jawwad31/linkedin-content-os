@@ -151,3 +151,77 @@ export async function getReviewPosts(
     }),
   };
 }
+
+export type ReviewPostResult =
+  | { ok: true; post: ReviewPost }
+  | { ok: false; code: string; message: string };
+
+/**
+ * Fetch a single post by both client_id and post_id to enforce access scoping
+ * and block cross-client access.
+ */
+export async function getReviewPost(
+  clientId: string,
+  postId: string,
+): Promise<ReviewPostResult> {
+  const supabase = await createClient();
+
+  const { data: row, error } = await supabase
+    .from("posts")
+    .select(
+      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
+    )
+    .eq("client_id", clientId)
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .maybeSingle<ReviewPostRow>();
+
+  if (error) {
+    return { ok: false, code: "DATABASE_ERROR", message: "Failed to load post." };
+  }
+  if (!row) {
+    return { ok: false, code: "NOT_FOUND", message: "Post not found." };
+  }
+
+  let idea: ReviewPostIdea | null = null;
+  if (row.content_idea_id) {
+    const { data: ideaRow, error: ideaError } = await supabase
+      .from("content_ideas")
+      .select("id, angle, source_type")
+      .eq("client_id", clientId)
+      .eq("id", row.content_idea_id)
+      .maybeSingle<ContentIdeaRow>();
+
+    if (!ideaError && ideaRow) {
+      idea = {
+        id: ideaRow.id,
+        angle: ideaRow.angle,
+        sourceType: ideaRow.source_type,
+      };
+    }
+  }
+
+  const split = splitPost(row.final_post);
+
+  return {
+    ok: true,
+    post: {
+      id: row.id,
+      contentIdeaId: row.content_idea_id,
+      finalPost: row.final_post,
+      hook: split.hook,
+      body: split.body,
+      buyerBeliefShift: row.buyer_belief_shift,
+      proofNotes: row.proof_notes,
+      riskNotes: row.risk_notes,
+      ctaIntent: row.cta_intent,
+      sourceContextUsed: row.source_context_used,
+      status: row.status,
+      editNote: row.edit_note,
+      approvedAt: row.approved_at,
+      publishedAt: row.published_at,
+      createdAt: row.created_at,
+      idea,
+    },
+  };
+}
