@@ -224,6 +224,29 @@ function buildPrompt(
   return { system, user };
 }
 
+function formatSynthesisNote(
+  attemptedItemCount: number,
+  cardsCreated: number,
+  synthesisErrorCount: number,
+): string | undefined {
+  if (attemptedItemCount === 0) {
+    return NO_EVIDENCE_NOTE;
+  }
+  if (cardsCreated === 0 && synthesisErrorCount === 0) {
+    return NO_NEW_CARDS_NOTE;
+  }
+  if (cardsCreated === 0 && synthesisErrorCount > 0) {
+    return "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
+  }
+  if (cardsCreated > 0 && synthesisErrorCount === 0) {
+    return undefined;
+  }
+  if (cardsCreated > 0 && synthesisErrorCount > 0) {
+    return "Some synthesis work could not complete.";
+  }
+  return undefined;
+}
+
 /**
  * Synthesizes evidence-backed TrendCards from a client's currently
  * `relevant` market_signal_items (Feature 17's classifier output). A single
@@ -438,7 +461,7 @@ export async function synthesizeTrendCardsForClient(
       signalsCreated: cardsCreated,
       itemsMarkedUsed,
       synthesisErrorCount,
-      note: cardsCreated === 0 ? NO_NEW_CARDS_NOTE : undefined,
+      note: formatSynthesisNote(items.length, cardsCreated, synthesisErrorCount),
     },
   };
 }
