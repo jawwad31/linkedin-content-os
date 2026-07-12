@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 const GENERIC_ERROR_COPY = "Could not generate this post. Please try again.";
 
@@ -72,6 +72,26 @@ export function GeneratePostButton({
     }
   }
 
+  if (state.status === "success") {
+    const label = state.alreadyGenerated ? "Open Existing Post" : "Open Post";
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <Link
+          href={`/client/${clientId}/posts/${state.postId}/review`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <FileText aria-hidden="true" className="h-4 w-4" />
+          {label}
+        </Link>
+        <p role="status" className="text-small text-success">
+          {state.alreadyGenerated
+            ? "Post already generated."
+            : "Post draft created."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-start gap-2">
       <Button
@@ -87,20 +107,6 @@ export function GeneratePostButton({
       {state.status === "error" ? (
         <p role="alert" className="text-small text-danger">
           {state.message}
-        </p>
-      ) : null}
-
-      {state.status === "success" ? (
-        <p role="status" className="text-small text-success">
-          {state.alreadyGenerated
-            ? "Post already generated."
-            : "Post draft created."}{" "}
-          <Link
-            href={`/client/${clientId}/posts/${state.postId}/review`}
-            className="font-medium underline"
-          >
-            Open review
-          </Link>
         </p>
       ) : null}
     </div>

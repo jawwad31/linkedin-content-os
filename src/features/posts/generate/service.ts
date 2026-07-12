@@ -607,7 +607,26 @@ export async function generatePostFromIdea(
     .select("id")
     .maybeSingle<{ id: string }>();
 
-  if (insertError || !inserted) return GENERIC_FAILURE;
+  if (insertError || !inserted) {
+    if (insertError?.code === "23505") {
+      const existingId = await getExistingPostId(admin, clientIdResult.data, idea.id);
+      if (existingId) {
+        await markContentIdeaUsed({
+          clientId: clientIdResult.data,
+          ideaId: idea.id,
+        });
+        revalidatePath(`/client/${clientIdResult.data}/ideas`);
+        revalidatePath(`/client/${clientIdResult.data}/posts`);
+        revalidatePath(`/client/${clientIdResult.data}/dashboard`);
+        revalidatePath(`/client/${clientIdResult.data}/posts/${existingId}/review`);
+        return {
+          ok: true,
+          data: { postId: existingId, alreadyGenerated: true },
+        };
+      }
+    }
+    return GENERIC_FAILURE;
+  }
 
   const markedUsed = await markContentIdeaUsed({
     clientId: clientIdResult.data,
@@ -637,6 +656,8 @@ export async function generatePostFromIdea(
   });
 
   revalidatePath(`/client/${clientIdResult.data}/ideas`);
+  revalidatePath(`/client/${clientIdResult.data}/posts`);
+  revalidatePath(`/client/${clientIdResult.data}/dashboard`);
   revalidatePath(`/client/${clientIdResult.data}/posts/${inserted.id}/review`);
 
   return { ok: true, data: { postId: inserted.id, alreadyGenerated: false } };

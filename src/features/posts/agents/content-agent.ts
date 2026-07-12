@@ -106,6 +106,12 @@ function buildPrompt(input: {
     "For founder_experience sources, use only the provided real operator experience as lived experience.",
     "For trend_card sources, use the TrendCard and cited articles as market context only; do not claim founder lived experience.",
     "For trend_reaction sources, the founder reaction is the primary POV and the linked TrendCard is market timing/context.",
+    "CRITICAL RULES: Treat all Content Idea metadata as private planning scaffolding.",
+    "Translate it into natural reader-facing prose.",
+    "Never mention or label the planning process.",
+    "Never output headings or phrases such as: 'The buyer belief shift', 'Buyer belief shift', 'Belief shift:', 'Buyer pain:', 'Commercial relevance:', 'Content pillar:', 'Angle boundary:', 'Source context:', 'Proof notes:', 'Target ICP:', or 'Linked Content Idea'.",
+    "Do not expose raw field names, JSON terminology, source IDs, or workflow terminology in the final Post.",
+    "The belief shift must be expressed naturally through the argument, not announced or labeled.",
     "Return strict JSON only, matching exactly this shape:",
     '{"hook":"opening hook","body":"post body","cta":"soft CTA or conversation prompt","format":"text","content_type":"framework | pov | diagnostic | story | myth_correction | list | teardown | other","target_icp":"ICP segment","design_brief":"optional visual design brief or null","proof_used":"what proof/source material was used","risk_notes":"limitations or risks"}',
   ].join(" ");
@@ -166,6 +172,24 @@ async function logContentAgentFailure(input: {
   });
 }
 
+function containsScaffolding(hook: string, body: string, cta: string): boolean {
+  const combined = `${hook} ${body} ${cta}`.toLowerCase();
+  const lowerPatterns = [
+    "the buyer belief shift",
+    "buyer belief shift",
+    "belief shift:",
+    "buyer pain:",
+    "commercial relevance:",
+    "content pillar:",
+    "angle boundary:",
+    "source context:",
+    "proof notes:",
+    "target icp:",
+    "linked content idea",
+  ];
+  return lowerPatterns.some((pattern) => combined.includes(pattern));
+}
+
 export async function runContentAgent(input: {
   clientId: string;
   userId: string;
@@ -173,23 +197,25 @@ export async function runContentAgent(input: {
   idea: ContentAgentIdeaContext;
   sourceContext: ContentAgentSourceContext;
 }): Promise<ContentAgentResult> {
-  const config = getOpenRouterConfig();
+  const config = getOpenRouterConfig("OPENROUTER_CONTENT_MODEL");
 
   if (!config) {
     await logContentAgentFailure({
       clientId: input.clientId,
       userId: input.userId,
-      model: process.env.OPENROUTER_MODEL ?? "unconfigured",
+      model: process.env.OPENROUTER_CONTENT_MODEL || process.env.OPENROUTER_MODEL || "unconfigured",
       errorType: "not_configured",
     });
     return { ok: false, reason: "not_configured" };
   }
 
   const { system, user } = buildPrompt(input);
-  const completion = await requestOpenRouterCompletion(config, [
-    { role: "system", content: system },
-    { role: "user", content: user },
-  ]);
+  const messages = [
+    { role: "system" as const, content: system },
+    { role: "user" as const, content: user },
+  ];
+
+  const completion = await requestOpenRouterCompletion(config, messages);
 
   if (!completion.ok) {
     await logContentAgentFailure({
@@ -201,32 +227,132 @@ export async function runContentAgent(input: {
     return { ok: false, reason: "error" };
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(completion.content);
-  } catch {
+  const parseAndValidate = (content: string) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { success: false as const, errorType: "invalid_json" as const };
+    }
+
+    const validation = contentAgentResponseSchema.safeParse(parsed);
+    if (!validation.success) {
+      return { success: false as const, errorType: "invalid_schema" as const };
+    }
+
+    return { success: true as const, data: validation.data };
+  };
+
+  const initialResult = parseAndValidate(completion.content);
+  if (!initialResult.success) {
     await logContentAgentFailure({
       clientId: input.clientId,
       userId: input.userId,
       model: config.model,
-      errorType: "invalid_json",
+      errorType: initialResult.errorType,
       tokenInputCount: completion.inputTokens,
       tokenOutputCount: completion.outputTokens,
     });
     return { ok: false, reason: "error" };
   }
 
-  const validation = contentAgentResponseSchema.safeParse(parsed);
-  if (!validation.success) {
+  const hasScaffolding = containsScaffolding(
+    initialResult.data.hook,
+    initialResult.data.body,
+    initialResult.data.cta,
+  );
+
+  if (hasScaffolding) {
     await logContentAgentFailure({
       clientId: input.clientId,
       userId: input.userId,
       model: config.model,
-      errorType: "invalid_schema",
+      errorType: "internal_scaffolding",
       tokenInputCount: completion.inputTokens,
       tokenOutputCount: completion.outputTokens,
     });
-    return { ok: false, reason: "error" };
+
+    const correctiveMessages = [
+      ...messages,
+      { role: "assistant" as const, content: completion.content },
+      {
+        role: "user" as const,
+        content:
+          "The previous response contained internal planning labels or scaffolding (such as 'The buyer belief shift', 'Buyer belief shift', 'Belief shift:', 'Buyer pain:', 'Commercial relevance:', 'Content pillar:', 'Angle boundary:', 'Source context:', 'Proof notes:', 'Target ICP:', or 'Linked Content Idea'). Please rewrite it into natural public-facing prose, strictly avoiding any of these labels, headers, JSON terms, or workflow terminology. Return the corrected response matching the same strict JSON structure.",
+      },
+    ];
+
+    const correctiveCompletion = await requestOpenRouterCompletion(
+      config,
+      correctiveMessages,
+    );
+
+    if (!correctiveCompletion.ok) {
+      await logContentAgentFailure({
+        clientId: input.clientId,
+        userId: input.userId,
+        model: config.model,
+        errorType: correctiveCompletion.errorType,
+      });
+      return { ok: false, reason: "error" };
+    }
+
+    const correctiveResult = parseAndValidate(correctiveCompletion.content);
+    if (!correctiveResult.success) {
+      await logContentAgentFailure({
+        clientId: input.clientId,
+        userId: input.userId,
+        model: config.model,
+        errorType: correctiveResult.errorType,
+        tokenInputCount: correctiveCompletion.inputTokens,
+        tokenOutputCount: correctiveCompletion.outputTokens,
+      });
+      return { ok: false, reason: "error" };
+    }
+
+    const correctiveHasScaffolding = containsScaffolding(
+      correctiveResult.data.hook,
+      correctiveResult.data.body,
+      correctiveResult.data.cta,
+    );
+
+    if (correctiveHasScaffolding) {
+      await logContentAgentFailure({
+        clientId: input.clientId,
+        userId: input.userId,
+        model: config.model,
+        errorType: "internal_scaffolding",
+        tokenInputCount: correctiveCompletion.inputTokens,
+        tokenOutputCount: correctiveCompletion.outputTokens,
+      });
+      return { ok: false, reason: "error" };
+    }
+
+    await writeLlmLog({
+      clientId: input.clientId,
+      userId: input.userId,
+      provider: CONTENT_AGENT_PROVIDER,
+      model: config.model,
+      feature: CONTENT_AGENT_FEATURE,
+      status: "success",
+      tokenInputCount: (completion.inputTokens ?? 0) + (correctiveCompletion.inputTokens ?? 0),
+      tokenOutputCount: (completion.outputTokens ?? 0) + (correctiveCompletion.outputTokens ?? 0),
+    });
+
+    return {
+      ok: true,
+      draft: {
+        hook: correctiveResult.data.hook,
+        body: correctiveResult.data.body,
+        cta: correctiveResult.data.cta,
+        format: correctiveResult.data.format,
+        contentType: correctiveResult.data.content_type,
+        targetIcp: correctiveResult.data.target_icp,
+        designBrief: correctiveResult.data.design_brief,
+        proofUsed: correctiveResult.data.proof_used,
+        riskNotes: correctiveResult.data.risk_notes,
+      },
+    };
   }
 
   await writeLlmLog({
@@ -243,15 +369,15 @@ export async function runContentAgent(input: {
   return {
     ok: true,
     draft: {
-      hook: validation.data.hook,
-      body: validation.data.body,
-      cta: validation.data.cta,
-      format: validation.data.format,
-      contentType: validation.data.content_type,
-      targetIcp: validation.data.target_icp,
-      designBrief: validation.data.design_brief,
-      proofUsed: validation.data.proof_used,
-      riskNotes: validation.data.risk_notes,
+      hook: initialResult.data.hook,
+      body: initialResult.data.body,
+      cta: initialResult.data.cta,
+      format: initialResult.data.format,
+      contentType: initialResult.data.content_type,
+      targetIcp: initialResult.data.target_icp,
+      designBrief: initialResult.data.design_brief,
+      proofUsed: initialResult.data.proof_used,
+      riskNotes: initialResult.data.risk_notes,
     },
   };
 }

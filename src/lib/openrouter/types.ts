@@ -4,7 +4,7 @@ export type OpenRouterConfig = {
 };
 
 export type OpenRouterChatMessage = {
-  role: "system" | "user";
+  role: "system" | "user" | "assistant";
   content: string;
 };
 

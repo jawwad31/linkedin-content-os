@@ -1,6 +1,8 @@
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, FileText } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   canRoleMutateClientWorkflow,
@@ -127,6 +129,14 @@ export function ContentIdeasPanel({
 
               {canGeneratePost ? (
                 <GeneratePostButton clientId={clientId} ideaId={idea.id} />
+              ) : idea.existingPostId ? (
+                <Link
+                  href={`/client/${clientId}/posts/${idea.existingPostId}/review`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <FileText aria-hidden="true" className="h-4 w-4" />
+                  Open Post
+                </Link>
               ) : null}
             </div>
 
