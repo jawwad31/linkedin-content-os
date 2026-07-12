@@ -1064,6 +1064,7 @@ Server-only:
 SUPABASE_SERVICE_ROLE_KEY=
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=
+OPENROUTER_RESEARCH_MODEL=
 WORKER_SECRET=
 RSS_COLLECTOR_ENABLED=true
 RSS_COLLECTOR_INTERVAL_HOURS=6
@@ -1072,6 +1073,7 @@ RESEARCH_PIPELINE_FULL=false
 
 Rules:
 
+- OPENROUTER_RESEARCH_MODEL is used for article classification and TrendCard synthesis, falling back to OPENROUTER_MODEL if unset.
 - Store production secrets in Railway.
 - Never commit `.env.local`.
 - Never expose service role or OpenRouter keys to the browser.

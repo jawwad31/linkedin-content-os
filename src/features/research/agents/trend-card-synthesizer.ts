@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/audit/log";
 import { writeLlmLog } from "@/lib/llm/log";
 import {
   getOpenRouterConfig,
-  requestOpenRouterCompletion,
+  requestStructuredCompletion,
 } from "@/lib/openrouter/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -67,6 +67,42 @@ const trendCardSchema = z.object({
 const synthesisResponseSchema = z.object({
   trend_cards: z.array(trendCardSchema),
 });
+
+const SYNTHESIS_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    trend_cards: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          shift: { type: "string" },
+          why_it_matters: { type: "string" },
+          relevance_to_icp: { type: "string" },
+          content_angle: { type: "string" },
+          source_item_ids: {
+            type: "array",
+            items: { type: "string" },
+          },
+          confidence_score: { type: "integer" },
+        },
+        required: [
+          "title",
+          "shift",
+          "why_it_matters",
+          "relevance_to_icp",
+          "content_angle",
+          "source_item_ids",
+          "confidence_score",
+        ],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["trend_cards"],
+  additionalProperties: false,
+};
 
 /** Monday of the current ISO week, UTC, as a YYYY-MM-DD date string. */
 function currentWeekOfUtc(): string {
@@ -204,7 +240,7 @@ export async function synthesizeTrendCardsForClient(
   clientId: string,
   userId: string | null = null,
 ): Promise<SynthesizeForClientResult> {
-  const config = getOpenRouterConfig();
+  const config = getOpenRouterConfig("OPENROUTER_RESEARCH_MODEL");
   if (!config) {
     return { ok: false, reason: "not_configured", message: NOT_CONFIGURED_ERROR };
   }
@@ -248,82 +284,39 @@ export async function synthesizeTrendCardsForClient(
   const existingCards = await getRecentCardTitles(admin, clientId);
   const { system, user } = buildPrompt(context, items, existingCards);
 
-  const completion = await requestOpenRouterCompletion(config, [
-    { role: "system", content: system },
-    { role: "user", content: user },
-  ]);
+  const result = await requestStructuredCompletion(
+    config,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    synthesisResponseSchema,
+    SYNTHESIS_JSON_SCHEMA,
+    "trend-card-synthesis",
+    {
+      timeoutMs: 90_000,
+      maxTokens: 2500,
+      temperature: 0.2,
+    },
+    clientId,
+    userId,
+    SYNTHESIZER_FEATURE,
+  );
 
   let cardsCreated = 0;
   let itemsMarkedUsed = 0;
   let synthesisErrorCount = 0;
 
-  if (!completion.ok) {
-    await writeLlmLog({
-      clientId,
-      userId,
-      provider: SYNTHESIZER_PROVIDER,
-      model: config.model,
-      feature: SYNTHESIZER_FEATURE,
-      status: "error",
-      errorType: completion.errorType,
-    });
+  if (!result.ok) {
     synthesisErrorCount = 1;
   } else {
-    let parsed: unknown;
-    let parseFailed = false;
-    try {
-      parsed = JSON.parse(completion.content);
-    } catch {
-      parseFailed = true;
-    }
+    const validItemIds = new Set(items.map((item) => item.id));
+    const seenTitles = new Set(
+      existingCards.map((card) => card.title.trim().toLowerCase()),
+    );
+    const weekOf = currentWeekOfUtc();
 
-    if (parseFailed) {
-      await writeLlmLog({
-        clientId,
-        userId,
-        provider: SYNTHESIZER_PROVIDER,
-        model: config.model,
-        feature: SYNTHESIZER_FEATURE,
-        status: "error",
-        errorType: "invalid_json",
-        tokenInputCount: completion.inputTokens,
-        tokenOutputCount: completion.outputTokens,
-      });
-      synthesisErrorCount = 1;
-    } else {
-      const validation = synthesisResponseSchema.safeParse(parsed);
-      if (!validation.success) {
-        await writeLlmLog({
-          clientId,
-          userId,
-          provider: SYNTHESIZER_PROVIDER,
-          model: config.model,
-          feature: SYNTHESIZER_FEATURE,
-          status: "error",
-          errorType: "invalid_schema",
-          tokenInputCount: completion.inputTokens,
-          tokenOutputCount: completion.outputTokens,
-        });
-        synthesisErrorCount = 1;
-      } else {
-        await writeLlmLog({
-          clientId,
-          userId,
-          provider: SYNTHESIZER_PROVIDER,
-          model: config.model,
-          feature: SYNTHESIZER_FEATURE,
-          status: "success",
-          tokenInputCount: completion.inputTokens,
-          tokenOutputCount: completion.outputTokens,
-        });
-
-        const validItemIds = new Set(items.map((item) => item.id));
-        const seenTitles = new Set(
-          existingCards.map((card) => card.title.trim().toLowerCase()),
-        );
-        const weekOf = currentWeekOfUtc();
-
-        for (const card of validation.data.trend_cards) {
+    for (const card of result.data.trend_cards) {
           const filteredIds = Array.from(
             new Set(
               card.source_item_ids.filter((id) => validItemIds.has(id)),
@@ -331,11 +324,16 @@ export async function synthesizeTrendCardsForClient(
           );
 
           if (filteredIds.length === 0) {
-            // A card must always cite at least one real evidence item —
-            // Zod only validates shape (uuid strings), not membership in
-            // the batch actually sent, so this app-level check is the real
-            // "no card without evidence" enforcement.
             synthesisErrorCount += 1;
+            await writeLlmLog({
+              clientId,
+              userId,
+              provider: SYNTHESIZER_PROVIDER,
+              model: config.model,
+              feature: SYNTHESIZER_FEATURE,
+              status: "error",
+              errorType: "invalid_source_ids",
+            });
             continue;
           }
 
@@ -369,9 +367,16 @@ export async function synthesizeTrendCardsForClient(
             .single();
 
           if (insertError || !inserted) {
-            // Insert failing leaves the source items untouched (still
-            // 'relevant') — nothing lost, they're eligible again next run.
             synthesisErrorCount += 1;
+            await writeLlmLog({
+              clientId,
+              userId,
+              provider: SYNTHESIZER_PROVIDER,
+              model: config.model,
+              feature: SYNTHESIZER_FEATURE,
+              status: "error",
+              errorType: "database_insert_failure",
+            });
             continue;
           }
 
@@ -411,9 +416,7 @@ export async function synthesizeTrendCardsForClient(
             },
           });
         }
-      }
     }
-  }
 
   await writeAuditLog({
     clientId,

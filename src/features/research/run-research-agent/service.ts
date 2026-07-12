@@ -176,17 +176,44 @@ export async function runResearchAgentManually(
     revalidatePath(`/client/${clientIdResult.data}/research`);
 
     const classify = guardResult.result.classify;
-    const classificationMessage =
-      !classify.ok && classify.reason === "not_configured"
-        ? NOT_CONFIGURED_ERROR
-        : null;
+    let classificationMessage: string | null = null;
+    if (!classify.ok) {
+      if (classify.reason === "not_configured") {
+        classificationMessage = NOT_CONFIGURED_ERROR;
+      }
+    } else {
+      const errCount = classify.summary.errorCount;
+      if (errCount > 0) {
+        classificationMessage = `${errCount} article${errCount === 1 ? " could not be classified and remains" : "s could not be classified and remain"} New / Not scored.`;
+      }
+    }
 
     const synthesize = guardResult.result.synthesize;
-    const synthesisMessage = !synthesize.ok
-      ? synthesize.reason === "not_configured"
-        ? SYNTHESIS_NOT_CONFIGURED_ERROR
-        : null
-      : (synthesize.summary.note ?? null);
+    let synthesisMessage: string | null = null;
+    if (!synthesize.ok) {
+      synthesisMessage =
+        synthesize.reason === "not_configured"
+          ? SYNTHESIS_NOT_CONFIGURED_ERROR
+          : "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
+    } else {
+      const cardsCreated = synthesize.summary.signalsCreated;
+      const errorCount = synthesize.summary.synthesisErrorCount;
+      const attemptedCount = synthesize.summary.attemptedItemCount;
+
+      if (cardsCreated === 0 && errorCount === 0) {
+        if (attemptedCount === 0) {
+          synthesisMessage = "No relevant articles available to synthesize yet.";
+        } else {
+          synthesisMessage = "No new TrendCards were found from the current evidence.";
+        }
+      } else if (cardsCreated === 0 && errorCount > 0) {
+        synthesisMessage = "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
+      } else if (cardsCreated > 0 && errorCount === 0) {
+        synthesisMessage = `${cardsCreated} TrendCard${cardsCreated === 1 ? "" : "s"} created.`;
+      } else if (cardsCreated > 0 && errorCount > 0) {
+        synthesisMessage = `${cardsCreated} TrendCard${cardsCreated === 1 ? "" : "s"} created. Some synthesis work could not complete.`;
+      }
+    }
 
     return {
       ok: true,

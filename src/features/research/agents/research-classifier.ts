@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/audit/log";
 import { writeLlmLog } from "@/lib/llm/log";
 import {
   getOpenRouterConfig,
-  requestOpenRouterCompletion,
+  requestStructuredCompletion,
 } from "@/lib/openrouter/client";
 import type { OpenRouterConfig } from "@/lib/openrouter/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,6 +55,28 @@ const classificationItemSchema = z.object({
 const classificationResponseSchema = z.object({
   items: z.array(classificationItemSchema),
 });
+
+const CLASSIFICATION_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          status: { type: "string", enum: ["relevant", "irrelevant"] },
+          relevance_score: { type: "integer" },
+          classification_reason: { type: "string" },
+        },
+        required: ["id", "status", "relevance_score", "classification_reason"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["items"],
+  additionalProperties: false,
+};
 
 /**
  * Unclassified items for one client: status = 'new' only (never
@@ -157,55 +179,26 @@ async function classifyBatch(
   const validIds = new Set(batch.map((item) => item.id));
   const { system, user } = buildPrompt(context, batch);
 
-  const completion = await requestOpenRouterCompletion(config, [
-    { role: "system", content: system },
-    { role: "user", content: user },
-  ]);
+  const result = await requestStructuredCompletion(
+    config,
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    classificationResponseSchema,
+    CLASSIFICATION_JSON_SCHEMA,
+    "research-classification",
+    {
+      timeoutMs: 60_000,
+      maxTokens: 2000,
+      temperature: 0.1,
+    },
+    clientId,
+    userId,
+    CLASSIFIER_FEATURE,
+  );
 
-  if (!completion.ok) {
-    await writeLlmLog({
-      clientId,
-      userId,
-      provider: CLASSIFIER_PROVIDER,
-      model: config.model,
-      feature: CLASSIFIER_FEATURE,
-      status: "error",
-      errorType: completion.errorType,
-    });
-    return { classified: 0, relevant: 0, irrelevant: 0, errors: batch.length };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(completion.content);
-  } catch {
-    await writeLlmLog({
-      clientId,
-      userId,
-      provider: CLASSIFIER_PROVIDER,
-      model: config.model,
-      feature: CLASSIFIER_FEATURE,
-      status: "error",
-      errorType: "invalid_json",
-      tokenInputCount: completion.inputTokens,
-      tokenOutputCount: completion.outputTokens,
-    });
-    return { classified: 0, relevant: 0, irrelevant: 0, errors: batch.length };
-  }
-
-  const validation = classificationResponseSchema.safeParse(parsed);
-  if (!validation.success) {
-    await writeLlmLog({
-      clientId,
-      userId,
-      provider: CLASSIFIER_PROVIDER,
-      model: config.model,
-      feature: CLASSIFIER_FEATURE,
-      status: "error",
-      errorType: "invalid_schema",
-      tokenInputCount: completion.inputTokens,
-      tokenOutputCount: completion.outputTokens,
-    });
+  if (!result.ok) {
     return { classified: 0, relevant: 0, irrelevant: 0, errors: batch.length };
   }
 
@@ -214,7 +207,7 @@ async function classifyBatch(
   let classified = 0;
   const seenIds = new Set<string>();
 
-  for (const item of validation.data.items) {
+  for (const item of result.data.items) {
     // Unknown ids (not in this batch) are ignored; duplicates are ignored.
     if (!validIds.has(item.id) || seenIds.has(item.id)) continue;
     seenIds.add(item.id);
@@ -232,7 +225,18 @@ async function classifyBatch(
       .select("id")
       .maybeSingle();
 
-    if (error || !updated) continue;
+    if (error || !updated) {
+      await writeLlmLog({
+        clientId,
+        userId,
+        provider: CLASSIFIER_PROVIDER,
+        model: config.model,
+        feature: CLASSIFIER_FEATURE,
+        status: "error",
+        errorType: "database_insert_failure",
+      });
+      continue;
+    }
 
     classified += 1;
     if (item.status === "relevant") relevant += 1;
@@ -241,17 +245,6 @@ async function classifyBatch(
 
   // Items omitted by the model, or that failed to update, count as errors.
   const errors = batch.length - classified;
-
-  await writeLlmLog({
-    clientId,
-    userId,
-    provider: CLASSIFIER_PROVIDER,
-    model: config.model,
-    feature: CLASSIFIER_FEATURE,
-    status: "success",
-    tokenInputCount: completion.inputTokens,
-    tokenOutputCount: completion.outputTokens,
-  });
 
   return { classified, relevant, irrelevant, errors };
 }
@@ -267,7 +260,7 @@ export async function classifyForClient(
   clientId: string,
   userId: string | null = null,
 ): Promise<ClassifyForClientResult> {
-  const config = getOpenRouterConfig();
+  const config = getOpenRouterConfig("OPENROUTER_RESEARCH_MODEL");
   if (!config) {
     return { ok: false, reason: "not_configured", message: NOT_CONFIGURED_ERROR };
   }

@@ -36,6 +36,14 @@ function formatDate(value: string | null): string {
   return formatUtcDate(value);
 }
 
+function getScoreBadgeVariant(score: number | null): BadgeProps["variant"] {
+  if (score === null) return "outline";
+  if (score >= 7 && score <= 10) return "success";
+  if (score >= 4 && score <= 6) return "warning";
+  if (score >= 1 && score <= 3) return "neutral";
+  return "outline";
+}
+
 const FILTERS: Array<{ value: CollectedArticleStatusFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
@@ -133,25 +141,24 @@ export function CollectedArticlesPanel({
               href={article.url}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-small font-medium text-near-black underline-offset-2 hover:underline"
+              className="text-small font-medium text-near-black underline-offset-2 hover:underline flex-1 min-w-[180px]"
             >
               {article.title}
             </a>
-            <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
-              {STATUS_LABEL[article.status]}
-            </Badge>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
+                {STATUS_LABEL[article.status]}
+              </Badge>
+              <Badge variant={getScoreBadgeVariant(article.relevanceScore)}>
+                {article.relevanceScore !== null ? `Relevance ${article.relevanceScore}/10` : "Not scored"}
+              </Badge>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 font-mono text-caption text-muted-foreground">
             <span>{article.sourceName ?? "Unknown source"}</span>
             <span>·</span>
             <span>{formatDate(article.publishedAt)}</span>
-            {article.relevanceScore !== null ? (
-              <>
-                <span>·</span>
-                <span>Score {article.relevanceScore}/10</span>
-              </>
-            ) : null}
           </div>
 
           {article.classificationReason ? (

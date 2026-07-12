@@ -16,3 +16,19 @@ export type OpenRouterCompletionResult =
       outputTokens: number | null;
     }
   | { ok: false; errorType: string };
+
+export type OpenRouterRequestOptions = {
+  timeoutMs?: number;
+  maxTokens?: number;
+  temperature?: number;
+  responseFormat?:
+    | { type: "json_object" }
+    | {
+        type: "json_schema";
+        json_schema: {
+          name: string;
+          strict: boolean;
+          schema: Record<string, unknown>;
+        };
+      };
+};
