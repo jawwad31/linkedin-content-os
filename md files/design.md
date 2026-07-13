@@ -17,31 +17,37 @@ Do not use it to redesign authentication, database schemas, API contracts, permi
 
 ### Source-of-truth order
 
-When sources appear to conflict, use this order:
+When sources appear to conflict, use this exact priority order:
 
-1. Existing product behavior, security rules, permissions, data contracts, and accepted feature requirements.
-2. This `design.md` for visual system, layout, component hierarchy, and responsive behavior.
-3. Approved PNG references for visual fidelity and composition.
-4. Reference HTML files for inspection only; do not copy placeholder data or unsupported behavior into production.
+1. Existing production behavior, security rules, permissions, routes, data contracts, workflow requirements, and RLS.
+2. Approved PNG references for the visual appearance of covered screens.
+3. Google Stitch HTML/code for measurements, spacing, layout structure, component grouping, and responsive implementation reference.
+4. `design.md` for reusable design-system rules, implementation constraints, and screens without a direct reference.
 
-The PNGs are visual targets, not product specifications. Do not reproduce mock names, metrics, posts, clients, channels, or buttons unless they are backed by the current application.
+Explicit rules:
+- When PNG and Stitch HTML differ visually, follow the PNG.
+- When a reference conflicts with production behavior, preserve production behavior and adapt the design around it.
+- PNGs are visual acceptance targets, not product specifications.
+- Do not copy mock data or unsupported prototype functionality.
 
 ---
 
 ## 2. Approved Visual References
 
-Use the following images as the primary visual references:
+Use the following actual visual references from the repository:
 
-| File | Screen | Reference viewport |
-|---|---|---:|
-| `01_dashboard.png` | Dashboard | 1440 × 1024 |
-| `02_research_hub.png` | Research | 1440 × 1024 |
-| `03_client_selector.png` | Client Selector | 1440 × 1024 |
-| `04_ideas.png` | Ideas | 1440 × 1024 |
-| `05_login.png` | Login | 1440 × 1024 |
-| `06_post_review.png` | Post Review | 1440 × 1024 |
-| `07_publish_queue.png` | Publish | 1440 × 1024 |
-| `08_business_context_setup.png` | Setup / Business Context | 1280 × 1024 |
+| File path | Screen | Production Route | Coverage |
+|---|---|---|---|
+| `ui-reference/login_m3_updated_colors/05_login.png` | Login | `/login` | Covered |
+| `ui-reference/client_selector_material_3/03_client_selector.png` | Client Selector | `/clients` | Covered |
+| `ui-reference/dashboard_m3_updated_colors/01_dashboard.png` | Overview | `/client/[client_id]/dashboard` | Covered |
+| `ui-reference/research_m3_updated_colors/02_research_hub.png` | Research | `/client/[client_id]/research` | Covered |
+| None | Founder Knowledge | `/client/[client_id]/founder-experiences` | Uncovered |
+| `ui-reference/ideas_material_3/04_ideas.png` | Ideas | `/client/[client_id]/ideas` | Covered |
+| None | Posts | `/client/[client_id]/posts` | Uncovered |
+| `ui-reference/post_review_m3_updated_colors/06_post_review.png` | Post Review | `/client/[client_id]/posts/[post_id]/review` | Covered |
+| `ui-reference/publish_queue_material_3/07_publish_queue.png` | Publish | `/client/[client_id]/publish` | Covered |
+| `ui-reference/setup_material_3/08_business_context_setup.png` | Settings | `/client/[client_id]/settings` | Covered |
 
 Implementation should preserve the same visual character at other viewport sizes rather than hardcoding these dimensions.
 
@@ -54,8 +60,6 @@ Some screenshot content is illustrative. Apply these constraints:
 - Login remains private. Do not expose public signup or workspace creation unless that route is intentionally enabled.
 - Founder Experiences remain a real product workflow. The Setup screen may show a summary module, but full management belongs on its dedicated route or existing workflow.
 - Do not add fake metrics, research runs, posts, proof, clients, users, or workspaces.
-
----
 
 ## 3. Visual Direction
 

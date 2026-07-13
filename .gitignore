@@ -44,5 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Local Google Stitch design references
-ui-reference
+# Local Google Stitch screen exports and PNG references
+ui-reference/*/
+
+# Keep reference governance documents tracked
+!ui-reference/README.md
+!ui-reference/screen-map.md

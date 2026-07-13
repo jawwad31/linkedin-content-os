@@ -16,50 +16,18 @@ These files are design references. They are not production application code.
 
 ## Source-of-Truth Priority
 
-Use this exact priority order:
+When sources appear to conflict, use this exact priority order:
 
-1. Production repository
-   - functionality
-   - routes
-   - data
-   - permissions
-   - roles
-   - workflow states
-   - validation
-   - API behavior
-   - Supabase behavior
-   - audit logging
+1. Existing production behavior, security rules, permissions, routes, data contracts, workflow requirements, and RLS.
+2. Approved PNG references for the visual appearance of covered screens.
+3. Google Stitch HTML/code for measurements, spacing, layout structure, component grouping, and responsive implementation reference.
+4. `design.md` for reusable design-system rules, implementation constraints, and screens without a direct reference.
 
-2. `reference.png`
-   - visual appearance
-   - page composition
-   - information hierarchy
-   - spacing
-   - positioning
-   - dimensions
-   - colors
-   - typography
-   - component styling
-   - responsive intent
-
-3. `code.html`
-   - secondary reference for:
-     - CSS measurements
-     - spacing values
-     - layout structure
-     - component grouping
-     - typography values
-     - responsive patterns
-
-4. `md files/design.md`
-   - reusable design-system rules
-   - implementation constraints
-   - patterns for screens without direct references
-
-When the PNG and Stitch code differ visually, follow the PNG.
-
-When a reference conflicts with existing production functionality, preserve the
-production functionality and adapt the reference design around it.
+Explicit rules:
+- When PNG and Stitch HTML differ visually, follow the PNG.
+- When a reference conflicts with production behavior, preserve production behavior and adapt the design around it.
+- PNGs are visual acceptance targets, not product specifications.
+- Do not copy mock data or unsupported prototype functionality.
 
 ---
 
