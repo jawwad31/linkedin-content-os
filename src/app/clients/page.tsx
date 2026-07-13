@@ -37,7 +37,7 @@ export default async function ClientsPage() {
         <div>
           <h1 className="text-headline-lg font-bold text-on-surface mb-2">Workspace Select</h1>
           <p className="text-body-lg text-on-surface-variant max-w-xl">
-            Welcome back. Select a client ecosystem to continue orchestrating content or initialize a new project space.
+            Select a Client Workspace to continue.
           </p>
         </div>
         <div className="w-full md:w-auto">

@@ -39,13 +39,7 @@ export default async function LoginPage() {
           
         </div>
         
-        {/* Decorative Info Pill */}
-        <div className="mt-8 flex justify-center">
-          <div className="bg-surface-container-high px-4 py-2 rounded-full border border-outline-variant flex items-center gap-2 animate-pulse">
-            <Zap className="w-4 h-4 text-primary fill-current" />
-            <span className="text-label-sm text-on-surface-variant font-bold">AI-Enhanced Content OS Active</span>
-          </div>
-        </div>
+
       </div>
     </main>
   );

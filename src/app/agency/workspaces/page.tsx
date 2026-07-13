@@ -1,4 +1,3 @@
-
 import { ClientList } from "@/features/clients/client-list";
 import { getAgencyWorkspaces } from "@/features/agency/queries";
 import { getServerUser } from "@/lib/supabase/session";
@@ -13,14 +12,12 @@ export default async function AgencyWorkspacesPage() {
 
   return (
     <div className="w-full">
-      <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <section className="flex flex-col gap-6 mb-12">
         <div>
           <h1 className="text-headline-lg font-bold text-on-surface mb-2">Workspace Select</h1>
           <p className="text-body-lg text-on-surface-variant max-w-xl">
             Client Workspaces available through this Agency. Select a client ecosystem to continue orchestrating content.
           </p>
-        </div>
-        <div className="w-full md:w-auto">
         </div>
       </section>
 
