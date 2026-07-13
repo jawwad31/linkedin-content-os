@@ -260,6 +260,10 @@
     box-shadow: 0 10px 24px -12px
       color-mix(in srgb, var(--near-black) 18%, transparent);
   }
+  .m3-pattern {
+    background-image: radial-gradient(color-mix(in srgb, var(--brand-orange) 10%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
 }
 
 ::-webkit-scrollbar {

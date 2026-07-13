@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,37 +12,84 @@ const initialState: LoginState = { error: null };
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, initialState);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-small font-medium">
-          Email
-        </label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-        />
+    <form action={formAction} className="flex flex-col gap-6">
+      <div className="relative group">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="email" className="text-body-md text-on-surface-variant font-medium">
+            Email address
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5 pointer-events-none" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="Email"
+              required
+              className="pl-12"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-small font-medium">
-          Password
+      <div className="relative group">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="password" className="text-body-md text-on-surface-variant font-medium">
+            Password
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5 pointer-events-none" />
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="Password"
+              required
+              className="pl-12 pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-3 cursor-pointer group">
+          <div className="relative flex items-center">
+            <input
+              type="checkbox"
+              className="peer appearance-none w-5 h-5 border-2 border-outline rounded-sm checked:bg-primary checked:border-primary transition-all cursor-pointer"
+            />
+            <svg
+              className="absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none w-4 h-4 left-0.5 top-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span className="text-body-md text-on-surface-variant group-hover:text-on-surface">Remember me</span>
         </label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
+        <a href="#" className="text-body-md text-primary hover:underline underline-offset-4 font-bold">
+          Forgot password?
+        </a>
       </div>
 
       {state.error ? (
-        <p role="alert" className="text-small text-danger">
+        <p role="alert" className="text-body-md text-danger">
           {state.error}
         </p>
       ) : null}
@@ -50,9 +98,17 @@ export function LoginForm() {
         type="submit"
         variant="gradient"
         disabled={isPending}
-        className="w-full"
+        className="w-full h-12 rounded-full text-label-lg font-bold"
       >
-        {isPending ? "Signing in..." : "Log in"}
+        {isPending ? "Signing in..." : "Sign In"}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="w-5 h-5 ml-1"
+        >
+          <path d="M14 16.94V12.94H5.08L5.05 10.93H14V6.94L19 11.94Z" />
+        </svg>
       </Button>
     </form>
   );

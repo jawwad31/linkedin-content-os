@@ -1,6 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Mail, Check } from "lucide-react";
 import { CLIENT_ROLE_LABELS } from "@/lib/access/roles";
 
 import { acceptInvitationAction } from "./actions";
@@ -14,27 +12,36 @@ export function PendingInvitations({
   if (invitations.length === 0) return null;
 
   return (
-    <div className="mt-6 flex flex-col gap-3">
-      <h2 className="text-small font-medium text-muted-foreground">
+    <div className="mt-8 mb-6 flex flex-col gap-4">
+      <h2 className="text-title-md font-bold text-on-surface">
         Pending Invitations
       </h2>
-      {invitations.map((invitation) => (
-        <Card key={invitation.id}>
-          <CardContent className="flex items-center justify-between gap-3 pt-6">
-            <div className="flex items-center gap-2">
-              <span className="text-body">You have been invited as</span>
-              <Badge variant="neutral">
-                {CLIENT_ROLE_LABELS[invitation.role]}
-              </Badge>
+      <div className="flex flex-col gap-3">
+        {invitations.map((invitation) => (
+          <div key={invitation.id} className="bg-surface-container-high rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-outline-variant">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary shrink-0">
+                <Mail className="w-5 h-5 fill-current opacity-80" />
+              </div>
+              <div className="flex flex-col">
+                <p className="text-body-md text-on-surface">
+                  You have been invited to join a Workspace as <span className="font-bold">{CLIENT_ROLE_LABELS[invitation.role]}</span>
+                </p>
+                <p className="text-body-sm text-on-surface-variant">
+                  Accept the invitation to gain access to the client ecosystem.
+                </p>
+              </div>
             </div>
-            <form action={acceptInvitationAction.bind(null, invitation.id)}>
-              <Button type="submit" variant="gradient" size="sm">
-                Accept
-              </Button>
+            
+            <form action={acceptInvitationAction.bind(null, invitation.id)} className="w-full sm:w-auto">
+              <button type="submit" className="w-full sm:w-auto bg-primary text-on-primary font-label-md px-6 py-2.5 rounded-full shadow hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                <Check className="w-4 h-4" />
+                Accept Invite
+              </button>
             </form>
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

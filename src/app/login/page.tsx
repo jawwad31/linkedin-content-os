@@ -1,12 +1,6 @@
 import { redirect } from "next/navigation";
+import { Zap } from "lucide-react";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { getServerUser } from "@/lib/supabase/session";
 import { LoginForm } from "@/features/auth/login-form";
@@ -19,24 +13,40 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-soft-white bg-radial-brand p-8">
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader className="items-center text-center">
-          <span
-            aria-hidden="true"
-            className="mb-3 flex h-14 w-14 items-center justify-center rounded-control bg-gradient-brand font-heading text-xl font-bold text-white shadow-md"
-          >
-            A
-          </span>
-          <CardTitle>Sign in to AIXelerate Content OS</CardTitle>
-          <CardDescription>
-            Enter your email and password to continue.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <main className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 m3-pattern z-0 opacity-50 pointer-events-none"></div>
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-orange/10 rounded-full blur-[120px] z-0 pointer-events-none"></div>
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-brand-purple/10 rounded-full blur-[100px] z-0 pointer-events-none"></div>
+
+      {/* Login Card */}
+      <div className="z-10 w-full max-w-[448px] px-4 md:px-0">
+        <div className="bg-surface-container-lowest rounded-2xl shadow-sm md:shadow-md border border-outline-variant p-8 md:p-10 flex flex-col gap-8 transition-all duration-300 hover:shadow-lg">
+          
+          {/* Branding Header */}
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-500">
+              <Zap className="w-8 h-8 text-on-primary fill-current" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-headline-sm font-bold tracking-tight text-on-surface">AIXelerate</h1>
+              <p className="text-body-md text-on-surface-variant">The Operating System for Content</p>
+            </div>
+          </div>
+          
+          {/* Form Container */}
           <LoginForm />
-        </CardContent>
-      </Card>
+          
+        </div>
+        
+        {/* Decorative Info Pill */}
+        <div className="mt-8 flex justify-center">
+          <div className="bg-surface-container-high px-4 py-2 rounded-full border border-outline-variant flex items-center gap-2 animate-pulse">
+            <Zap className="w-4 h-4 text-primary fill-current" />
+            <span className="text-label-sm text-on-surface-variant font-bold">AI-Enhanced Content OS Active</span>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

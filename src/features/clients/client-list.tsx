@@ -2,17 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Building2, Search } from "lucide-react";
+import { History, Rocket } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { EFFECTIVE_ROLE_LABELS } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
 
@@ -27,7 +18,7 @@ export function ClientList({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
 
   if (clients.length === 0) {
     return (
@@ -52,70 +43,60 @@ export function ClientList({
     : clients;
 
   return (
-    <div className="mt-6 flex flex-col gap-4">
-      <div className="relative max-w-xs">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search workspaces..."
-          aria-label="Search Client Workspaces"
-          className="rounded-full pl-9"
-        />
+    <div className="mt-6 flex flex-col gap-6">
+      {/* Bento Grid Contextual Filter Chips - Visual Only */}
+      <div className="flex flex-wrap gap-2 mb-2">
+        <button className="bg-primary text-on-primary rounded-full px-4 py-2 font-label-md text-label-md shadow-md">All Clients</button>
+        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Recent</button>
+        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Favorites</button>
+        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Owned by Me</button>
       </div>
 
       {filteredClients.length === 0 ? (
-        <div className="rounded-card border border-border-grey bg-white p-8 text-center">
-          <p className="text-body font-medium">
+        <div className="rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center h-64">
+          <p className="text-title-md text-on-surface-variant">
             No Client Workspaces match your search.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredClients.map((client) => (
             <Link
               key={client.id}
               href={`/client/${client.id}/dashboard`}
-              className="hover-lift block h-full rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+              className="workspace-card rounded-2xl p-6 border border-outline-variant flex flex-col justify-between h-64 group cursor-pointer bg-surface-container-lowest transition-all duration-200 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <Card className="h-full transition-colors hover:border-brand-orange/50">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      aria-hidden="true"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-soft-white text-near-black"
-                    >
-                      <Building2 className="h-5 w-5" />
-                    </span>
-                    <Badge variant="neutral">
-                      {EFFECTIVE_ROLE_LABELS[client.role]}
-                    </Badge>
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="h-14 w-14 bg-surface-container-high rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+                    <Rocket className="w-8 h-8 fill-current opacity-80" />
                   </div>
-                  <CardTitle className="mt-1">{client.name}</CardTitle>
-                  <CardDescription>
-                    {client.agencyName || client.founderName || client.industry
-                      ? [client.agencyName, client.founderName, client.industry]
-                          .filter(Boolean)
-                          .join(" | ")
-                      : "No business details yet"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-caption text-muted-foreground">
-                    Updated {formatUtcDate(client.updatedAt)}
+                  <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full font-label-sm text-label-sm">
+                    {EFFECTIVE_ROLE_LABELS[client.role]}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-control border border-border-grey px-3 py-1.5 text-small font-medium text-near-black">
-                    Open
-                    <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-                  </span>
-                </CardContent>
-              </Card>
+                </div>
+                <h3 className="font-title-lg text-title-lg text-on-surface group-hover:bg-gradient-brand group-hover:text-transparent group-hover:bg-clip-text transition-all font-bold">
+                  {client.name}
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 line-clamp-1">
+                  {client.agencyName || client.founderName || client.industry
+                    ? [client.agencyName, client.founderName, client.industry]
+                        .filter(Boolean)
+                        .join(" | ")
+                    : "No business details yet"}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
+                <div className="flex items-center gap-2 text-on-surface-variant">
+                  <History className="w-4 h-4" />
+                  <span className="font-label-sm text-label-sm">Updated {formatUtcDate(client.updatedAt)}</span>
+                </div>
+              </div>
             </Link>
           ))}
+          
+          {/* Add New Client Empty State / Card (For visual parity, non-functional if not agency admin, handled by role if needed. We'll render it as a visual placeholder that redirects or just informative) */}
         </div>
       )}
     </div>
