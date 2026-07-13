@@ -37,6 +37,7 @@ export async function deleteRssSource(
     .select("id")
     .eq("id", sourceIdResult.data)
     .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (fetchError || !source) {
@@ -47,15 +48,19 @@ export async function deleteRssSource(
     .from("market_signal_items")
     .select("id", { count: "exact", head: true })
     .eq("client_id", clientIdResult.data)
-    .eq("rss_source_id", sourceIdResult.data);
+    .eq("rss_source_id", sourceIdResult.data)
+    .is("deleted_at", null);
 
-  const { error: deleteError } = await supabase
+  const { data: deleted, error: deleteError } = await supabase
     .from("rss_sources")
     .delete()
     .eq("id", sourceIdResult.data)
-    .eq("client_id", clientIdResult.data);
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (deleteError) {
+  if (deleteError || !deleted) {
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this RSS source. Please try again." };
   }
 

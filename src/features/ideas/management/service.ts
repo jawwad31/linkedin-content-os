@@ -234,13 +234,16 @@ export async function deleteContentIdea(
     };
   }
 
-  const { error: deleteError } = await supabase
+  const { data: deleted, error: deleteError } = await supabase
     .from("content_ideas")
     .delete()
     .eq("id", ideaIdResult.data)
-    .eq("client_id", clientIdResult.data);
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (deleteError) {
+  if (deleteError || !deleted) {
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this Content Idea. Please try again." };
   }
 

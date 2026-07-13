@@ -179,6 +179,7 @@ export async function deleteCollectedArticle(
     .select("id, status")
     .eq("id", itemIdResult.data)
     .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (fetchError || !article) {
@@ -204,13 +205,16 @@ export async function deleteCollectedArticle(
     };
   }
 
-  const { error: deleteError } = await supabase
+  const { data: deleted, error: deleteError } = await supabase
     .from("market_signal_items")
     .delete()
     .eq("id", itemIdResult.data)
-    .eq("client_id", clientIdResult.data);
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
-  if (deleteError) {
+  if (deleteError || !deleted) {
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this article. Please try again." };
   }
 

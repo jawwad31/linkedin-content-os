@@ -396,6 +396,31 @@ export async function deleteTrendCard(
     return { ok: false, code: "NOT_FOUND", message: "TrendCard not found." };
   }
 
+  const articleIds: string[] = [];
+  if (Array.isArray(card.source_item_ids_json)) {
+    for (const item of card.source_item_ids_json) {
+      if (typeof item === "string" && uuidSchema.safeParse(item).success) {
+        articleIds.push(item);
+      }
+    }
+  }
+
+  const preStatusMap = new Map<string, string>();
+  if (articleIds.length > 0) {
+    const { data: preArticles } = await supabase
+      .from("market_signal_items")
+      .select("id, status")
+      .in("id", articleIds)
+      .eq("client_id", clientIdResult.data)
+      .is("deleted_at", null);
+
+    if (preArticles) {
+      for (const art of preArticles) {
+        preStatusMap.set(art.id, art.status);
+      }
+    }
+  }
+
   const { error: rpcError } = await supabase.rpc(
     "delete_trend_card_and_restore_articles",
     {
@@ -405,27 +430,44 @@ export async function deleteTrendCard(
   );
 
   if (rpcError) {
-    const msg = rpcError.message || "Could not delete this TrendCard. Please try again.";
-    if (msg.includes("depends on it")) {
+    if (rpcError.code === "23503") {
       return {
         ok: false,
         code: "DEPENDENCY_CONFLICT",
         message: "This TrendCard cannot be deleted because downstream content depends on it.",
       };
     }
-    return { ok: false, code: "UNKNOWN_ERROR", message: msg };
+    if (rpcError.code === "P0002") {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+        message: "TrendCard not found.",
+      };
+    }
+    return {
+      ok: false,
+      code: "UNKNOWN_ERROR",
+      message: "Could not delete this TrendCard. Please try again.",
+    };
   }
 
   let restoredCount = 0;
-  const articleIds = Array.isArray(card.source_item_ids_json) ? card.source_item_ids_json : [];
   if (articleIds.length > 0) {
-    const { data: articles } = await supabase
+    const { data: postArticles } = await supabase
       .from("market_signal_items")
       .select("id, status")
       .in("id", articleIds)
-      .eq("client_id", clientIdResult.data);
+      .eq("client_id", clientIdResult.data)
+      .is("deleted_at", null);
 
-    restoredCount = (articles || []).filter(a => a.status === "relevant").length;
+    if (postArticles) {
+      for (const art of postArticles) {
+        const beforeStatus = preStatusMap.get(art.id);
+        if (beforeStatus === "used" && art.status === "relevant") {
+          restoredCount++;
+        }
+      }
+    }
   }
 
   await writeAuditLog({

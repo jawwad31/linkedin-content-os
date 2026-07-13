@@ -713,10 +713,17 @@ export async function deletePost(
   );
 
   if (rpcError) {
+    if (rpcError.code === "P0002") {
+      return {
+        ok: false,
+        code: "NOT_FOUND",
+        message: "Post not found.",
+      };
+    }
     return {
       ok: false,
       code: "UNKNOWN_ERROR",
-      message: rpcError.message || "Could not delete this post. Please try again.",
+      message: "Could not delete this post. Please try again.",
     };
   }
 
@@ -727,6 +734,8 @@ export async function deletePost(
       .select("status")
       .eq("id", post.content_idea_id)
       .eq("client_id", clientIdResult.data)
+      .is("deleted_at", null)
+      .maybeSingle<{ status: string }>();
 
     if (idea && idea.status === "ready") {
       ideaRestored = true;
