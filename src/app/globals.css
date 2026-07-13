@@ -7,32 +7,62 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-roboto-flex), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono);
-  --font-heading: var(--font-poppins);
+  --font-heading: var(--font-roboto-flex), ui-sans-serif, system-ui, sans-serif;
   --color-brand-orange: var(--brand-orange);
   --color-brand-purple: var(--brand-purple);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-tertiary: var(--tertiary);
   --color-near-black: var(--near-black);
   --color-soft-white: var(--soft-white);
   --color-border-grey: var(--border-grey);
+  --color-surface: var(--surface);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-variant: var(--surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
+  --color-success-strong: var(--success-strong);
+  --color-warning-strong: var(--warning-strong);
+  --color-danger-strong: var(--danger-strong);
+  --color-info-strong: var(--info-strong);
   --radius-control: 0.5rem;
   --radius-btn: 0.625rem;
   --radius-card: 0.875rem;
   --radius-dialog: 1.375rem;
-  --text-display-xl: 4rem;
-  --text-display-l: 3.5rem;
-  --text-display-m: 3rem;
-  --text-page-title: 2.5rem;
-  --text-section-title: 2rem;
-  --text-card-title: 1.5rem;
+  --text-display-xl: 3.5625rem;
+  --text-display-xl--line-height: 4rem;
+  --text-display-l: 2.8125rem;
+  --text-display-l--line-height: 3.25rem;
+  --text-display-m: 2.25rem;
+  --text-display-m--line-height: 2.75rem;
+  --text-page-title: 2rem;
+  --text-page-title--line-height: 2.5rem;
+  --text-page-title-mobile: 1.75rem;
+  --text-page-title-mobile--line-height: 2.25rem;
+  --text-section-title: 1.5rem;
+  --text-section-title--line-height: 2rem;
+  --text-card-title: 1.375rem;
+  --text-card-title--line-height: 1.75rem;
   --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.75rem;
   --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
   --text-small: 0.875rem;
+  --text-small--line-height: 1.25rem;
   --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -72,32 +102,65 @@
 }
 
 :root {
+  /* Brand core (design.md §4.1) */
   --brand-orange: #f84e28;
   --brand-purple: #bb26f2;
+  --primary-dark: #b22300;
+  --secondary-dark: #9600c7;
+  --tertiary: #613ed3;
   --near-black: #0a0a0b;
-  --soft-white: #fafafb;
-  --border-grey: #ebebef;
+
+  /* Warm tonal surface system (design.md §4.1) */
+  --surface: #fdf8f7;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #fff0ed;
+  --surface-container: #ffe9e4;
+  --surface-container-high: #ffe2db;
+  --surface-container-highest: #fadcd5;
+  --surface-variant: #f4e0db;
+
+  /* Outline and text */
+  --outline: #79747e;
+  --outline-variant: #e4beb5;
+  --on-surface: #1c1b1d;
+  --on-surface-variant: #5b403a;
+
+  /* Semantic statuses */
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #2563eb;
-  --background: var(--soft-white);
+  /* Darkened status text for AA contrast on tinted chip backgrounds */
+  --success-strong: color-mix(in srgb, var(--success) 55%, var(--near-black));
+  --warning-strong: color-mix(in srgb, var(--warning) 55%, var(--near-black));
+  --danger-strong: color-mix(in srgb, var(--danger) 60%, var(--near-black));
+  --info-strong: color-mix(in srgb, var(--info) 70%, var(--near-black));
+
+  /* Signature gradient mid stops (design.md §4.2) */
+  --gradient-brand-mid-1: #ff6b3d;
+  --gradient-brand-mid-2: #d63d8d;
+
+  /* Legacy aliases: existing components keep working, now on warm values */
+  --soft-white: var(--surface-container-low);
+  --border-grey: var(--outline-variant);
+
+  --background: #fff8f6;
   --foreground: var(--near-black);
-  --card: #ffffff;
+  --card: var(--surface-container-lowest);
   --card-foreground: var(--near-black);
-  --popover: #ffffff;
+  --popover: var(--surface-container-lowest);
   --popover-foreground: var(--near-black);
   --primary: var(--near-black);
-  --primary-foreground: var(--soft-white);
-  --secondary: oklch(0.97 0 0);
+  --primary-foreground: var(--surface-container-lowest);
+  --secondary: var(--surface-container-low);
   --secondary-foreground: var(--near-black);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: var(--surface-container-low);
+  --muted-foreground: var(--on-surface-variant);
+  --accent: var(--surface-container);
   --accent-foreground: var(--near-black);
   --destructive: var(--danger);
-  --border: var(--border-grey);
-  --input: var(--border-grey);
+  --border: var(--outline-variant);
+  --input: var(--outline-variant);
   --ring: var(--brand-orange);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -166,8 +229,8 @@
     background-image: linear-gradient(
       90deg,
       var(--brand-orange) 0%,
-      #ff6b3d 30%,
-      #d63d8d 65%,
+      var(--gradient-brand-mid-1) 30%,
+      var(--gradient-brand-mid-2) 65%,
       var(--brand-purple) 100%
     );
   }
@@ -194,7 +257,8 @@
   }
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px -12px rgba(10, 10, 11, 0.18);
+    box-shadow: 0 10px 24px -12px
+      color-mix(in srgb, var(--near-black) 18%, transparent);
   }
 }
 
@@ -206,9 +270,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-grey);
+  background: var(--outline-variant);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d3d3da;
+  background: color-mix(in srgb, var(--outline) 45%, var(--outline-variant));
 }

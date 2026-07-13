@@ -86,7 +86,7 @@ export function DestructiveConfirmDialog({
             </h2>
             <Dialog.Close
               disabled={isDeleting}
-              className="rounded-full p-1 text-dark-grey hover:bg-soft-white disabled:pointer-events-none disabled:opacity-50"
+              className="rounded-full p-1 text-muted-foreground hover:bg-soft-white disabled:pointer-events-none disabled:opacity-50"
               aria-label="Close dialog"
             >
               <X className="h-4 w-4" />
@@ -94,7 +94,7 @@ export function DestructiveConfirmDialog({
           </div>
 
           <form onSubmit={handleConfirm} className="mt-4 flex flex-col gap-4">
-            <p className="text-small text-dark-grey leading-relaxed">
+            <p className="text-small text-muted-foreground leading-relaxed">
               This permanently deletes &quot;{recordTitle}&quot;. This action cannot be undone.
             </p>
 
@@ -120,8 +120,8 @@ export function DestructiveConfirmDialog({
             )}
 
             {error && (
-              <div className="rounded-control bg-danger-light/10 border border-danger/20 p-3">
-                <p className="text-xs font-medium text-danger">{error}</p>
+              <div className="rounded-control bg-danger/10 border border-danger/20 p-3">
+                <p className="text-xs font-medium text-danger-strong">{error}</p>
               </div>
             )}
 

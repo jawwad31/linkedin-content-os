@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Poppins, Inter, JetBrains_Mono } from "next/font/google";
+import { Roboto_Flex, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
+const robotoFlex = Roboto_Flex({
+  variable: "--font-roboto-flex",
   subsets: ["latin"],
 });
 
@@ -32,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${robotoFlex.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
