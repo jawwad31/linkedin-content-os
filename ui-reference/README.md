@@ -2,32 +2,28 @@
 
 ## Purpose
 
-This directory contains approved Google Stitch UI references for the
-AIXelerate Content OS interface refresh.
+This directory contains approved Google Stitch UI references for the AIXelerate Content OS interface refresh.
 
-Each screen folder contains:
-
-- `reference.png` — the approved visual target
-- `code.html` — the Google Stitch exported implementation reference
-
-These files are design references. They are not production application code.
+These screenshots and Stitch HTML/code exports are design-language references illustrating color system, tonal surfaces, typography, component proportions, spacing, layout patterns, and states (loading, empty, error, and interaction). They are not authoritative definitions of feature inventories, product functionality, routes, workflow behaviors, role permissions, or backend capabilities.
 
 ---
 
 ## Source-of-Truth Priority
 
+“The production application determines what exists and how it works. The UI references determine how it should look and feel.”
+
 When sources appear to conflict, use this exact priority order:
 
-1. Existing production behavior, security rules, permissions, routes, data contracts, workflow requirements, and RLS.
-2. Approved PNG references for the visual appearance of covered screens.
-3. Google Stitch HTML/code for measurements, spacing, layout structure, component grouping, and responsive implementation reference.
-4. `design.md` for reusable design-system rules, implementation constraints, and screens without a direct reference.
+1. **Production application and governing product/security requirements**: This includes features, routes, navigation, UX flows, permissions, data states, actions, validations, APIs, database tables, RLS policies, and background worker behavior.
+2. **`design.md`**: The normalized, reusable design system, visual tokens, and UI implementation guidelines.
+3. **Approved PNG and Stitch references**: Visual examples used to extract component patterns, layout approaches, spacing, and responsive intent.
+   - Within the reference package, the PNG controls the visible appearance, and the Stitch HTML helps inspect measurements/structure. Do not treat PNGs as mandatory pixel-perfect replicas.
 
-Explicit rules:
-- When PNG and Stitch HTML differ visually, follow the PNG.
-- When a reference conflicts with production behavior, preserve production behavior and adapt the design around it.
-- PNGs are visual acceptance targets, not product specifications.
-- Do not copy mock data or unsupported prototype functionality.
+### Functional Preservation and Existing Features
+- **Preserve Production Behavior**: Every existing production feature must remain fully functional during the UI refresh. Do not remove, hide, disable, rename, or downgrade a feature merely because it is absent from a reference screenshot or Stitch prototype.
+- **Preserve Controls**: Do not remove, hide, or alter the functionality of any existing control (including global search, notification indicators/controls, command palette, Help sidebar triggers, filters, client switcher actions, admin features, or metadata) merely because it is not illustrated or is placed differently in the prototype references.
+- **Adapt UX**: Adapt all existing features (including loading states, empty states, error handling, destructive confirmations, and role-based views) into the new visual design language without stripping away actual logic. Reorganization of layouts is permitted only if the underlying workflows and options remain fully intact.
+- **No Prototype-only Code**: Do not invent or add new prototype-only functionalities (such as fake mock metrics, public signup routes, SSO options, Twitter/Instagram publishing options, or automated scheduling screens) if they are not backed by backend APIs or explicit feature checklist tickets.
 
 ---
 

@@ -1,19 +1,8 @@
-# design.md — AIXelerate Content OS
-
 ## 1. Purpose and Authority
 
-This file is the visual and interaction source of truth for AIXelerate Content OS.
+“The production application determines what exists and how it works. The UI references determine how it should look and feel.”
 
-Use it for:
-
-- page composition and responsive layouts
-- Tailwind theme tokens
-- shadcn/ui customization
-- reusable component styling
-- visual QA against the approved PNG references
-- prompts given to Claude, Codex, Stitch, or other implementation agents
-
-Do not use it to redesign authentication, database schemas, API contracts, permissions, routes, research logic, or publishing workflows. Those rules remain in `AGENTS.md`, `security-access.md`, feature tickets, migrations, and the existing codebase.
+This document outlines the visual system, layout approach, and reusable styles for the UI refresh. The approved PNG screenshots and Stitch HTML/code exports in `ui-reference/` serve strictly as design-language references illustrating the color system, tonal surfaces, typography, component proportions, spacing, layout patterns, and states (loading, empty, error, and interaction). They are not authoritative definitions of feature inventories, product functionality, routes, workflow behaviors, role permissions, or backend capabilities. Do not use this document to redesign authentication, database schemas, API contracts, permissions, routes, research logic, or publishing workflows. Those rules remain in `AGENTS.md`, `security-access.md`, feature tickets, migrations, and the existing codebase.
 
 ### Source-of-truth order
 
@@ -1072,21 +1061,17 @@ When implementing the refresh:
 
 ## 17. Visual QA Checklist
 
+Visual QA checks must verify both design-language fidelity and the complete preservation of existing production functionality.
+
 Before marking a screen complete, verify:
 
-- [ ] Sidebar width, spacing, and active state match the reference.
-- [ ] Main canvas uses warm surfaces rather than cold neutral grey.
-- [ ] Roboto Flex is applied consistently.
-- [ ] Page title is 28–32px and hierarchy is compact.
-- [ ] Card radii, borders, and tonal hierarchy are consistent.
-- [ ] Only one dominant primary action is visible per page.
-- [ ] Gradient use is restrained.
-- [ ] Real data is used; no screenshot placeholder data remains.
-- [ ] Empty, loading, error, and unauthorized states are present.
-- [ ] Buttons remain visible and usable at 375px width.
-- [ ] No action is hover-only.
-- [ ] Focus states and keyboard navigation work.
-- [ ] Unsupported signup, channels, scheduling, or auto-publishing were not added.
+- [ ] Design-System Consistency: Typography (Roboto Flex), colors, margins, and tonal hierarchy conform to the design tokens.
+- [ ] Close Component Fidelity: Radii, borders, button/input sizes, and active nav states match visual patterns.
+- [ ] Functional Completeness: Existing inputs, filters, action triggers, notifications, search, Help, and metadata fields are fully functional and present.
+- [ ] Desktop layout composition adaptations are documented where current production features require different spacing or arrangements.
+- [ ] Layout remains responsive and accessible (interactive at 375px without hover, WCAG AA contrast, clear focus rings).
+- [ ] No mockup-only features (e.g. public signup, Google login, or cross-channel auto-publishing) are added.
+- [ ] No existing feature logic or routes were deleted or hidden.
 - [ ] Existing workflows and permissions still pass tests.
 - [ ] The production build succeeds.
 
