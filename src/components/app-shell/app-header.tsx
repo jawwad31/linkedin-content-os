@@ -42,7 +42,7 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white/90 px-6 py-4 backdrop-blur-md lg:px-8",
+        "sticky top-0 z-10 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-surface-container-low/90 px-6 py-4 backdrop-blur-md lg:px-8",
         className,
       )}
     >

@@ -22,7 +22,7 @@ export function AppSidebar({
   accessibleClientCount: number;
 }) {
   return (
-    <aside className="hidden flex-col gap-6 bg-near-black p-6 text-soft-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0">
+    <aside className="hidden flex-col gap-6 bg-near-black p-6 text-soft-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0">
       <div className="flex items-center gap-2.5 px-1">
         <span
           aria-hidden="true"

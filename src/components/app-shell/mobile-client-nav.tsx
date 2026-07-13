@@ -40,7 +40,12 @@ export function MobileClientNav({
 
   const items: NavItem[] = getNavItems(clientId);
   if (params?.post_id) {
-    items.push({ label: "Post Review", href: pathname, icon: FileText });
+    items.push({
+      label: "Post Review",
+      href: pathname,
+      icon: FileText,
+      accent: "orange",
+    });
   }
 
   const activeItem = items.find((item) => item.href === pathname);
@@ -50,7 +55,7 @@ export function MobileClientNav({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border-grey bg-white/95 px-4 py-3 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-border-grey bg-surface-container-low/95 px-4 py-3 backdrop-blur-md lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-caption font-mono text-muted-foreground">
@@ -159,7 +164,9 @@ export function MobileClientNav({
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-control px-3.5 py-2.5 text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black",
                       isActive &&
-                        "bg-gradient-brand font-semibold text-white shadow-sm",
+                        (item.accent === "purple"
+                          ? "bg-secondary-dark font-semibold text-white shadow-sm"
+                          : "bg-primary-dark font-semibold text-white shadow-sm"),
                     )}
                   >
                     <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />

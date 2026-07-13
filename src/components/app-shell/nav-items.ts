@@ -13,13 +13,15 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  accent: "orange" | "purple";
 };
 
 /**
  * Single source of truth for sidebar nav links and the header's
  * current-page title lookup. Route hrefs stay on their existing paths
  * (e.g. "Settings" still points at /settings) — only the user-facing label
- * changes here.
+ * changes here. `accent` drives the active-pill color per design.md §9.1:
+ * orange for operational sections, purple for intelligence/distribution.
  */
 export function getNavItems(clientId: string): NavItem[] {
   return [
@@ -27,36 +29,43 @@ export function getNavItems(clientId: string): NavItem[] {
       label: "Overview",
       href: `/client/${clientId}/dashboard`,
       icon: LayoutDashboard,
+      accent: "orange",
     },
     {
       label: "Research",
       href: `/client/${clientId}/research`,
       icon: Radar,
+      accent: "purple",
     },
     {
       label: "Founder Knowledge",
       href: `/client/${clientId}/founder-experiences`,
       icon: BookOpen,
+      accent: "purple",
     },
     {
       label: "Ideas",
       href: `/client/${clientId}/ideas`,
       icon: Lightbulb,
+      accent: "purple",
     },
     {
       label: "Posts",
       href: `/client/${clientId}/posts`,
       icon: FileText,
+      accent: "orange",
     },
     {
       label: "Publish",
       href: `/client/${clientId}/publish`,
       icon: Send,
+      accent: "purple",
     },
     {
       label: "Settings",
       href: `/client/${clientId}/settings`,
       icon: Settings,
+      accent: "orange",
     },
   ];
 }

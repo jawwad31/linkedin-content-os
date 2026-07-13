@@ -16,7 +16,7 @@ export function AgencyShell({
   return (
     <div className="lg:flex lg:min-h-screen">
       <MobileAgencyNav agencyName={agencyName} />
-      <aside className="hidden flex-col gap-6 bg-near-black p-6 text-soft-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0">
+      <aside className="hidden flex-col gap-6 bg-near-black p-6 text-soft-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0">
         <div className="flex items-center gap-2.5 px-1">
           <span
             aria-hidden="true"
@@ -50,7 +50,7 @@ export function AgencyShell({
       </aside>
 
       <div className="flex w-full flex-1 flex-col">
-        <header className="sticky top-0 z-10 hidden flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-white/90 px-6 py-4 backdrop-blur-md lg:flex lg:px-8">
+        <header className="sticky top-0 z-10 hidden min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border-grey bg-surface-container-low/90 px-6 py-4 backdrop-blur-md lg:flex lg:px-8">
           <div className="min-w-0">
             <h2 className="truncate text-card-title font-heading font-semibold">
               Agency
