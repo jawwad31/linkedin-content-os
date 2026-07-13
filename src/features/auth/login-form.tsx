@@ -30,7 +30,8 @@ export function LoginForm() {
               autoComplete="email"
               placeholder="Email"
               required
-              className="pl-12 h-14 w-full rounded-lg border border-outline bg-transparent px-4 text-body-lg text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus-visible:border-primary focus-visible:border-2 focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-on-surface-variant"
+              style={{ paddingLeft: '3rem', paddingRight: '2.5rem' }}
+              className="h-14 w-full rounded-lg border border-outline bg-transparent text-body-lg text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus-visible:border-primary focus-visible:border-2 focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-on-surface-variant"
             />
           </div>
         </div>
@@ -50,7 +51,8 @@ export function LoginForm() {
               autoComplete="current-password"
               placeholder="Password"
               required
-              className="pl-12 pr-12 h-14 w-full rounded-lg border border-outline bg-transparent px-4 text-body-lg text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus-visible:border-primary focus-visible:border-2 focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-on-surface-variant"
+              style={{ paddingLeft: '3rem', paddingRight: '5rem' }}
+              className="h-14 w-full rounded-lg border border-outline bg-transparent text-body-lg text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus-visible:border-primary focus-visible:border-2 focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 hover:border-on-surface-variant"
             />
             <button
               type="button"

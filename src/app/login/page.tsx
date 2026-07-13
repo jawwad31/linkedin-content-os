@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { Zap } from "lucide-react";
 
 import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { getServerUser } from "@/lib/supabase/session";
@@ -25,8 +24,8 @@ export default async function LoginPage() {
           
           {/* Branding Header */}
           <div className="flex flex-col items-center text-center gap-3">
-            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-500">
-              <Zap className="w-8 h-8 text-on-primary fill-current" />
+            <div className="w-16 h-16 bg-gradient-brand rounded-xl flex items-center justify-center shadow-lg" aria-hidden="true">
+              <span className="text-4xl font-bold text-white leading-none tracking-tighter">A</span>
             </div>
             <div className="flex flex-col gap-1">
               <h1 className="text-headline-sm font-bold tracking-tight text-on-surface">AIXelerate</h1>
