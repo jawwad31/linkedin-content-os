@@ -179,17 +179,17 @@ Main canvas:
 
 Primary sidebar labels, in order:
 
-1. Dashboard
+1. Overview
 2. Research
-3. Founder Experiences
+3. Founder Knowledge
 4. Ideas
-5. Publish
-6. Setup
+5. Posts
+6. Publish
+7. Settings
 
 Post Review is not a primary sidebar item — it appears contextually only while viewing that exact post, alongside the primary items above.
 
 Avoid internal implementation terms in UI:
-
 - classifier
 - synthesis
 - Collected Article
@@ -200,10 +200,9 @@ Avoid internal implementation terms in UI:
 - business_context_only
 
 Use user-facing terms:
-
 - Collected Article
 - TrendCard
-- Founder Experience
+- Founder Knowledge
 - Idea
 - Post
 - Founder Take
@@ -243,8 +242,20 @@ Ghost:
 
 Danger:
 
-- red/danger styling
-- confirmation required
+- Red/destructive styling.
+- Visible at all times without hover requirements (reachable at 375px mobile widths).
+- Action requires permanent confirmation dialog.
+- Confirmation dialog requirements:
+  - Accessible modal dialog.
+  - Names the record explicitly.
+  - States clearly: "This permanently deletes \"{record title}\". This action cannot be undone."
+  - Provides prominent "Cancel" and "Delete" button controls.
+  - Shows pending `Deleting...` status while deletion is running.
+  - Prevents duplicate/double submissions.
+  - Disables close triggers (like Escape or clicking outside the backdrop) while deletion is pending.
+  - Displays safe inline dependency/conflict errors.
+  - For Approved or Published Posts, requires typing "DELETE" to enable the confirm button.
+  - No destructive actions are represented or triggered via simple GET links.
 
 ### Cards
 
@@ -260,12 +271,41 @@ Card types:
 - Metric Card
 - Client Card
 - Setup Section Card
-- Founder Experience Card
-- TrendCard
-- Idea Card
-- Post Review Card
+- Founder Knowledge Card
+- TrendCard (action: Delete; no user-facing Archive)
+- Idea Card (action: Delete; shows status, angle, pillar, planning metadata fields, and Founder Direction)
+- Post Review Card (action: Delete)
 - Publish Queue Card
 - Activity Card
+
+### Screen Layout Details:
+
+#### Ideas Page
+- Shows Idea cards with source type, status, date, angle, pillar, planning metadata (buyer pain, commercial relevance, belief shift, angle boundary, source context, proof notes), and Founder Direction.
+- Ideas without an active Post show a prominent "Generate Post" button.
+- Ideas with an active Post show a "Post Drafted" badge and an "Open Post" button.
+- One active Post per Idea workflow.
+- Deleting an Idea with a linked Post is blocked and displays a safe inline conflict error.
+- No Content Ideas filter in the current UI.
+
+#### Posts Page (Distinct from Publish)
+- Manages internal workflow states for posts (Needs Review, Approved, Rejected, Published).
+- Links to individual Post Review page.
+- Supports permanent Delete button for administrators.
+- Requires typing "DELETE" to confirm deletion of Approved or Published posts.
+
+#### Publish Page
+- Shows approved posts ready for manual publishing (copy text action).
+- Shows history of manually published posts.
+- Remains manual-publishing only (no auto-posting or LinkedIn publishing API).
+- Deleting an internal Post record in Content OS does not remove the live LinkedIn post.
+
+#### Research Page
+- Displays Collected Articles and TrendCards.
+- Displays a single primary "Run Research Agent" button.
+- Advanced/debug stage controls remain collapsed by default.
+- TrendCard and Collected Article actions are "Delete" (Archived is historical status only).
+- Non-admin client users do not see Delete/Archive buttons.
 
 ### Tables
 
@@ -738,13 +778,25 @@ Each page should have one primary job and one primary action. Advanced/debug con
 
 ---
 
-## Implementation Notes
+## Current Filters
 
-- Use Tailwind tokens for all colors.
-- Use shadcn/ui as the base component library.
-- Do not hardcode random colors.
-- Create reusable cards, badges, layout, and table components.
-- Keep page files thin.
-- Put feature UI inside `src/features/*`.
-- Use skeletons for loading states.
-- Keep UI copy operator-focused.
+- **Posts page**: Displays custom navigation tabs for Post statuses (`Needs Review`, `Approved`, `Rejected`, `Published`).
+- **Research page**: Displays collected article and TrendCard status badges.
+
+---
+
+## UI Refresh Constraints
+
+- **Preserve Behavior**: Visual polish must preserve all current workflows, permissions, API data contracts, and security rules.
+- **No Parallel Redesign**: Do not redesign the database, API paths, or backend routes.
+- **Real Data Only**: No mock metrics, fake posts, fake proof, or hardcoded workspaces.
+- **Hierarchy & Accents**: Use current design tokens and component primitives. Maintain WCAG AA contrast.
+- **Actions visibility**: One primary action per page. Danger/destructive buttons must be visibly distinct and visible at 375px mobile widths without hover. Advanced/debug controls remain secondary or collapsed.
+- **Focused Commits**: Refresh one screen or coherent component family per commit.
+
+---
+
+## V2 Design Notes (Deferred Backlog)
+
+- **V2.01 — Independent Research Stage Controls**: Collapsed advanced buttons (Collect RSS, Classify Articles, Synthesize TrendCards, Retry options) deferred to V2.
+- **V2.02 — Expanded Posts and Research Filters**: Expanded filters (by RSS source, relevance score, run, TrendCard approval state, etc.) are deferred to V2. Post filter improvements should extend the current tab filters rather than create a parallel system. No Content Ideas filter is planned.

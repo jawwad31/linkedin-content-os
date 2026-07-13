@@ -76,7 +76,6 @@ Can:
 ### client_admin
 
 Can:
-
 - access only assigned Client Workspaces
 - edit client settings
 - invite users for assigned Client Workspaces
@@ -87,9 +86,9 @@ Can:
 - generate posts
 - approve/reject posts
 - mark posts as published
+- hard-delete business records (RSS sources, collected articles, TrendCards, founder experiences, content ideas, posts) for assigned Client Workspaces
 
 Cannot:
-
 - access Agency-level pages
 - access other Client Workspaces
 - view agency-admin-only operational logs
@@ -97,7 +96,6 @@ Cannot:
 ### client_user
 
 Can:
-
 - access only assigned Client Workspaces
 - create/edit safe workflow content records
 - mark articles relevant/irrelevant
@@ -108,16 +106,16 @@ Can:
 - copy approved posts
 
 Cannot:
-
 - edit Setup/business context
 - manage users
 - manage RSS sources
 - run Research Agent
-- approve/reject/archive posts
+- approve/reject/delete posts
 - mark posts published
 - view operational logs
 - access Agency-level pages
 - access other Client Workspaces
+- delete RSS sources, collected articles, TrendCards, founder experiences, content ideas, or posts
 
 There is no viewer-level product role. Legacy `owner`, `editor`, and `viewer` `client_access` rows were migrated to `client_admin` or `client_user` before real external client onboarding.
 
@@ -154,7 +152,9 @@ Unauthorized behavior:
 
 ## Client Access Model
 
-A user can access a client only if there is a matching `client_access` row.
+Access to Client Workspace records is scoped and isolated:
+- **Agency Admins**: Receive implicit Client Workspace access through their `agency_members` record linked to `clients.agency_id`. They do not require a direct `client_access` row.
+- **Client Admins and Client Users**: Receive scoped access to specific client workspaces through a matching `client_access` row where `invitation_status = 'accepted'`.
 
 Every client-owned table must include:
 
@@ -162,17 +162,8 @@ Every client-owned table must include:
 client_id
 ```
 
-Every query must verify:
-
-```text
-authenticated user
-→ client_access row exists
-→ role allows action
-→ record belongs to same client_id
-```
-
+Every query must verify client scope and Agency isolation.
 Never query by record ID alone.
-
 Always include `client_id` in mutations.
 
 ---
@@ -255,9 +246,9 @@ Restricted `client_user` actions:
 TrendCard writes:
 
 - `trend_cards` read access follows accepted client access.
-- `trend_cards` create/update/archive actions run through trusted server-side code and route handlers.
-- `agency_admin` and `client_admin` permissions are checked server-side before approve/archive mutations.
-- `client_user` may add Founder Take / Trend Reaction but cannot approve or archive TrendCards.
+- `trend_cards` create/update/delete actions run through trusted server-side code and route handlers.
+- `agency_admin` and `client_admin` permissions are checked server-side before approve/delete mutations.
+- `client_user` may add Founder Take / Trend Reaction but cannot approve or delete TrendCards.
 
 ---
 
@@ -457,7 +448,7 @@ Record lightweight audit logs for:
 - article marked relevant/irrelevant
 - trend_card_created
 - trend_card_approved_for_ideas
-- trend_card_archived
+- trend_card_hard_deleted
 - trend_card_reaction_added
 - founder_take_added / founder_take_updated
 - idea generated
@@ -490,7 +481,7 @@ Audit logs must not include:
 
 ## Delete Policy
 
-Soft delete business records by default (e.g., `clients` or other non-admin managed entities):
+Soft delete business records by default (e.g., `clients` or other non-admin managed entities) where deletion is not exposed or is handled via workflow status updates:
 
 ```text
 set deleted_at = now()
@@ -509,34 +500,42 @@ Hard delete (using SQL DELETE) is allowed and implemented for these six specific
 Allowed roles:
 - `agency_admin`, when the Client Workspace belongs to that administrator's Agency.
 - `client_admin`, for that exact Client Workspace.
-- Blocked: `client_user`, unauthenticated users, users from another Client Workspace, administrators from another Agency.
+- Blocked: `client_user`, unauthenticated users, users from another Client Workspace, and administrators from another Agency.
 
-Security & Isolation:
-- Every Delete request uses the authenticated server Supabase client so that the custom DELETE RLS policies remain active.
-- No `SUPABASE_SERVICE_ROLE_KEY` bypass is used.
-- Cross-client and cross-Agency deletions are denied.
+Delete Safety & Verifications:
+- Every direct SQL DELETE operation must:
+  1. Scope by both entity ID and `client_id`.
+  2. Require `deleted_at IS NULL` where applicable.
+  3. Append `.select("id")` and `.maybeSingle<{ id: string }>()` to retrieve the deleted ID.
+  4. Verify that exactly one row was returned.
+  5. Only write a success audit log event after the deletion is confirmed.
+- Every delete route/service must use the authenticated session-bound Supabase client so that the custom DELETE RLS policies remain active (no service-role delete bypass).
+- Downstream dependencies must block deletion, returning `DEPENDENCY_CONFLICT` (HTTP 409) with a safe error message.
+- Raw PostgreSQL database errors and RPC messages are caught and mapped using safe error codes (`rpcError.code === '23503'` -> `DEPENDENCY_CONFLICT`, `rpcError.code === 'P0002'` -> `NOT_FOUND`, other -> `UNKNOWN_ERROR`), preventing raw database leak to the browser.
+- The canonical Collected Article delete route is under `/api/client/[client_id]/market-items/[item_id]`; the duplicate `/api/client/[client_id]/collected-articles/[article_id]` route was removed.
 
-Dependency & Conflict Behavior:
-- Never silently cascade-delete downstream business content. If a dependency exists, return a `DEPENDENCY_CONFLICT` (HTTP 409) status with a safe error message.
-- RSS Source: Allow hard deletion even when articles were collected (articles remain with `rss_source_id` set to null).
-- Collected Article: Block if cited by any active TrendCard.
-- TrendCard: Block if referenced by active founder experiences or content ideas. On delete, restore uncited 'used' articles back to 'relevant' atomically.
-- Founder Experience: Block if referenced by active content ideas.
-- Content Idea: Block if referenced by active posts.
-- Post: Allow deletion. If no active posts remain for the linked Content Idea, set its status back to 'ready'.
+Atomic State Cleanup (using SQL RPC functions):
+- **TrendCard Delete**: Performs dependency checks, deletes the TrendCard, and restores uncited relevant articles (which went from `used` back to `relevant`) atomically.
+- **Post Delete**: Deletes the Post, and restores the linked Idea status back to `ready` if no other active posts remain for that idea.
+- These database functions run under `SECURITY INVOKER` with a fixed `search_path` and preserve RLS. They perform workflow state cleanups rather than record restorations (deleted records are permanently gone).
 
-Permanent Confirmation Requirements:
-- Every Delete control requires confirmation: "Delete this {record type}? This permanently deletes \"{record title}\". This action cannot be undone."
-- For Approved or Published Posts, the API and UI require the user to type exactly "DELETE" to confirm.
+Content Idea & Published Post Rules:
+- A Content Idea cannot be deleted if any active Post references it (applies to review, needs_edit, approved, rejected, or published Posts). The Post must be deleted first. Deleting a content idea never automatically deletes its post.
+- Approved and published Posts require exact typed confirmation: "DELETE" both on the client and server side.
+- Deleting an internal published Post record in Content OS does not remove the actual post from LinkedIn (no LinkedIn API integration).
 
-Safe Audit Events:
-- RSS Source: `rss_source_hard_deleted`
-- Collected Article: `article_hard_deleted`
-- TrendCard: `trend_card_hard_deleted`
-- Founder Experience: `founder_experience_hard_deleted`
-- Content Idea: `content_idea_hard_deleted`
-- Post: `post_hard_deleted`
-- Complete article summaries, post bodies, founder experience texts, prompts, and secrets are excluded from audit metadata.
+Audit Logs for Hard Deletes:
+The following audit actions are recorded:
+- `rss_source_hard_deleted`
+- `article_hard_deleted`
+- `trend_card_hard_deleted` (metadata tracks `number_of_articles_restored` transition count)
+- `founder_experience_hard_deleted`
+- `content_idea_hard_deleted`
+- `post_hard_deleted` (metadata tracks `linked_idea_restored_to_ready` restoration status)
+
+Audit metadata rules:
+- May store metadata such as status indicators, transition counts, or linked IDs.
+- Must not store the post body, complete article summary, founder experience text, raw prompt, raw LLM response, or raw database error.
 
 ---
 
@@ -643,5 +642,16 @@ Use secure cookie/session defaults through Supabase SSR helpers.
 - [ ] Worker logs are safe.
 - [ ] Stale research runs are handled.
 - [ ] Audit logs are written for key actions.
-- [ ] Soft delete works.
+- [ ] Soft delete works by default for non-admin entity updates.
+- [ ] Six hard-delete entity policies verified (RSS Sources, Collected Articles, TrendCards, Founder Experiences, Content Ideas, Posts).
+- [ ] client_user delete denial verified.
+- [ ] Cross-client delete denial verified.
+- [ ] Cross-Agency delete denial verified.
+- [ ] Dependency conflicts return 409.
+- [ ] Direct deletes confirm one deleted row was returned.
+- [ ] Raw database/RPC errors are not exposed.
+- [ ] Approved/published Posts require typed DELETE.
+- [ ] Post-to-Idea state cleanup verified.
+- [ ] TrendCard-to-Article state cleanup verified.
+- [ ] No silent cascade deletion exists.
 - [ ] Production Railway env vars are configured.
