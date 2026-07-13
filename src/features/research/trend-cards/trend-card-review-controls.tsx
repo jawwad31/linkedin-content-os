@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 
 import {
   FOUNDER_TAKE_MAX_LENGTH,
@@ -28,7 +29,6 @@ export function TrendCardReviewControls({
   cardId,
   founderTake,
   approvedForIdeas,
-  reactionCount,
   canManageReview,
 }: {
   clientId: string;
@@ -44,14 +44,12 @@ export function TrendCardReviewControls({
   const [saveState, setSaveState] = useState<RequestState>(IDLE);
   const [approveState, setApproveState] = useState<RequestState>(IDLE);
 
-  const [mode, setMode] = useState<"default" | "react" | "confirm-archive">(
-    "default",
-  );
+  const [mode, setMode] = useState<"default" | "react">("default");
   const [reactionType, setReactionType] = useState<ReactionType>("observation");
   const [reactionTake, setReactionTake] = useState("");
   const [reactionProof, setReactionProof] = useState("");
   const [reactState, setReactState] = useState<RequestState>(IDLE);
-  const [archiveState, setArchiveState] = useState<RequestState>(IDLE);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   async function postJson(
     path: string,
@@ -96,8 +94,6 @@ export function TrendCardReviewControls({
   const isSaving = saveState.status === "pending";
   const isApproving = approveState.status === "pending";
   const isReacting = reactState.status === "pending";
-  const isArchiving = archiveState.status === "pending";
-  const canArchive = reactionCount === 0;
 
   if (mode === "react") {
     return (
@@ -194,123 +190,108 @@ export function TrendCardReviewControls({
     );
   }
 
-  if (mode === "confirm-archive") {
-    return (
+  return (
+    <>
       <div className="flex flex-col gap-2 rounded-control border border-border-grey bg-white p-3">
-        <p className="text-small font-medium">
-          Archive this TrendCard? It will be hidden from the list but not
-          deleted.
-        </p>
-        {archiveState.status === "error" ? (
+        <label
+          htmlFor={`founder-take-${cardId}`}
+          className="text-caption font-medium uppercase tracking-wide text-muted-foreground"
+        >
+          Founder take
+        </label>
+        <Textarea
+          id={`founder-take-${cardId}`}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          maxLength={FOUNDER_TAKE_MAX_LENGTH}
+          rows={3}
+          placeholder="Add your take on this TrendCard..."
+        />
+
+        {saveState.status === "error" ? (
           <p role="alert" className="text-small text-danger">
-            {archiveState.message}
+            {saveState.message}
           </p>
         ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="destructive"
+            variant="outline"
             size="sm"
-            disabled={isArchiving}
-            onClick={() => postJson("archive", null, setArchiveState)}
+            onClick={() =>
+              postJson("founder-take", { founderTake: draft }, setSaveState)
+            }
+            disabled={isSaving}
           >
-            {isArchiving ? "Archiving..." : "Confirm archive"}
+            {isSaving ? "Saving..." : "Save Founder Take"}
           </Button>
+
+          {approvedForIdeas ? (
+            <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
+          ) : canManageReview ? (
+            <Button
+              type="button"
+              variant="accent-purple"
+              size="sm"
+              onClick={() => postJson("approve-for-ideas", null, setApproveState)}
+              disabled={isApproving}
+            >
+              {isApproving ? "Approving..." : "Approve for Ideas"}
+            </Button>
+          ) : null}
+
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={() => setMode("default")}
-            disabled={isArchiving}
+            onClick={() => setMode("react")}
           >
-            Cancel
+            React
           </Button>
+
+          {canManageReview ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-danger hover:bg-danger/10 hover:text-danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              Delete
+            </Button>
+          ) : null}
         </div>
+
+        {approveState.status === "error" ? (
+          <p role="alert" className="text-small text-danger">
+            {approveState.message}
+          </p>
+        ) : null}
       </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col gap-2 rounded-control border border-border-grey bg-white p-3">
-      <label
-        htmlFor={`founder-take-${cardId}`}
-        className="text-caption font-medium uppercase tracking-wide text-muted-foreground"
-      >
-        Founder take
-      </label>
-      <Textarea
-        id={`founder-take-${cardId}`}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        maxLength={FOUNDER_TAKE_MAX_LENGTH}
-        rows={3}
-        placeholder="Add your take on this TrendCard..."
-      />
-
-      {saveState.status === "error" ? (
-        <p role="alert" className="text-small text-danger">
-          {saveState.message}
-        </p>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            postJson("founder-take", { founderTake: draft }, setSaveState)
+      <DestructiveConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        recordType="TrendCard"
+        recordTitle={founderTake || "Untitled TrendCard"}
+        onConfirm={async () => {
+          const res = await fetch(`/api/client/${clientId}/trend-cards/${cardId}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            return {
+              ok: false,
+              error: data.error?.message || "Failed to delete TrendCard.",
+            };
           }
-          disabled={isSaving}
-        >
-          {isSaving ? "Saving..." : "Save Founder Take"}
-        </Button>
-
-        {approvedForIdeas ? (
-          <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
-        ) : canManageReview ? (
-          <Button
-            type="button"
-            variant="accent-purple"
-            size="sm"
-            onClick={() => postJson("approve-for-ideas", null, setApproveState)}
-            disabled={isApproving}
-          >
-            {isApproving ? "Approving..." : "Approve for Ideas"}
-          </Button>
-        ) : null}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setMode("react")}
-        >
-          React
-        </Button>
-
-        {canManageReview && canArchive ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setMode("confirm-archive")}
-          >
-            Archive
-          </Button>
-        ) : null}
-      </div>
-
-      {approveState.status === "error" ? (
-        <p role="alert" className="text-small text-danger">
-          {approveState.message}
-        </p>
-      ) : null}
-      {archiveState.status === "error" && mode === "default" ? (
-        <p role="alert" className="text-small text-danger">
-          {archiveState.message}
-        </p>
-      ) : null}
-    </div>
+          return { ok: true };
+        }}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
+    </>
   );
 }

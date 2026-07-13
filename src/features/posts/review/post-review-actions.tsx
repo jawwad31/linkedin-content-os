@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, CheckCircle2, PenSquare, XCircle } from "lucide-react";
+import { CheckCircle2, PenSquare, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -12,7 +12,7 @@ import { EDIT_NOTE_MAX_LENGTH } from "./schemas";
 
 const GENERIC_ERROR_COPY = "Could not update this post. Please try again.";
 
-type ActionName = "approve" | "needs-edit" | "reject" | "archive";
+type ActionName = "approve" | "needs-edit" | "reject";
 
 type RequestState =
   | { status: "idle" }
@@ -25,8 +25,7 @@ const IDLE: RequestState = { status: "idle" };
 function statusMessage(action: ActionName): string {
   if (action === "approve") return "Post approved.";
   if (action === "needs-edit") return "Post marked needs edit.";
-  if (action === "reject") return "Post rejected.";
-  return "Post archived.";
+  return "Post rejected.";
 }
 
 export function PostReviewActions({
@@ -45,8 +44,6 @@ export function PostReviewActions({
   const canApprove = status === "review" || status === "needs_edit";
   const canNeedsEdit = status === "review";
   const canReject = status === "review" || status === "needs_edit";
-  const canArchive =
-    status === "review" || status === "needs_edit" || status === "rejected";
 
   async function submitAction(action: ActionName) {
     const trimmedNote = editNote.trim();
@@ -173,19 +170,6 @@ export function PostReviewActions({
           {state.status === "pending" && state.action === "reject"
             ? "Rejecting..."
             : "Reject"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={!canArchive || isPending}
-          onClick={() => submitAction("archive")}
-          className="max-sm:flex-1"
-        >
-          <Archive aria-hidden="true" className="h-4 w-4" />
-          {state.status === "pending" && state.action === "archive"
-            ? "Archiving..."
-            : "Archive"}
         </Button>
       </div>
     </div>

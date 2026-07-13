@@ -1087,3 +1087,58 @@ Commit:
 ```text
 chore: harden private MVP
 ```
+
+---
+
+## Feature 27 — Administrator Hard Delete Controls
+
+Goal:
+
+Implement administrator hard-delete controls for six selected Client Workspace business records.
+
+Scope:
+
+- RSS Sources
+- Collected Articles (`market_signal_items`)
+- TrendCards
+- Founder Experience entries
+- Content Ideas
+- Posts
+
+Permission Matrix:
+
+- Allowed: `agency_admin` (for Client Workspaces belonging to their Agency), `client_admin` (for their Client Workspace).
+- Blocked: `client_user`, unauthenticated users, users from another Client Workspace, administrators from another Agency.
+
+Dependency Rules:
+
+- RSS Source: Allow hard deletion even when articles were collected.
+- Collected Article: Block if cited by any active TrendCard.
+- TrendCard: Block if referenced by active founder experiences or content ideas. On delete, restore uncited 'used' articles back to 'relevant' atomically.
+- Founder Experience: Block if referenced by active content ideas.
+- Content Idea: Block if referenced by active posts.
+- Post: Allow deletion. If no active posts remain for the linked Content Idea, set its status back to 'ready'.
+
+Acceptance Criteria:
+
+- Supabase migration with DELETE RLS policies applied.
+- Authenticated server Supabase client used for target DELETE.
+- HTTP DELETE routes implemented.
+- Safe audit events written.
+- Affected paths revalidated.
+- Normal confirmation dialog for most records; typed "DELETE" confirmation for approved/published posts.
+- No user-facing Archive action remains.
+
+Test Matrix:
+
+- Verify `client_user` is denied.
+- Verify cross-client and cross-Agency deletions are denied.
+- Verify dependency checks block deletion with 409 status.
+- Verify correct articles and ideas status restoration on delete.
+- Verify typed confirmation requirement for approved/published posts.
+
+Suggested Commit:
+
+```text
+feat: add admin hard delete controls
+```

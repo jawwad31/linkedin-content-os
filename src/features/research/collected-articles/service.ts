@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
+import { canAccessClient, canMutateClientWorkflow, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -154,4 +154,80 @@ export async function markCollectedArticleIrrelevant(
   itemId: string,
 ): Promise<ServiceResult<MarkResult>> {
   return markCollectedArticleStatus(clientId, itemId, "irrelevant");
+}
+
+export async function deleteCollectedArticle(
+  clientId: string,
+  itemId: string,
+): Promise<ServiceResult<void>> {
+  const { user } = await getServerUser();
+  if (!user) return { ok: false, code: "AUTH_REQUIRED", message: "You must be signed in to continue." };
+
+  const clientIdResult = uuidSchema.safeParse(clientId);
+  const itemIdResult = uuidSchema.safeParse(itemId);
+  if (!clientIdResult.success || !itemIdResult.success) {
+    return { ok: false, code: "VALIDATION_ERROR", message: "Invalid parameters." };
+  }
+
+  const isAuthorized = await canUserDeleteBusinessRecords(user.id, clientIdResult.data);
+  if (!isAuthorized) return { ok: false, code: "FORBIDDEN", message: "You do not have permission to delete articles for this Client Workspace." };
+
+  const supabase = await createClient();
+
+  const { data: article, error: fetchError } = await supabase
+    .from("market_signal_items")
+    .select("id, status")
+    .eq("id", itemIdResult.data)
+    .eq("client_id", clientIdResult.data)
+    .maybeSingle();
+
+  if (fetchError || !article) {
+    return { ok: false, code: "NOT_FOUND", message: "Article not found." };
+  }
+
+  const { count: citedCount, error: citeError } = await supabase
+    .from("trend_cards")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .contains("source_item_ids_json", JSON.stringify([itemIdResult.data]));
+
+  if (citeError) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not perform dependency check." };
+  }
+
+  if ((citedCount ?? 0) > 0) {
+    return {
+      ok: false,
+      code: "DEPENDENCY_CONFLICT",
+      message: "This article cannot be deleted because it supports an existing TrendCard.",
+    };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("market_signal_items")
+    .delete()
+    .eq("id", itemIdResult.data)
+    .eq("client_id", clientIdResult.data);
+
+  if (deleteError) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this article. Please try again." };
+  }
+
+  await writeAuditLog({
+    clientId: clientIdResult.data,
+    userId: user.id,
+    action: "article_hard_deleted",
+    entityType: "market_signal_item",
+    entityId: itemIdResult.data,
+    metadata: {
+      article_id: itemIdResult.data,
+      previous_status: article.status,
+    },
+  });
+
+  revalidatePath(`/client/${clientIdResult.data}/research`);
+  revalidatePath(`/client/${clientIdResult.data}/dashboard`);
+
+  return { ok: true, data: undefined };
 }

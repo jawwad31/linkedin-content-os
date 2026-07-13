@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,20 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
 
-import {
-  archiveFounderExperienceAction,
-  type ArchiveFounderExperienceState,
-} from "./actions";
 import { FounderExperienceForm } from "./founder-experience-form";
 import type { FounderExperience } from "./queries";
-
-const archiveInitialState: ArchiveFounderExperienceState = { error: null };
 
 function Detail({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
@@ -46,15 +42,12 @@ export function FounderExperienceCard({
   role: EffectiveClientRole;
   experience: FounderExperience;
 }) {
-  const [mode, setMode] = useState<"view" | "edit" | "confirm-archive">(
-    "view",
-  );
-  const [archiveState, archiveAction, isArchiving] = useActionState(
-    archiveFounderExperienceAction.bind(null, clientId, experience.id),
-    archiveInitialState,
-  );
+  const router = useRouter();
+  const [mode, setMode] = useState<"view" | "edit">("view");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const canManage = canRoleMutateClientWorkflow(role);
+  const isAdmin = role === "agency_admin" || role === "client_admin";
 
   if (mode === "edit") {
     return (
@@ -68,60 +61,26 @@ export function FounderExperienceCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{experience.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-small text-near-black">{experience.whatHappened}</p>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{experience.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-small text-near-black">{experience.whatHappened}</p>
 
-        <Detail label="What was learned" value={experience.whatWasLearned} />
-        <Detail label="What changed" value={experience.whatChanged} />
-        <Detail label="Why it matters" value={experience.whyItMatters} />
+          <Detail label="What was learned" value={experience.whatWasLearned} />
+          <Detail label="What changed" value={experience.whatChanged} />
+          <Detail label="Why it matters" value={experience.whyItMatters} />
 
-        <span className="font-mono text-caption text-muted-foreground">
-          Added {formatUtcDate(experience.createdAt)}
-          {experience.updatedAt !== experience.createdAt
-            ? ` · Updated ${formatUtcDate(experience.updatedAt)}`
-            : ""}
-        </span>
+          <span className="font-mono text-caption text-muted-foreground">
+            Added {formatUtcDate(experience.createdAt)}
+            {experience.updatedAt !== experience.createdAt
+              ? ` · Updated ${formatUtcDate(experience.updatedAt)}`
+              : ""}
+          </span>
 
-        {canManage ? (
-          mode === "confirm-archive" ? (
-            <form
-              action={archiveAction}
-              className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
-            >
-              <p className="text-small font-medium">
-                Archive this founder experience? It will be hidden from the
-                log but not deleted.
-              </p>
-              {archiveState.error ? (
-                <p role="alert" className="text-small text-danger">
-                  {archiveState.error}
-                </p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  size="sm"
-                  disabled={isArchiving}
-                >
-                  {isArchiving ? "Archiving..." : "Confirm archive"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMode("view")}
-                  disabled={isArchiving}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : (
+          {canManage ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -131,18 +90,44 @@ export function FounderExperienceCard({
               >
                 Edit
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setMode("confirm-archive")}
-              >
-                Archive
-              </Button>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-danger hover:bg-danger/10 hover:text-danger"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  Delete
+                </Button>
+              )}
             </div>
-          )
-        ) : null}
-      </CardContent>
-    </Card>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <DestructiveConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        recordType="Founder Experience"
+        recordTitle={experience.title}
+        onConfirm={async () => {
+          const res = await fetch(`/api/client/${clientId}/founder-experiences/${experience.id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            return {
+              ok: false,
+              error: data.error?.message || "Failed to delete entry.",
+            };
+          }
+          return { ok: true };
+        }}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
+    </>
   );
 }

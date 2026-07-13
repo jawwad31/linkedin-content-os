@@ -9,6 +9,7 @@ import {
 import { formatUtcDate } from "@/lib/format/date";
 
 import { PostReviewActions } from "./post-review-actions";
+import { PostDeleteButton } from "./post-delete-button";
 import type { ReviewPost, ReviewPostStatus } from "./queries";
 
 const STATUS_LABELS: Record<ReviewPostStatus, string> = {
@@ -119,7 +120,7 @@ function PostCard({
   return (
     <article className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge variant={STATUS_BADGE_VARIANT[post.status]}>
               {STATUS_LABELS[post.status] ?? post.status}
@@ -132,6 +133,13 @@ function PostCard({
             {post.hook ?? "Generated post draft"}
           </h2>
         </div>
+        {(role === "agency_admin" || role === "client_admin") && (
+          <PostDeleteButton
+            clientId={clientId}
+            post={post}
+            redirectToPosts={true}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">

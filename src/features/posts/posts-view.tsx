@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpen, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { formatUtcDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
+import type { EffectiveClientRole } from "@/lib/access/roles";
 import type { ReviewPost, ReviewPostStatus } from "@/features/posts/review/queries";
 
 type TabId = "needs_review" | "approved" | "rejected" | "published";
@@ -40,10 +44,13 @@ const STATUS_BADGE_VARIANT: Record<
 export function PostsView({
   clientId,
   posts,
+  role,
 }: {
   clientId: string;
   posts: ReviewPost[];
+  role: EffectiveClientRole;
 }) {
+  const isAdmin = role === "agency_admin" || role === "client_admin";
   const [activeTab, setActiveTab] = useState<TabId>("needs_review");
 
   // Filtering based on workflow states
@@ -171,13 +178,21 @@ export function PostsView({
                     )}
                   </div>
                   
-                  <Link
-                    href={`/client/${clientId}/posts/${post.id}/review`}
-                    className="inline-flex items-center gap-1 text-small font-medium text-brand-orange hover:underline focus-visible:outline-none"
-                  >
-                    View Details
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/client/${clientId}/posts/${post.id}/review`}
+                      className="inline-flex items-center gap-1 text-small font-medium text-brand-orange hover:underline focus-visible:outline-none"
+                    >
+                      View Details
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                    {isAdmin && (
+                      <PostDeleteButton
+                        clientId={clientId}
+                        post={post}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="text-body leading-relaxed text-near-black whitespace-pre-line">
@@ -211,5 +226,59 @@ export function PostsView({
         </div>
       )}
     </div>
+  );
+}
+
+function PostDeleteButton({
+  clientId,
+  post,
+}: {
+  clientId: string;
+  post: ReviewPost;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const requiresTypedConfirmation =
+    post.status === "approved" || post.status === "published";
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-danger hover:bg-danger/10 hover:text-danger h-7 px-2"
+        onClick={() => setOpen(true)}
+      >
+        Delete
+      </Button>
+
+      <DestructiveConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        recordType="Post"
+        recordTitle={post.finalPost.substring(0, 40) + (post.finalPost.length > 40 ? "..." : "")}
+        requiresTypedConfirmation={requiresTypedConfirmation}
+        onConfirm={async (confirmText) => {
+          const res = await fetch(`/api/client/${clientId}/posts/${post.id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirmDelete: confirmText }),
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            return {
+              ok: false,
+              error: data.error?.message || "Failed to delete post.",
+            };
+          }
+          return { ok: true };
+        }}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
+    </>
   );
 }

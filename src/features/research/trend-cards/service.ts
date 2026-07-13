@@ -7,6 +7,7 @@ import {
   canAccessClient,
   canManageWorkflowReview,
   canMutateClientWorkflow,
+  canUserDeleteBusinessRecords,
 } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -363,4 +364,85 @@ export async function addTrendReaction(
   revalidatePath(`/client/${auth.clientId}/research`);
 
   return { ok: true, data: { id: inserted.id } };
+}
+
+export async function deleteTrendCard(
+  clientId: string,
+  cardId: string,
+): Promise<ServiceResult<void>> {
+  const { user } = await getServerUser();
+  if (!user) return { ok: false, code: "AUTH_REQUIRED", message: "You must be signed in to continue." };
+
+  const clientIdResult = uuidSchema.safeParse(clientId);
+  const cardIdResult = uuidSchema.safeParse(cardId);
+  if (!clientIdResult.success || !cardIdResult.success) {
+    return { ok: false, code: "VALIDATION_ERROR", message: "Invalid parameters." };
+  }
+
+  const isAuthorized = await canUserDeleteBusinessRecords(user.id, clientIdResult.data);
+  if (!isAuthorized) return { ok: false, code: "FORBIDDEN", message: "You do not have permission to delete TrendCards for this Client Workspace." };
+
+  const supabase = await createClient();
+
+  const { data: card, error: fetchError } = await supabase
+    .from("trend_cards")
+    .select("id, source_item_ids_json")
+    .eq("id", cardIdResult.data)
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (fetchError || !card) {
+    return { ok: false, code: "NOT_FOUND", message: "TrendCard not found." };
+  }
+
+  const { error: rpcError } = await supabase.rpc(
+    "delete_trend_card_and_restore_articles",
+    {
+      p_client_id: clientIdResult.data,
+      p_trend_card_id: cardIdResult.data,
+    }
+  );
+
+  if (rpcError) {
+    const msg = rpcError.message || "Could not delete this TrendCard. Please try again.";
+    if (msg.includes("depends on it")) {
+      return {
+        ok: false,
+        code: "DEPENDENCY_CONFLICT",
+        message: "This TrendCard cannot be deleted because downstream content depends on it.",
+      };
+    }
+    return { ok: false, code: "UNKNOWN_ERROR", message: msg };
+  }
+
+  let restoredCount = 0;
+  const articleIds = Array.isArray(card.source_item_ids_json) ? card.source_item_ids_json : [];
+  if (articleIds.length > 0) {
+    const { data: articles } = await supabase
+      .from("market_signal_items")
+      .select("id, status")
+      .in("id", articleIds)
+      .eq("client_id", clientIdResult.data);
+
+    restoredCount = (articles || []).filter(a => a.status === "relevant").length;
+  }
+
+  await writeAuditLog({
+    clientId: clientIdResult.data,
+    userId: user.id,
+    action: "trend_card_hard_deleted",
+    entityType: "trend_card",
+    entityId: cardIdResult.data,
+    metadata: {
+      trend_card_id: cardIdResult.data,
+      number_of_articles_restored: restoredCount,
+    },
+  });
+
+  revalidatePath(`/client/${clientIdResult.data}/research`);
+  revalidatePath(`/client/${clientIdResult.data}/ideas`);
+  revalidatePath(`/client/${clientIdResult.data}/dashboard`);
+
+  return { ok: true, data: undefined };
 }

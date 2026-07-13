@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
+import { canAccessClient, canMutateClientWorkflow, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -183,4 +183,83 @@ export async function archiveContentIdea(
   revalidatePath(`/client/${auth.clientId}/ideas`);
 
   return { ok: true, data: {} };
+}
+
+export async function deleteContentIdea(
+  clientId: string,
+  ideaId: string,
+): Promise<ServiceResult<void>> {
+  const { user } = await getServerUser();
+  if (!user) return { ok: false, code: "AUTH_REQUIRED", message: "You must be signed in to continue." };
+
+  const clientIdResult = uuidSchema.safeParse(clientId);
+  const ideaIdResult = uuidSchema.safeParse(ideaId);
+  if (!clientIdResult.success || !ideaIdResult.success) {
+    return { ok: false, code: "VALIDATION_ERROR", message: "Invalid parameters." };
+  }
+
+  const isAuthorized = await canUserDeleteBusinessRecords(user.id, clientIdResult.data);
+  if (!isAuthorized) return { ok: false, code: "FORBIDDEN", message: "You do not have permission to delete ideas for this Client Workspace." };
+
+  const supabase = await createClient();
+
+  const { data: idea, error: fetchError } = await supabase
+    .from("content_ideas")
+    .select("id, source_type, status")
+    .eq("id", ideaIdResult.data)
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (fetchError || !idea) {
+    return { ok: false, code: "NOT_FOUND", message: "Content Idea not found." };
+  }
+
+  const { count: postCount, error: postError } = await supabase
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientIdResult.data)
+    .eq("content_idea_id", ideaIdResult.data)
+    .is("deleted_at", null);
+
+  if (postError) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not perform dependency check." };
+  }
+
+  if ((postCount ?? 0) > 0) {
+    return {
+      ok: false,
+      code: "DEPENDENCY_CONFLICT",
+      message: "This Content Idea cannot be deleted because a Post was generated from it. Delete the Post first.",
+    };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("content_ideas")
+    .delete()
+    .eq("id", ideaIdResult.data)
+    .eq("client_id", clientIdResult.data);
+
+  if (deleteError) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this Content Idea. Please try again." };
+  }
+
+  await writeAuditLog({
+    clientId: clientIdResult.data,
+    userId: user.id,
+    action: "content_idea_hard_deleted",
+    entityType: "content_idea",
+    entityId: ideaIdResult.data,
+    metadata: {
+      idea_id: ideaIdResult.data,
+      source_type: idea.source_type,
+      previous_status: idea.status,
+    },
+  });
+
+  revalidatePath(`/client/${clientIdResult.data}/ideas`);
+  revalidatePath(`/client/${clientIdResult.data}/posts`);
+  revalidatePath(`/client/${clientIdResult.data}/dashboard`);
+
+  return { ok: true, data: undefined };
 }

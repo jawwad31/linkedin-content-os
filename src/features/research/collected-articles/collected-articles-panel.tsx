@@ -9,7 +9,7 @@ import {
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
 
-import { CollectedArticleActions } from "./collected-article-actions";
+import { CollectedArticleActions, ArticleDeleteButton } from "./collected-article-actions";
 import type {
   CollectedArticle,
   CollectedArticleCounts,
@@ -167,13 +167,22 @@ export function CollectedArticlesPanel({
             </p>
           ) : null}
 
-          {canManage && article.status !== "used" ? (
-            <CollectedArticleActions
-              clientId={clientId}
-              itemId={article.id}
-              status={article.status}
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {canManage && article.status !== "used" ? (
+              <CollectedArticleActions
+                clientId={clientId}
+                itemId={article.id}
+                status={article.status}
+              />
+            ) : null}
+            {(role === "agency_admin" || role === "client_admin") && (
+              <ArticleDeleteButton
+                clientId={clientId}
+                articleId={article.id}
+                articleTitle={article.title}
+              />
+            )}
+          </div>
           </div>
         ))}
       </div>

@@ -37,7 +37,7 @@ export default async function PostsPage({
       />
 
       {postsResult.ok ? (
-        <PostsView clientId={clientId} posts={postsResult.posts} />
+        <PostsView clientId={clientId} posts={postsResult.posts} role={role} />
       ) : (
         <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
           We could not load post drafts. Please try again.

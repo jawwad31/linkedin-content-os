@@ -133,7 +133,7 @@ Do not design for public self-serve signup in v1.
 | Invitations | Email invitations |
 | Access model | Agency model with `agency_admin`, `client_admin`, and `client_user` only |
 | Audit logs | Lightweight logs: user, action, timestamp, client |
-| Delete policy | Soft delete business records; hard delete temporary logs |
+| Delete policy | Soft delete by default; Admin hard delete for 6 specific entity types; hard delete temporary logs |
 | Publishing | Manual only; no LinkedIn API |
 
 ---
@@ -246,7 +246,7 @@ Build in v1:
 19. Research run tracking.
 20. Safe LLM metadata logs.
 21. Lightweight audit logs.
-22. Soft delete for business records.
+22. Soft delete for business records by default (except for the 6 entity types allowing administrator hard deletion).
 
 ---
 
@@ -787,9 +787,22 @@ Tables:
 
 Every client-owned table must include `client_id`.
 
-Soft delete business records with `deleted_at`.
+Soft delete business records with `deleted_at` by default.
 
-Use hard delete only for temporary logs or expired temporary artifacts.
+However, administrator hard deletion is implemented using SQL DELETE for these six specific entity types:
+- RSS Sources (`rss_sources`)
+- Collected Articles (`market_signal_items`)
+- TrendCards (`trend_cards`)
+- Founder Experience entries (`founder_experiences`)
+- Content Ideas (`content_ideas`)
+- Posts (`posts`)
+
+Rules for these hard-delete controls:
+- client_user cannot delete (only agency_admin and client_admin are allowed).
+- No silent cascade deletion is allowed; downstream dependencies will block deletion.
+- Post deletion may restore its linked Content Idea to 'ready'.
+- TrendCard deletion may restore uncited 'used' articles back to 'relevant'.
+- No other record types inherit hard-delete permission automatically.
 
 ---
 

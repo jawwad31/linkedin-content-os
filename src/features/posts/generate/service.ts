@@ -3,7 +3,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
+import { canAccessClient, canMutateClientWorkflow, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import {
   runContentAgent,
   type ContentAgentBusinessContext,
@@ -661,4 +661,96 @@ export async function generatePostFromIdea(
   revalidatePath(`/client/${clientIdResult.data}/posts/${inserted.id}/review`);
 
   return { ok: true, data: { postId: inserted.id, alreadyGenerated: false } };
+}
+
+export async function deletePost(
+  clientId: string,
+  postId: string,
+  confirmDelete?: string,
+): Promise<ServiceResult<void>> {
+  const { user } = await getServerUser();
+  if (!user) return { ok: false, code: "AUTH_REQUIRED", message: "You must be signed in to continue." };
+
+  const clientIdResult = uuidSchema.safeParse(clientId);
+  const postIdResult = uuidSchema.safeParse(postId);
+  if (!clientIdResult.success || !postIdResult.success) {
+    return { ok: false, code: "VALIDATION_ERROR", message: "Invalid parameters." };
+  }
+
+  const isAuthorized = await canUserDeleteBusinessRecords(user.id, clientIdResult.data);
+  if (!isAuthorized) return { ok: false, code: "FORBIDDEN", message: "You do not have permission to delete posts for this Client Workspace." };
+
+  const supabase = await createClient();
+
+  const { data: post, error: fetchError } = await supabase
+    .from("posts")
+    .select("id, status, content_idea_id")
+    .eq("id", postIdResult.data)
+    .eq("client_id", clientIdResult.data)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (fetchError || !post) {
+    return { ok: false, code: "NOT_FOUND", message: "Post not found." };
+  }
+
+  if (post.status === "approved" || post.status === "published") {
+    if (confirmDelete !== "DELETE") {
+      return {
+        ok: false,
+        code: "VALIDATION_ERROR",
+        message: "To delete an approved or published post, you must type 'DELETE' to confirm.",
+      };
+    }
+  }
+
+  const { error: rpcError } = await supabase.rpc(
+    "delete_post_and_restore_idea",
+    {
+      p_client_id: clientIdResult.data,
+      p_post_id: postIdResult.data,
+    }
+  );
+
+  if (rpcError) {
+    return {
+      ok: false,
+      code: "UNKNOWN_ERROR",
+      message: rpcError.message || "Could not delete this post. Please try again.",
+    };
+  }
+
+  let ideaRestored = false;
+  if (post.content_idea_id) {
+    const { data: idea } = await supabase
+      .from("content_ideas")
+      .select("status")
+      .eq("id", post.content_idea_id)
+      .eq("client_id", clientIdResult.data)
+
+    if (idea && idea.status === "ready") {
+      ideaRestored = true;
+    }
+  }
+
+  await writeAuditLog({
+    clientId: clientIdResult.data,
+    userId: user.id,
+    action: "post_hard_deleted",
+    entityType: "post",
+    entityId: postIdResult.data,
+    metadata: {
+      post_id: postIdResult.data,
+      previous_status: post.status,
+      linked_idea_id: post.content_idea_id,
+      linked_idea_restored_to_ready: ideaRestored,
+    },
+  });
+
+  revalidatePath(`/client/${clientIdResult.data}/posts`);
+  revalidatePath(`/client/${clientIdResult.data}/ideas`);
+  revalidatePath(`/client/${clientIdResult.data}/publish`);
+  revalidatePath(`/client/${clientIdResult.data}/dashboard`);
+
+  return { ok: true, data: undefined };
 }

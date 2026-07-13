@@ -490,17 +490,7 @@ Audit logs must not include:
 
 ## Delete Policy
 
-Soft delete business records:
-
-- clients
-- rss_sources
-- market_signal_items
-- trend_cards
-- founder_experiences
-- content_ideas
-- posts
-
-Soft delete means:
+Soft delete business records by default (e.g., `clients` or other non-admin managed entities):
 
 ```text
 set deleted_at = now()
@@ -508,14 +498,45 @@ set deleted_at = now()
 
 Do not display soft-deleted records in normal UI.
 
-Hard delete allowed for:
+Hard delete (using SQL DELETE) is allowed and implemented for these six specific entity types:
+- RSS Sources (`rss_sources`)
+- Collected Articles (`market_signal_items`)
+- TrendCards (`trend_cards`)
+- Founder Experience entries (`founder_experiences`)
+- Content Ideas (`content_ideas`)
+- Posts (`posts`)
 
-- temporary logs
-- expired invitations if needed
-- transient worker artifacts
-- development seed/test data
+Allowed roles:
+- `agency_admin`, when the Client Workspace belongs to that administrator's Agency.
+- `client_admin`, for that exact Client Workspace.
+- Blocked: `client_user`, unauthenticated users, users from another Client Workspace, administrators from another Agency.
 
-Never hard delete client business records in normal v1 UI unless an authorized admin confirms a future admin-only destructive action.
+Security & Isolation:
+- Every Delete request uses the authenticated server Supabase client so that the custom DELETE RLS policies remain active.
+- No `SUPABASE_SERVICE_ROLE_KEY` bypass is used.
+- Cross-client and cross-Agency deletions are denied.
+
+Dependency & Conflict Behavior:
+- Never silently cascade-delete downstream business content. If a dependency exists, return a `DEPENDENCY_CONFLICT` (HTTP 409) status with a safe error message.
+- RSS Source: Allow hard deletion even when articles were collected (articles remain with `rss_source_id` set to null).
+- Collected Article: Block if cited by any active TrendCard.
+- TrendCard: Block if referenced by active founder experiences or content ideas. On delete, restore uncited 'used' articles back to 'relevant' atomically.
+- Founder Experience: Block if referenced by active content ideas.
+- Content Idea: Block if referenced by active posts.
+- Post: Allow deletion. If no active posts remain for the linked Content Idea, set its status back to 'ready'.
+
+Permanent Confirmation Requirements:
+- Every Delete control requires confirmation: "Delete this {record type}? This permanently deletes \"{record title}\". This action cannot be undone."
+- For Approved or Published Posts, the API and UI require the user to type exactly "DELETE" to confirm.
+
+Safe Audit Events:
+- RSS Source: `rss_source_hard_deleted`
+- Collected Article: `article_hard_deleted`
+- TrendCard: `trend_card_hard_deleted`
+- Founder Experience: `founder_experience_hard_deleted`
+- Content Idea: `content_idea_hard_deleted`
+- Post: `post_hard_deleted`
+- Complete article summaries, post bodies, founder experience texts, prompts, and secrets are excluded from audit metadata.
 
 ---
 

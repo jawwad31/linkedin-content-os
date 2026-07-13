@@ -236,3 +236,11 @@ async function getDirectClientAccessCount(userId: string): Promise<number> {
 
   return new Set(data.map((row) => row.client_id)).size;
 }
+
+export async function canUserDeleteBusinessRecords(
+  userId: string,
+  clientId: string,
+): Promise<boolean> {
+  const role = await getCurrentUserRoleForClient(userId, clientId);
+  return role === "agency_admin" || role === "client_admin";
+}

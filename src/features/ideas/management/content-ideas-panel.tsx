@@ -167,7 +167,9 @@ export function ContentIdeasPanel({
               <FounderDirectionControls
                 clientId={clientId}
                 ideaId={idea.id}
+                ideaAngle={idea.angle}
                 founderDirection={idea.founderDirection}
+                role={role}
               />
             ) : (
               <ReadOnlyDirection value={idea.founderDirection} />
