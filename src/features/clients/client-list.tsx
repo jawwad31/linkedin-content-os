@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { History, Rocket } from "lucide-react";
+import { History, Rocket, Search } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
 import { EFFECTIVE_ROLE_LABELS } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
 
@@ -18,15 +19,15 @@ export function ClientList({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
 
   if (clients.length === 0) {
     return (
-      <div className="mt-6 rounded-card border border-border-grey bg-white p-8 text-center">
-        <p className="text-body font-medium">
+      <div className="mt-6 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center">
+        <p className="text-title-md font-bold text-on-surface">
           {emptyTitle}
         </p>
-        <p className="mt-1 text-small text-muted-foreground">
+        <p className="mt-2 text-body-md text-on-surface-variant max-w-md">
           {emptyDescription}
         </p>
       </div>
@@ -44,12 +45,20 @@ export function ClientList({
 
   return (
     <div className="mt-6 flex flex-col gap-6">
-      {/* Bento Grid Contextual Filter Chips - Visual Only */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        <button className="bg-primary text-on-primary rounded-full px-4 py-2 font-label-md text-label-md shadow-md">All Clients</button>
-        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Recent</button>
-        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Favorites</button>
-        <button className="bg-surface-container-highest text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full px-4 py-2 font-label-md text-label-md pointer-events-none opacity-60">Owned by Me</button>
+      {/* Functional Search Bar */}
+      <div className="relative max-w-md">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-on-surface-variant"
+        />
+        <Input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search workspaces..."
+          aria-label="Search Client Workspaces"
+          className="rounded-full pl-12 h-14 bg-surface-container-highest border-transparent hover:bg-surface-variant focus-visible:bg-surface-container-lowest focus-visible:border-primary text-body-lg placeholder:text-on-surface-variant transition-colors"
+        />
       </div>
 
       {filteredClients.length === 0 ? (
@@ -64,39 +73,39 @@ export function ClientList({
             <Link
               key={client.id}
               href={`/client/${client.id}/dashboard`}
-              className="workspace-card rounded-2xl p-6 border border-outline-variant flex flex-col justify-between h-64 group cursor-pointer bg-surface-container-lowest transition-all duration-200 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
             >
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="h-14 w-14 bg-surface-container-high rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                    <Rocket className="w-8 h-8 fill-current opacity-80" />
+              <div className="workspace-card rounded-2xl p-6 border border-outline-variant flex flex-col justify-between h-64 bg-surface-container-lowest transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="h-14 w-14 bg-surface-container-high rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+                      <Rocket className="w-8 h-8 fill-current opacity-80" />
+                    </div>
+                    <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full font-label-sm text-label-sm">
+                      {EFFECTIVE_ROLE_LABELS[client.role]}
+                    </span>
                   </div>
-                  <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full font-label-sm text-label-sm">
-                    {EFFECTIVE_ROLE_LABELS[client.role]}
-                  </span>
+                  <h3 className="font-title-lg text-title-lg text-on-surface group-hover:bg-gradient-brand group-hover:text-transparent group-hover:bg-clip-text transition-all font-bold">
+                    {client.name}
+                  </h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 line-clamp-1">
+                    {client.agencyName || client.founderName || client.industry
+                      ? [client.agencyName, client.founderName, client.industry]
+                          .filter(Boolean)
+                          .join(" | ")
+                      : "No business details yet"}
+                  </p>
                 </div>
-                <h3 className="font-title-lg text-title-lg text-on-surface group-hover:bg-gradient-brand group-hover:text-transparent group-hover:bg-clip-text transition-all font-bold">
-                  {client.name}
-                </h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 line-clamp-1">
-                  {client.agencyName || client.founderName || client.industry
-                    ? [client.agencyName, client.founderName, client.industry]
-                        .filter(Boolean)
-                        .join(" | ")
-                    : "No business details yet"}
-                </p>
-              </div>
-              
-              <div className="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <History className="w-4 h-4" />
-                  <span className="font-label-sm text-label-sm">Updated {formatUtcDate(client.updatedAt)}</span>
+                
+                <div className="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
+                  <div className="flex items-center gap-2 text-on-surface-variant">
+                    <History className="w-4 h-4" />
+                    <span className="font-label-sm text-label-sm">Updated {formatUtcDate(client.updatedAt)}</span>
+                  </div>
                 </div>
               </div>
             </Link>
           ))}
-          
-          {/* Add New Client Empty State / Card (For visual parity, non-functional if not agency admin, handled by role if needed. We'll render it as a visual placeholder that redirects or just informative) */}
         </div>
       )}
     </div>

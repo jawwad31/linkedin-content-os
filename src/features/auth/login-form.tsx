@@ -64,29 +64,7 @@ export function LoginForm() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              className="peer appearance-none w-5 h-5 border-2 border-outline rounded-sm checked:bg-primary checked:border-primary transition-all cursor-pointer"
-            />
-            <svg
-              className="absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none w-4 h-4 left-0.5 top-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span className="text-body-md text-on-surface-variant group-hover:text-on-surface">Remember me</span>
-        </label>
-        <a href="#" className="text-body-md text-primary hover:underline underline-offset-4 font-bold">
-          Forgot password?
-        </a>
-      </div>
+
 
       {state.error ? (
         <p role="alert" className="text-body-md text-danger">

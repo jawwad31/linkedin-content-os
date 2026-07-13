@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+
 import { ClientList } from "@/features/clients/client-list";
 import { getAgencyWorkspaces } from "@/features/agency/queries";
 import { getServerUser } from "@/lib/supabase/session";
@@ -21,11 +21,6 @@ export default async function AgencyWorkspacesPage() {
           </p>
         </div>
         <div className="w-full md:w-auto">
-          {/* Add Client is restricted to agency admin, this page is only accessible by agency admins anyway */}
-          <button className="bg-gradient-brand text-white font-label-lg flex items-center justify-center gap-2 px-8 py-4 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all w-full md:w-auto">
-            <Plus className="w-5 h-5" />
-            Add Client
-          </button>
         </div>
       </section>
 
