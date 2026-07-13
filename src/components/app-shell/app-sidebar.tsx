@@ -1,9 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/features/auth/logout-button";
-import {
-  EFFECTIVE_ROLE_LABELS,
-  type EffectiveClientRole,
-} from "@/lib/access/roles";
+import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { AppNav } from "./app-nav";
 import { WorkspaceSwitchLink } from "./workspace-switch-link";
@@ -36,19 +32,9 @@ export function AppSidebar({
       </div>
 
       <div className="flex flex-col gap-2 rounded-control border border-white/10 bg-white/5 p-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-caption font-mono uppercase tracking-wide text-soft-white/50">
-            Current workspace
-          </span>
-          <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 rounded-full bg-success"
-          />
-        </div>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-body font-medium">{clientName}</span>
-          <Badge variant="neutral">{EFFECTIVE_ROLE_LABELS[role]}</Badge>
-        </div>
+        <p className="truncate text-body font-semibold text-soft-white">
+          {clientName}
+        </p>
         {agencyName ? (
           <p className="truncate text-caption text-soft-white/50">
             Agency: {agencyName}

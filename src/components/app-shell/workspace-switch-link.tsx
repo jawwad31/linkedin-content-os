@@ -21,7 +21,7 @@ export function WorkspaceSwitchLink({
   }
 
   const href = isAgencyAdmin ? "/agency/workspaces" : "/clients";
-  const label = isAgencyAdmin ? "Agency workspaces" : "Switch workspace";
+  const label = "Switch workspace";
   const className =
     variant === "dark"
       ? "mt-1 rounded-full border border-white/10 px-3 py-1.5 text-center text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black"
