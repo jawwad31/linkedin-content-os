@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowDown,
   ArrowLeft,
   ChevronRight,
   Clock,
@@ -15,6 +14,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { getReviewPost, type ReviewPostStatus } from "@/features/posts/review/queries";
 import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
@@ -68,28 +68,8 @@ function getInitials(name: string): string {
   return (parts[0]![0] + parts[parts.length - 1]![0]).toUpperCase();
 }
 
-/** The Planning Agent's prompt contract always writes belief_shift as
- * "what the buyer currently believes -> what they should believe" (see
- * planning-agent.ts), and posts.buyer_belief_shift is copied straight from
- * that field. Splitting on the arrow is safe - it's a guaranteed part of the
- * data contract, not a guess. Falls back to plain text for older records or
- * anything that doesn't match. */
-function splitBeliefShift(value: string): { from: string; to: string } | null {
-  const parts = value.split(/\s*(?:->|→)\s*/);
-  if (parts.length !== 2) return null;
-
-  const clean = (part: string) => part.trim().replace(/^["“]+|["”]+$/g, "").trim();
-  const from = clean(parts[0]!);
-  const to = clean(parts[1]!);
-  if (!from || !to) return null;
-
-  return { from, to };
-}
-
 function BuyerBeliefShiftCard({ value }: { value: string | null }) {
   if (!value) return null;
-
-  const shift = splitBeliefShift(value);
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-soft-white p-5">
@@ -99,33 +79,7 @@ function BuyerBeliefShiftCard({ value }: { value: string | null }) {
           Buyer Belief Shift
         </h3>
       </div>
-      {shift ? (
-        <div className="flex flex-col gap-2">
-          <div className="rounded-control border border-border-grey bg-white/70 p-3">
-            <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-              Before
-            </p>
-            <p className="mt-1 whitespace-pre-line break-words text-small italic text-near-black">
-              &ldquo;{shift.from}&rdquo;
-            </p>
-          </div>
-          <div className="flex justify-center text-brand-purple">
-            <ArrowDown aria-hidden="true" className="h-4 w-4" />
-          </div>
-          <div className="rounded-control border border-brand-purple/25 bg-white p-3">
-            <p className="text-caption font-medium uppercase tracking-wide text-secondary-dark">
-              After
-            </p>
-            <p className="mt-1 whitespace-pre-line break-words text-small font-medium italic text-near-black">
-              &ldquo;{shift.to}&rdquo;
-            </p>
-          </div>
-        </div>
-      ) : (
-        <p className="whitespace-pre-line break-words text-small italic text-near-black">
-          {value}
-        </p>
-      )}
+      <BeliefShiftDisplay value={value} />
     </div>
   );
 }

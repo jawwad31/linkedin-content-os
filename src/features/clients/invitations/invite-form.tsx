@@ -55,12 +55,7 @@ export function InviteForm({ clientId }: { clientId: string }) {
         <p className="text-small text-success">{state.success}</p>
       ) : null}
 
-      <Button
-        type="submit"
-        variant="accent-purple"
-        disabled={isPending}
-        className="bg-[#C43EEA] hover:bg-[#C43EEA]/90"
-      >
+      <Button type="submit" variant="gradient" disabled={isPending}>
         {isPending ? "Sending invite..." : "Send Invite"}
       </Button>
     </form>

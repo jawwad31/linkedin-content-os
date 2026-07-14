@@ -420,10 +420,10 @@ export function BusinessContextForm({
       {isReadOnly ? null : (
         <Button
           type="submit"
-          variant="accent-purple"
+          variant="gradient"
           size="lg"
           disabled={isPending}
-          className="self-start bg-[#C43EEA] hover:bg-[#C43EEA]/90"
+          className="self-start"
         >
           {isPending ? "Saving..." : "Save business context"}
         </Button>

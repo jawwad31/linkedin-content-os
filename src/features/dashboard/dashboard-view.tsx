@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatResearchRunStage } from "@/features/research/research-runs/types";
 import { formatUtcDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
@@ -381,9 +382,9 @@ export function DashboardView({
                   {RUN_STATUS_LABELS[latestResearchRun.status] ??
                     latestResearchRun.status}
                 </Badge>
-                {latestResearchRun.stage ? (
+                {formatResearchRunStage(latestResearchRun.stage) ? (
                   <span className="text-small text-muted-foreground">
-                    {latestResearchRun.stage}
+                    {formatResearchRunStage(latestResearchRun.stage)}
                   </span>
                 ) : null}
               </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
 import {
   canRoleManageWorkflowReview,
   canRoleMutateClientWorkflow,
@@ -159,7 +160,16 @@ export function ContentIdeasPanel({
                   />
                 </summary>
                 <div className="grid grid-cols-1 gap-3 px-3 pb-3 sm:grid-cols-2">
-                  <IdeaField label="Belief Shift" value={idea.beliefShift} />
+                  {idea.beliefShift ? (
+                    <div className="min-w-0">
+                      <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
+                        Belief Shift
+                      </p>
+                      <div className="mt-1">
+                        <BeliefShiftDisplay value={idea.beliefShift} />
+                      </div>
+                    </div>
+                  ) : null}
                   <IdeaField label="Angle Boundary" value={idea.angleBoundary} />
                 </div>
               </details>

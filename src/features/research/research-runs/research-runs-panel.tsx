@@ -4,7 +4,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatUtcDateTime } from "@/lib/format/date";
 
-import type { ResearchRun, ResearchRunStatus } from "./types";
+import { formatResearchRunStage, type ResearchRun, type ResearchRunStatus } from "./types";
 
 const STATUS_BADGE_VARIANT: Record<ResearchRunStatus, BadgeProps["variant"]> = {
   queued: "neutral",
@@ -56,7 +56,9 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
               </Badge>
               <span className="break-words text-small text-muted-foreground">
                 {run.triggerType === "worker" ? "Worker" : "Manual"}
-                {run.stage ? ` · ${run.stage}` : ""}
+                {formatResearchRunStage(run.stage)
+                  ? ` · ${formatResearchRunStage(run.stage)}`
+                  : ""}
               </span>
             </div>
             <span className="break-words font-mono text-caption text-muted-foreground">

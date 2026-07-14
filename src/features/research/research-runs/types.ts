@@ -28,6 +28,20 @@ export type ResearchRunSummary = {
   synthesisErrorCount?: number;
 };
 
+const STAGE_LABELS: Record<string, string> = {
+  rss_collect: "Collecting articles",
+  classify: "Classifying articles",
+  synthesize: "Synthesizing TrendCards",
+};
+
+/** Research run `stage` is a free-form internal lock/pipeline-stage string
+ * (e.g. "rss_collect"), not something meant for display. Falls back to the
+ * raw value for any stage not yet mapped, rather than hiding it. */
+export function formatResearchRunStage(stage: string | null): string | null {
+  if (!stage) return null;
+  return STAGE_LABELS[stage] ?? stage;
+}
+
 export type ResearchRun = {
   id: string;
   status: ResearchRunStatus;

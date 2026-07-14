@@ -1,3 +1,6 @@
+import { Search } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
 import { LogoutButton } from "@/features/auth/logout-button";
 import type { EffectiveClientRole } from "@/lib/access/roles";
 
@@ -43,6 +46,20 @@ export function AppSidebar({
         <WorkspaceSwitchLink
           role={role}
           accessibleClientCount={accessibleClientCount}
+        />
+      </div>
+
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-soft-white/40"
+        />
+        <Input
+          type="search"
+          disabled
+          aria-label="Search coming later"
+          placeholder="Search coming later"
+          className="border-white/10 bg-transparent pl-9 text-caption text-soft-white placeholder:text-soft-white/40 disabled:bg-transparent disabled:opacity-100"
         />
       </div>
 

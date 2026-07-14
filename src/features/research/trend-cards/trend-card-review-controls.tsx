@@ -14,7 +14,6 @@ import {
 } from "./schemas";
 
 const GENERIC_ERROR_COPY = "Could not update this TrendCard. Please try again.";
-const APPROVED_MESSAGE = "This TrendCard has been approved for ideas.";
 
 type RequestState =
   | { status: "idle" }
@@ -218,9 +217,7 @@ export function TrendCardReviewControls({
             ) : null}
           </div>
 
-          {approvedForIdeas ? (
-            <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
-          ) : canManageReview ? (
+          {approvedForIdeas ? null : canManageReview ? (
             <Button
               type="button"
               variant="accent-purple"

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BookOpen, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { BookOpen, Clock, AlertCircle, CheckCircle2, Maximize2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { formatUtcDate } from "@/lib/format/date";
@@ -181,10 +181,10 @@ export function PostsView({
                   <div className="flex items-center gap-3">
                     <Link
                       href={`/client/${clientId}/posts/${post.id}/review`}
-                      className="inline-flex items-center gap-1 text-small font-medium text-brand-orange hover:underline focus-visible:outline-none"
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
-                      View Details
-                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                      <Maximize2 aria-hidden="true" className="h-4 w-4" />
+                      Open Full Post
                     </Link>
                     {isAdmin && (
                       <PostDeleteButton
