@@ -143,7 +143,7 @@ export function FounderExperienceForm({
       ) : null}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" variant="gradient" disabled={isPending}>
+        <Button type="submit" variant="brand" disabled={isPending}>
           {isPending
             ? "Saving..."
             : experience

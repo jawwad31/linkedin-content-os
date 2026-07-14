@@ -207,7 +207,7 @@ Test:
 - Two users, two clients.
 - Confirm isolation.
 - Confirm `client_user` can contribute safe workflow content.
-- Confirm `client_user` cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, logs, Agency-level pages, or other Client Workspaces.
+- Confirm `client_user` cannot manage Settings, users, RSS sources, Research Agent, post approvals, publishing state, logs, Agency-level pages, or other Client Workspaces.
 
 Commit:
 
@@ -351,7 +351,7 @@ UI:
 
 Acceptance Criteria:
 
-- Sidebar labels: Dashboard, Setup, Research, Ideas, Posts, Publish.
+- Sidebar labels: Dashboard, Research, Founder Experiences, Ideas, Posts, Publish, Settings.
 - Active route state works.
 - Logout available.
 - Responsive layout works.
@@ -383,7 +383,7 @@ Dependencies:
 
 Metrics:
 
-- setup completeness
+- settings completeness
 - latest research run
 - collected articles count
 - TrendCards count
@@ -417,7 +417,7 @@ feat: add client dashboard
 
 Goal:
 
-Build Setup page for always-on business context.
+Build Settings page for always-on business context.
 
 Dependencies:
 
@@ -431,7 +431,7 @@ Acceptance Criteria:
 
 - All client context fields exist.
 - `agency_admin` and `client_admin` can edit.
-- `client_user` cannot edit Setup/business context.
+- `client_user` cannot edit Settings/business context.
 - Zod validation.
 - Audit log on update.
 - Safe toasts.

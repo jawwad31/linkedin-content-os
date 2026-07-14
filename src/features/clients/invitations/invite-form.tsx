@@ -55,7 +55,7 @@ export function InviteForm({ clientId }: { clientId: string }) {
         <p className="text-small text-success-strong">{state.success}</p>
       ) : null}
 
-      <Button type="submit" variant="gradient" disabled={isPending}>
+      <Button type="submit" variant="brand" disabled={isPending}>
         {isPending ? "Sending invite..." : "Send Invite"}
       </Button>
     </form>

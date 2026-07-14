@@ -47,7 +47,7 @@ Some screenshot content is illustrative. Apply these constraints:
 - Publish remains LinkedIn-only and manual unless another channel is already supported by the product.
 - Do not add Twitter, Instagram, or auto-publishing merely because a reference card displays them.
 - Login remains private. Do not expose public signup or workspace creation unless that route is intentionally enabled.
-- Founder Experiences remain a real product workflow. The Setup screen may show a summary module, but full management belongs on its dedicated route or existing workflow.
+- Founder Experiences remain a real product workflow. The Settings screen may show a summary module, but full management belongs on its dedicated route or existing workflow.
 - Do not add fake metrics, research runs, posts, proof, clients, users, or workspaces.
 
 ## 3. Visual Direction
@@ -344,7 +344,7 @@ These are opened from a workflow or linked module rather than duplicated in the 
 
 Founder Experiences may be surfaced through:
 
-- Setup summary module
+- Settings summary module
 - Ideas generation source card
 - dedicated management page
 - command palette
@@ -387,7 +387,7 @@ Avoid exposing implementation language such as:
 - Inactive items use white at approximately 65–75% opacity.
 - Hover state uses a subtle white overlay.
 - Active state uses an orange or purple pill with white text.
-- Use orange for operational sections such as Dashboard, Setup, and Posts.
+- Use orange for operational sections such as Dashboard, Settings, and Posts.
 - Use purple for intelligence and distribution sections such as Research, Ideas, and Publish.
 - Do not rely on color alone: active state also uses stronger weight and filled icon state.
 
@@ -403,7 +403,7 @@ Avoid exposing implementation language such as:
 
 Primary:
 
-- solid orange or signature gradient
+- solid orange or solid brand purple (`#C43EEA`)
 - white text
 - 10–12px radius or full pill when matching the reference shell
 - one dominant primary action per page
@@ -468,7 +468,7 @@ Supported card families:
 - post preview card
 - review metadata card
 - publish queue card
-- setup section card
+- settings section card
 - activity card
 
 Interactive cards must have:
@@ -524,7 +524,7 @@ Rules:
 - never expose raw backend errors
 - use success toast or persistent save state after completion
 - preserve field values after a recoverable error
-- group long Setup forms into visible sections or tabs
+- group long Settings forms into visible sections or tabs
 
 ### 9.7 Tables
 
@@ -657,7 +657,7 @@ Visual composition:
 
 Recommended metrics:
 
-- Setup completeness
+- Settings completeness
 - Latest research result or signal count
 - Collected Articles
 - Ideas or posts requiring attention
@@ -723,14 +723,14 @@ Purpose: capture real operator experiences for future content generation.
 
 Access:
 
-- contextual route from Setup, Ideas, or command palette
+- contextual route from Settings, Ideas, or command palette
 - not required as a permanent primary-sidebar item
 
 Layout:
 
 - entry form for users with contribution permission
 - experience log below
-- optional summary preview inside Setup
+- optional summary preview inside Settings
 
 Fields:
 
@@ -864,7 +864,7 @@ Rules:
 - deleting the internal Content OS record does not delete the live LinkedIn post
 - use the screenshot’s card composition without copying unsupported Twitter or Instagram channels
 
-## 10.10 Setup / Business Context
+## 10.10 Settings / Business Context
 
 Purpose: maintain the durable context used by research and content generation.
 
@@ -876,7 +876,7 @@ Visual composition:
 - two-column content where useful
 - primary business detail form on the left
 - brand or context summary card on the right
-- additional setup cards stacked below
+- additional settings cards stacked below
 - persistent save state and completion indicator
 
 Sections:
@@ -892,7 +892,7 @@ Sections:
 
 Founder Experiences:
 
-- Setup may display a recent-experience summary module with `Add Experience` and `Manage all`
+- Settings may display a recent-experience summary module with `Add Experience` and `Manage all`
 - full editing and history remain in the dedicated Founder Experiences workflow
 
 Primary action:
@@ -913,7 +913,7 @@ Suggested actions:
 
 - Switch Client Workspace
 - Go to Dashboard
-- Go to Setup
+- Go to Settings
 - Go to Research
 - Run Research Agent
 - Add RSS Source
@@ -1050,7 +1050,7 @@ When implementing the refresh:
 3. reusable cards, badges, buttons, inputs, and dialogs
 4. Login and Client Selector
 5. Dashboard
-6. Setup
+6. Settings
 7. Research
 8. Ideas
 9. Posts and Post Review

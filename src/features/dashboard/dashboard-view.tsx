@@ -165,9 +165,9 @@ export function DashboardView({
         href: `/client/${clientId}/publish`,
       };
     } else if (setupIncomplete) {
-      statusMessage = "Finish setting up business context to improve research and ideas.";
+      statusMessage = "Finish configuring business context settings to improve research and ideas.";
       nextAction = {
-        label: "Complete setup",
+        label: "Complete settings",
         href: `/client/${clientId}/settings`,
       };
     } else if (researchEmpty) {
@@ -208,7 +208,7 @@ export function DashboardView({
     } else if (latestResearchRun?.status === "failed") {
       statusMessage = "Latest research run failed and requires administrator attention.";
     } else if (setupIncomplete) {
-      statusMessage = "Business setup is incomplete and requires administrator completion.";
+      statusMessage = "Business settings are incomplete and require administrator completion.";
     } else if (researchEmpty) {
       statusMessage = "No research data collected. An administrator must run research.";
     } else {
@@ -227,7 +227,7 @@ export function DashboardView({
         <Card className="hover-lift">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
-              <CardTitle>Setup completeness</CardTitle>
+              <CardTitle>Settings completeness</CardTitle>
               <MetricIcon
                 icon={SlidersHorizontal}
                 tint="bg-brand-orange/10 text-brand-orange"
@@ -244,7 +244,7 @@ export function DashboardView({
             </span>
             <div
               role="progressbar"
-              aria-label="Setup completeness"
+              aria-label="Settings completeness"
               aria-valuenow={setupCompleteness.percent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -260,7 +260,7 @@ export function DashboardView({
                 href={`/client/${clientId}/settings`}
                 className="rounded-control text-small font-medium text-brand-orange hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
               >
-                Complete setup
+                Complete settings
               </Link>
             ) : null}
           </CardContent>
@@ -305,7 +305,7 @@ export function DashboardView({
             <CardFooter>
               <Link
                 href={nextAction.href}
-                className={cn(buttonVariants({ variant: "gradient" }), "gap-2")}
+                className={cn(buttonVariants({ variant: "brand" }), "gap-2")}
               >
                 {nextAction.label}
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />

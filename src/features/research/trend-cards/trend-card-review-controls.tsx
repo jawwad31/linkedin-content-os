@@ -150,7 +150,7 @@ export function TrendCardReviewControls({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="gradient"
+            variant="brand"
             size="sm"
             disabled={isReacting || reactionTake.trim().length === 0}
             onClick={() =>
@@ -220,7 +220,7 @@ export function TrendCardReviewControls({
           {approvedForIdeas ? null : canManageReview ? (
             <Button
               type="button"
-              variant="accent-purple"
+              variant="success"
               size="sm"
               onClick={() => postJson("approve-for-ideas", null, setApproveState)}
               disabled={isApproving}

@@ -163,10 +163,10 @@ Verified live migration state on 2026-07-10:
 
 Role rules:
 
-- `agency_admin` can access all Client Workspaces under the Agency, manage Setup, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
-- `client_admin` can access only assigned Client Workspaces, manage Setup, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
+- `agency_admin` can access all Client Workspaces under the Agency, manage Settings, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
+- `client_admin` can access only assigned Client Workspaces, manage Settings, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
 - `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add a Trend Reaction (one per TrendCard), generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
-- `client_user` cannot edit Setup/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
+- `client_user` cannot edit Settings/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
 
 ---
 
@@ -186,7 +186,7 @@ UX patterns may be adopted from either reference gradually, one screen at a time
 - dark sidebar with a current-workspace card
 - top header
 - denser dashboard layout
-- tabbed/card Setup layout
+- tabbed/card Settings layout
 
 Never copy from either reference:
 
@@ -213,7 +213,7 @@ Build in v1:
 2. Email invitations for client collaboration.
 3. Client selector with many users ↔ many clients.
 4. Agency access roles: `agency_admin`, `client_admin`, and `client_user`.
-5. Client setup / always-on business context.
+5. Client Settings / always-on business context.
 6. Founder Experience records.
 7. RSS source management.
 8. Persistent Railway worker for RSS collection.
@@ -637,7 +637,7 @@ Protected:
 - `/client/[client_id]/ideas` (Ideas)
 - `/client/[client_id]/posts` (Posts)
 - `/client/[client_id]/publish` (Publish)
-- `/client/[client_id]/settings` (Settings / Setup)
+- `/client/[client_id]/settings` (Settings)
 - `/client/[client_id]/posts/[post_id]/review`
 
 Primary sidebar nav order: Overview, Research, Founder Experiences, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
@@ -654,8 +654,8 @@ The Settings page is the always-on business context editor for a client.
 - Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted access, and `agency_admin` or `client_admin` permission.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
-- Team Access / invitations remain part of Setup and must not be broken by business-context changes.
-- Founder Experiences entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings/Setup at all.
+- Team Access / invitations remain part of Settings and must not be broken by business-context changes.
+- Founder Experiences entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings at all.
 
 Supported Business Context fields (on `clients`):
 
@@ -1184,7 +1184,7 @@ The MVP is done when:
 - Agency admins and client admins can invite collaborators by email, subject to client scope.
 - User roles are enforced.
 - No viewer-level role exists.
-- `client_user` can contribute to safe workflow content but cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
+- `client_user` can contribute to safe workflow content but cannot manage Settings, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
 - Client data is scoped by `client_id`.
 - User can create/update business context.
 - User can create Founder Experiences.

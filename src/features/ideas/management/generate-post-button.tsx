@@ -96,7 +96,7 @@ export function GeneratePostButton({
     <div className="flex flex-col items-start gap-2">
       <Button
         type="button"
-        variant="gradient"
+        variant="brand"
         size="sm"
         disabled={isPending}
         onClick={generatePost}

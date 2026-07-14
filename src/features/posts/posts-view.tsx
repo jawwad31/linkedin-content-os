@@ -158,7 +158,7 @@ export function PostsView({
                       className={buttonVariants({ variant: "outline", size: "sm" })}
                     >
                       <Maximize2 aria-hidden="true" className="h-4 w-4" />
-                      Open Full Post
+                      Review Post
                     </Link>
                     {isAdmin && (
                       <PostDeleteButton

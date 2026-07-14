@@ -10,7 +10,7 @@ import {
   Target,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,11 @@ import {
   SegmentedNavigation,
   type SegmentedNavigationItem,
 } from "@/components/ui/segmented-navigation";
+import { cn } from "@/lib/utils";
+import {
+  businessContextFormSchema,
+  type BusinessContextFormInput,
+} from "./schemas";
 
 import { saveBusinessContextAction, type SaveBusinessContextState } from "./actions";
 import type { ClientBusinessContext } from "./queries";
@@ -45,6 +50,25 @@ const TABS: SegmentedNavigationItem<TabId>[] = [
   { id: "guardrails", label: "Guardrails & Banned Topics", icon: ShieldAlert },
   { id: "publishing", label: "Publishing Preferences", icon: Send },
 ];
+
+const FIELD_TABS: Record<keyof BusinessContextFormInput, TabId> = {
+  name: "profile",
+  founderName: "profile",
+  industry: "profile",
+  businessDescription: "profile",
+  primaryIcp: "icp",
+  mainOffer: "icp",
+  corePov: "pov",
+  contentPillars: "pov",
+  researchKeywords: "pov",
+  founderVoiceSample: "voice",
+  phrasesToUse: "voice",
+  phrasesToAvoid: "voice",
+  approvedProof: "proof",
+  referenceMaterial: "proof",
+  bannedTopics: "guardrails",
+  publishingPreferencesNotes: "publishing",
+};
 
 function toLines(values: string[]): string {
   return values.join("\n");
@@ -81,6 +105,7 @@ function FieldBlock({
   required,
   helperText,
   readOnly,
+  error,
 }: {
   label: string;
   htmlFor: string;
@@ -92,6 +117,7 @@ function FieldBlock({
   required?: boolean;
   helperText?: string;
   readOnly: boolean;
+  error?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -117,6 +143,7 @@ function FieldBlock({
           defaultValue={value}
           maxLength={maxLength}
           required={required}
+          className={cn(error && "border-danger focus-visible:ring-danger/50")}
         />
       ) : (
         <Input
@@ -125,9 +152,12 @@ function FieldBlock({
           defaultValue={value}
           maxLength={maxLength}
           required={required}
+          className={cn(error && "border-danger focus-visible:ring-danger/50")}
         />
       )}
-      {helperText ? (
+      {error ? (
+        <p className="text-caption text-danger-strong">{error}</p>
+      ) : helperText ? (
         <p className="text-caption text-muted-foreground">{helperText}</p>
       ) : null}
     </div>
@@ -150,14 +180,80 @@ export function BusinessContextForm({
     saveBusinessContextAction.bind(null, clientId),
     initialState,
   );
+  const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof BusinessContextFormInput, string>>>({});
 
   const isReadOnly = !canRoleManageClientSetup(role);
 
+  useEffect(() => {
+    if (state.success) {
+      const timer = setTimeout(() => {
+        setValidationErrors({});
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [state.success]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (isReadOnly) return;
+
+    const formData = new FormData(e.currentTarget);
+    const rawData = {
+      name: (formData.get("name") as string) || "",
+      founderName: (formData.get("founderName") as string) || "",
+      industry: (formData.get("industry") as string) || "",
+      businessDescription: (formData.get("businessDescription") as string) || "",
+      primaryIcp: (formData.get("primaryIcp") as string) || "",
+      mainOffer: (formData.get("mainOffer") as string) || "",
+      corePov: (formData.get("corePov") as string) || "",
+      contentPillars: (formData.get("contentPillars") as string) || "",
+      researchKeywords: (formData.get("researchKeywords") as string) || "",
+      bannedTopics: (formData.get("bannedTopics") as string) || "",
+      founderVoiceSample: (formData.get("founderVoiceSample") as string) || "",
+      phrasesToUse: (formData.get("phrasesToUse") as string) || "",
+      phrasesToAvoid: (formData.get("phrasesToAvoid") as string) || "",
+      approvedProof: (formData.get("approvedProof") as string) || "",
+      referenceMaterial: (formData.get("referenceMaterial") as string) || "",
+      publishingPreferencesNotes: (formData.get("publishingPreferencesNotes") as string) || "",
+    };
+
+    const parsed = businessContextFormSchema.safeParse(rawData);
+    if (!parsed.success) {
+      e.preventDefault(); // Stop server action submission
+
+      const errors: Partial<Record<keyof BusinessContextFormInput, string>> = {};
+      parsed.error.issues.forEach((err) => {
+        const path = err.path[0] as keyof BusinessContextFormInput;
+        if (!errors[path]) {
+          errors[path] = err.message;
+        }
+      });
+      setValidationErrors(errors);
+
+      // Find first invalid field
+      const firstErrorField = Object.keys(errors)[0] as keyof BusinessContextFormInput;
+      if (firstErrorField) {
+        const targetTab = FIELD_TABS[firstErrorField];
+        setActiveTab(targetTab);
+
+        // Wait for tab switch rendering before focusing
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorField);
+          if (element) {
+            element.focus();
+          }
+        }, 50);
+      }
+      return;
+    }
+
+    setValidationErrors({});
+  };
+
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form action={formAction} noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
       {isReadOnly ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Client Users can view Setup but cannot edit business context.
+          Client Users can view Settings but cannot edit business context.
         </p>
       ) : null}
 
@@ -185,6 +281,7 @@ export function BusinessContextForm({
           maxLength={200}
           required
           readOnly={isReadOnly}
+          error={validationErrors.name}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldBlock
@@ -194,6 +291,7 @@ export function BusinessContextForm({
             value={context.founderName ?? ""}
             maxLength={200}
             readOnly={isReadOnly}
+            error={validationErrors.founderName}
           />
           <FieldBlock
             label="Industry"
@@ -202,6 +300,7 @@ export function BusinessContextForm({
             value={context.industry ?? ""}
             maxLength={200}
             readOnly={isReadOnly}
+            error={validationErrors.industry}
           />
         </div>
         <FieldBlock
@@ -213,6 +312,7 @@ export function BusinessContextForm({
           rows={4}
           maxLength={4000}
           readOnly={isReadOnly}
+          error={validationErrors.businessDescription}
         />
       </div>
 
@@ -231,6 +331,7 @@ export function BusinessContextForm({
           rows={3}
           maxLength={2000}
           readOnly={isReadOnly}
+          error={validationErrors.primaryIcp}
         />
         <FieldBlock
           label="Main offer"
@@ -241,6 +342,7 @@ export function BusinessContextForm({
           rows={3}
           maxLength={2000}
           readOnly={isReadOnly}
+          error={validationErrors.mainOffer}
         />
       </div>
 
@@ -259,6 +361,7 @@ export function BusinessContextForm({
           rows={4}
           maxLength={4000}
           readOnly={isReadOnly}
+          error={validationErrors.corePov}
         />
         <FieldBlock
           label="Content pillars"
@@ -270,6 +373,7 @@ export function BusinessContextForm({
           maxLength={4000}
           helperText="One per line."
           readOnly={isReadOnly}
+          error={validationErrors.contentPillars}
         />
         <FieldBlock
           label="Research keywords"
@@ -281,6 +385,7 @@ export function BusinessContextForm({
           maxLength={2000}
           helperText="One per line."
           readOnly={isReadOnly}
+          error={validationErrors.researchKeywords}
         />
       </div>
 
@@ -299,6 +404,7 @@ export function BusinessContextForm({
           rows={4}
           maxLength={4000}
           readOnly={isReadOnly}
+          error={validationErrors.founderVoiceSample}
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FieldBlock
@@ -311,6 +417,7 @@ export function BusinessContextForm({
             maxLength={2000}
             helperText="One per line."
             readOnly={isReadOnly}
+            error={validationErrors.phrasesToUse}
           />
           <FieldBlock
             label="Phrases to avoid"
@@ -322,6 +429,7 @@ export function BusinessContextForm({
             maxLength={2000}
             helperText="One per line."
             readOnly={isReadOnly}
+            error={validationErrors.phrasesToAvoid}
           />
         </div>
       </div>
@@ -343,6 +451,7 @@ export function BusinessContextForm({
             maxLength={4000}
             helperText="One per line. Only real, approved proof points."
             readOnly={isReadOnly}
+            error={validationErrors.approvedProof}
           />
           <FieldBlock
             label="Reference material"
@@ -354,6 +463,7 @@ export function BusinessContextForm({
             maxLength={4000}
             helperText="One per line."
             readOnly={isReadOnly}
+            error={validationErrors.referenceMaterial}
           />
         </div>
       </div>
@@ -374,6 +484,7 @@ export function BusinessContextForm({
           maxLength={2000}
           helperText="One per line."
           readOnly={isReadOnly}
+          error={validationErrors.bannedTopics}
         />
       </div>
 
@@ -392,6 +503,7 @@ export function BusinessContextForm({
           rows={4}
           maxLength={2000}
           readOnly={isReadOnly}
+          error={validationErrors.publishingPreferencesNotes}
         />
       </div>
 
@@ -412,7 +524,7 @@ export function BusinessContextForm({
       {isReadOnly ? null : (
         <Button
           type="submit"
-          variant="gradient"
+          variant="brand"
           size="lg"
           disabled={isPending}
           className="self-start"

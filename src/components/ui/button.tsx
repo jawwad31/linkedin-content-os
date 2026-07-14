@@ -11,7 +11,7 @@ const buttonVariants = cva(
         // Primary / main CTA — real primary actions only (login, save,
         // complete setup, generation actions). Solid brand purple, not a
         // gradient, so every primary action reads as the same one color.
-        gradient:
+        brand:
           "bg-brand-purple text-white shadow-sm hover:opacity-90 hover:shadow-md active:scale-[0.98]",
         // Accent orange — important but not global-primary actions.
         "accent-orange":

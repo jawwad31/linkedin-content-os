@@ -76,7 +76,7 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        variant="gradient"
+        variant="brand"
         disabled={isPending}
         className="w-full h-12 rounded-full font-bold"
       >

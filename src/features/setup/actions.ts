@@ -22,7 +22,7 @@ export type SaveBusinessContextState = {
 const SAVE_ERROR_COPY =
   "Could not save business context. Check the fields and try again.";
 const SETUP_FORBIDDEN_COPY =
-  "You do not have permission to edit Setup for this Client Workspace.";
+  "You do not have permission to edit Settings for this Client Workspace.";
 
 const uuidSchema = z.string().uuid();
 

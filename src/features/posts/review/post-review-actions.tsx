@@ -161,7 +161,7 @@ export function PostReviewActions({
           </Button>
           <Button
             type="button"
-            variant="gradient"
+            variant="success"
             size="sm"
             disabled={!canApprove || isPending}
             onClick={() => submitAction("approve")}

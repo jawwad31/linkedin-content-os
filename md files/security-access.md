@@ -106,7 +106,7 @@ Can:
 - copy approved posts
 
 Cannot:
-- edit Setup/business context
+- edit Settings/business context
 - manage users
 - manage RSS sources
 - run Research Agent
@@ -241,7 +241,7 @@ exists (
 Restricted `client_user` actions:
 
 - can write only safe workflow content records
-- cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces
+- cannot manage Settings, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces
 
 TrendCard writes:
 

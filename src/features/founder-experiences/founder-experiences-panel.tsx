@@ -47,7 +47,7 @@ export function FounderExperiencesPanel({
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className={cn(buttonVariants({ variant: "gradient" }), "self-start gap-2")}
+            className={cn(buttonVariants({ variant: "brand" }), "self-start gap-2")}
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             Add Founder Experience

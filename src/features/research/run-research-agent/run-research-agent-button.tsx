@@ -56,7 +56,7 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <Button type="button" variant="gradient" onClick={handleClick} disabled={isPending}>
+        <Button type="button" variant="brand" onClick={handleClick} disabled={isPending}>
           {isPending ? "Running research..." : "Run Research Agent"}
         </Button>
       </div>

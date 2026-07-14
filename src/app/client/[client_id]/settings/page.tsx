@@ -41,7 +41,7 @@ export default async function SetupPage({
   return (
     <div>
       <PageHeader
-        title="Setup"
+        title="Settings"
         description="The always-on context Research, Ideas, and Posts use for this Client Workspace, plus who has access to it."
       />
 
