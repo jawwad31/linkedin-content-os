@@ -165,7 +165,7 @@ Role rules:
 
 - `agency_admin` can access all Client Workspaces under the Agency, manage Setup, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
 - `client_admin` can access only assigned Client Workspaces, manage Setup, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
-- `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add Founder Take / Trend Reaction, generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
+- `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add a Trend Reaction (one per TrendCard), generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
 - `client_user` cannot edit Setup/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
 
 ---
@@ -220,7 +220,7 @@ Build in v1:
 9. Manual Run Research Agent button.
 10. Article classification.
 11. TrendCard synthesis.
-12. Founder Take and Trend Reactions on TrendCards.
+12. Trend Reactions on TrendCards (one per TrendCard; Founder Take input was removed from the Research UI, existing stored values still feed Ideas/Post generation).
 13. Approve or archive TrendCards.
 14. Content Idea generation from exactly three modes:
     - `founder_experience`
@@ -448,7 +448,7 @@ Rules:
 - RSS claims are context, not verified proof
 - do not duplicate existing TrendCards
 - source links are resolved from cited `market_signal_items`; the model must only return cited source item IDs
-- founder POV must come from a human Founder Take or Trend Reaction, not generated `founder_pov`
+- founder POV must come from an existing Founder Take value or a Trend Reaction, not generated `founder_pov` (Founder Take is no longer addable from the Research UI; only Trend Reaction, limited to one per TrendCard, can be added there)
 - do not expose raw prompts
 - do not flash raw LLM errors
 
@@ -1193,7 +1193,7 @@ The MVP is done when:
 - User can manually run research.
 - App classifies collected articles.
 - App generates TrendCards.
-- User can add founder_take.
+- User can add a Trend Reaction (one per TrendCard); Founder Take is no longer addable from the Research UI.
 - User can approve TrendCards for ideas.
 - Planning Agent generates ideas from:
   - founder_experience

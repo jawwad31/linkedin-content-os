@@ -99,7 +99,7 @@ Can:
 - access only assigned Client Workspaces
 - create/edit safe workflow content records
 - mark articles relevant/irrelevant
-- add Founder Take / Trend Reaction
+- add a Trend Reaction (one per TrendCard)
 - generate Ideas
 - add Founder Direction
 - generate Posts
@@ -248,7 +248,8 @@ TrendCard writes:
 - `trend_cards` read access follows accepted client access.
 - `trend_cards` create/update/delete actions run through trusted server-side code and route handlers.
 - `agency_admin` and `client_admin` permissions are checked server-side before approve/delete mutations.
-- `client_user` may add Founder Take / Trend Reaction but cannot approve or delete TrendCards.
+- `client_user` may add a Trend Reaction (one per TrendCard, enforced server-side) but cannot approve or delete TrendCards.
+- Founder Take is no longer an editable UI control for any role; existing stored values are untouched and still feed Ideas/Post generation.
 
 ---
 

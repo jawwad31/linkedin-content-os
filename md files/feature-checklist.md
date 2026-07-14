@@ -788,30 +788,31 @@ UI actions:
 
 - mark relevant
 - mark irrelevant
-- add founder_take
-- add Trend Reaction
+- add Trend Reaction (one per TrendCard)
 - approve for ideas
 - delete TrendCard (superseded by Feature 27)
+
+Note: Founder Take input and read-only display were removed from this UI in Batch 4A. Existing stored `founder_take` values on TrendCards are untouched and still feed Ideas/Post generation.
 
 Acceptance Criteria:
 
 - Collected Articles list works.
 - TrendCard cards/table works.
-- Founder Take saves.
-- Trend Reactions save as linked Founder Experience records.
+- Trend Reaction saves as a linked Founder Experience record; a second reaction attempt for the same TrendCard is rejected server-side.
+- The React control hides once a reaction exists, showing "Reaction recorded." instead.
 - Approve for Ideas works.
 - Delete hard-deletes TrendCards that are not linked to reactions or ideas (superseded by Feature 27).
 - Weekly grouping works.
 - Source links render from cited collected articles.
-- `client_user` can mark articles relevant/irrelevant and add Founder Take / Trend Reaction.
+- `client_user` can mark articles relevant/irrelevant and add one Trend Reaction per TrendCard.
 - `client_user` cannot approve/delete TrendCards.
 - Audit logs written.
 
 Test:
 
 - Mark article relevant.
-- Add founder take.
 - Add Trend Reaction.
+- Confirm a second Trend Reaction attempt on the same TrendCard is rejected.
 - Approve TrendCard.
 - Delete unused TrendCard (superseded by Feature 27).
 - Test `client_user` allowed contribution actions.

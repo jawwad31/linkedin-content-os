@@ -359,7 +359,7 @@ Use:
 - Collected Article
 - TrendCard
 - Idea
-- Founder Take
+- Trend Reaction
 - Post
 - Post Review
 - Publish Queue
@@ -683,18 +683,18 @@ Purpose: collect sources, run research, inspect signals, and manage TrendCards.
 Visual composition:
 
 - title and concise page description
-- one primary `Run Research Agent` action in the page header
-- top market signals / TrendCards in a compact card grid
-- recent research runs below
-- intelligence sources and source-health panel on the right at desktop widths
+- one primary `Run Research Agent` action in the page header action area (hidden for `client_user`, who instead sees a read-only notice near the top of the content)
+- Collected Articles full-width first, then TrendCards full-width, then RSS Sources and Research Runs side by side below
+- RSS Sources render as a responsive two-column card grid, not a stacked list
+- TrendCards grow to their natural content height; no fixed-height internal scroll box
 - filters and date range controls near the content header (non-functional visual placeholders only; Research date range filtering is unsupported on the backend)
 
 Sections:
 
-1. RSS Sources / Intelligence Sources
-2. Research Runs
-3. Collected Articles
-4. TrendCards / Market Signals
+1. Collected Articles
+2. TrendCards / Market Signals
+3. RSS Sources / Intelligence Sources
+4. Research Runs
 
 TrendCard fields:
 
@@ -703,11 +703,12 @@ TrendCard fields:
 - why it matters
 - relevance to ICP
 - content angle
-- confidence score
+- confidence score (shown as a badge alongside the Approved for Ideas / reaction-count badges)
 - source count and links
-- Founder Take
-- reaction or decision state
+- reaction or decision state (one Trend Reaction per TrendCard, enforced server-side; the React control hides once a reaction exists)
 - approve for Ideas action
+
+Founder Take is not part of the Research UI. Existing stored Founder Take values on TrendCards are untouched and continue feeding Ideas/Post generation, but no control to add or edit one is shown here.
 
 Rules:
 
