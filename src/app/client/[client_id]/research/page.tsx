@@ -58,28 +58,73 @@ export default async function ResearchPage({
       <PageHeader
         title="Research"
         description="Collect and process market signals for this Client Workspace."
+        action={
+          role && canRoleRunResearchAgent(role) ? (
+            <RunResearchAgentButton clientId={clientId} />
+          ) : undefined
+        }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Run Research Agent</CardTitle>
-          <CardDescription>
-            Collect the latest articles, classify them for ICP relevance,
-            then synthesize evidence-backed TrendCards.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {role && canRoleRunResearchAgent(role) ? (
-            <RunResearchAgentButton clientId={clientId} />
-          ) : role ? (
-            <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-              Client Users cannot run the Research Agent.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      {role && !canRoleRunResearchAgent(role) ? (
+        <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
+          Client Users cannot run the Research Agent.
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Collected Articles</CardTitle>
+            <CardDescription>
+              Articles gathered from active RSS sources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && articlesResult ? (
+              articlesResult.ok ? (
+                <CollectedArticlesPanel
+                  clientId={clientId}
+                  role={role}
+                  articles={articlesResult.articles}
+                  activeStatus={articleStatus}
+                  counts={
+                    articleCountsResult?.ok ? articleCountsResult.counts : null
+                  }
+                />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load collected articles. Please try again.
+                </p>
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>TrendCards</CardTitle>
+            <CardDescription>
+              Evidence-backed TrendCards synthesized from collected articles,
+              grouped by week.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && cardsResult ? (
+              cardsResult.ok ? (
+                <TrendCardsPanel
+                  clientId={clientId}
+                  role={role}
+                  cards={cardsResult.cards}
+                />
+              ) : (
+                <p className="text-small text-danger">
+                  We could not load TrendCards. Please try again.
+                </p>
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>RSS Sources</CardTitle>
@@ -118,59 +163,6 @@ export default async function ResearchPage({
               ) : (
                 <p className="text-small text-danger">
                   We could not load research runs. Please try again.
-                </p>
-              )
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Collected Articles</CardTitle>
-            <CardDescription>
-              Articles gathered from active RSS sources.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {role && articlesResult ? (
-              articlesResult.ok ? (
-                <CollectedArticlesPanel
-                  clientId={clientId}
-                  role={role}
-                  articles={articlesResult.articles}
-                  activeStatus={articleStatus}
-                  counts={
-                    articleCountsResult?.ok ? articleCountsResult.counts : null
-                  }
-                />
-              ) : (
-                <p className="text-small text-danger">
-                  We could not load collected articles. Please try again.
-                </p>
-              )
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>TrendCards</CardTitle>
-            <CardDescription>
-              Evidence-backed TrendCards synthesized from collected articles,
-              grouped by week.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {role && cardsResult ? (
-              cardsResult.ok ? (
-                <TrendCardsPanel
-                  clientId={clientId}
-                  role={role}
-                  cards={cardsResult.cards}
-                />
-              ) : (
-                <p className="text-small text-danger">
-                  We could not load TrendCards. Please try again.
                 </p>
               )
             ) : null}

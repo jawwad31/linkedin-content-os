@@ -67,6 +67,12 @@ const CARD_IN_USE = {
     "This TrendCard has reactions or linked ideas and can no longer be archived.",
 };
 
+const REACTION_ALREADY_EXISTS = {
+  ok: false as const,
+  code: "VALIDATION_ERROR",
+  message: "This TrendCard already has a reaction. Only one reaction is allowed per TrendCard.",
+};
+
 const GENERIC_FAILURE = {
   ok: false as const,
   code: "UNKNOWN_ERROR",
@@ -333,6 +339,18 @@ export async function addTrendReaction(
     .maybeSingle<{ id: string; title: string }>();
 
   if (fetchError || !card) return NOT_FOUND;
+
+  const admin = createAdminClient();
+  const { count: existingReactionCount, error: existingCountError } = await admin
+    .from("founder_experiences")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", auth.clientId)
+    .eq("entry_type", "trend_reaction")
+    .eq("source_trend_card_id", cardIdResult.data)
+    .is("deleted_at", null);
+
+  if (existingCountError) return GENERIC_FAILURE;
+  if ((existingReactionCount ?? 0) > 0) return REACTION_ALREADY_EXISTS;
 
   const proof = parsed.data.proofOrExample?.trim() ?? "";
 

@@ -70,7 +70,7 @@ export function TrendCardsPanel({
   }
 
   return (
-    <div className="flex max-h-[32rem] flex-col gap-4 overflow-y-auto">
+    <div className="flex flex-col gap-4">
       {groupByWeek(cards).map(([weekOf, weekCards]) => (
         <div key={weekOf} className="flex flex-col gap-3">
           <p className="font-mono text-caption font-medium uppercase tracking-wide text-muted-foreground">
@@ -87,6 +87,11 @@ export function TrendCardsPanel({
                   {card.title}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {card.confidenceScore !== null ? (
+                    <Badge variant="outline">
+                      Confidence {card.confidenceScore}/10
+                    </Badge>
+                  ) : null}
                   {card.reactionCount > 0 ? (
                     <Badge variant="accent-orange">
                       {card.reactionCount} reaction
@@ -134,25 +139,14 @@ export function TrendCardsPanel({
                 <TrendCardReviewControls
                   clientId={clientId}
                   cardId={card.id}
-                  founderTake={card.founderTake}
+                  cardTitle={card.title}
                   approvedForIdeas={card.approvedForIdeas}
                   reactionCount={card.reactionCount}
                   canManageReview={canManageReview}
                 />
-              ) : (
-                <CardSection label="Founder take" text={card.founderTake} />
-              )}
+              ) : null}
 
               <div className="flex flex-wrap items-center gap-2 font-mono text-caption text-muted-foreground">
-                {card.confidenceScore !== null ? (
-                  <span>Confidence {card.confidenceScore}/10</span>
-                ) : null}
-                <span>·</span>
-                <span>
-                  {card.sourceItemCount} source
-                  {card.sourceItemCount === 1 ? "" : "s"}
-                </span>
-                <span>·</span>
                 <span>{formatUtcDate(card.createdAt)}</span>
               </div>
             </div>

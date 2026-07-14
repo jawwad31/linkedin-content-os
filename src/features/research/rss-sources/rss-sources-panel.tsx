@@ -38,7 +38,7 @@ export function RssSourcesPanel({
           description="Add trusted industry feeds so Research can collect articles for TrendCards later."
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {sources.map((source) => (
             <RssSourceCard
               key={source.id}

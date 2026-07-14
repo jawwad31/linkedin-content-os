@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 
 import {
-  FOUNDER_TAKE_MAX_LENGTH,
   REACTION_TYPES,
   REACTION_TYPE_LABELS,
   type ReactionType,
@@ -27,21 +26,20 @@ const IDLE: RequestState = { status: "idle" };
 export function TrendCardReviewControls({
   clientId,
   cardId,
-  founderTake,
+  cardTitle,
   approvedForIdeas,
+  reactionCount,
   canManageReview,
 }: {
   clientId: string;
   cardId: string;
-  founderTake: string | null;
+  cardTitle: string;
   approvedForIdeas: boolean;
   reactionCount: number;
   canManageReview: boolean;
 }) {
   const router = useRouter();
 
-  const [draft, setDraft] = useState(founderTake ?? "");
-  const [saveState, setSaveState] = useState<RequestState>(IDLE);
   const [approveState, setApproveState] = useState<RequestState>(IDLE);
 
   const [mode, setMode] = useState<"default" | "react">("default");
@@ -91,7 +89,6 @@ export function TrendCardReviewControls({
     }
   }
 
-  const isSaving = saveState.status === "pending";
   const isApproving = approveState.status === "pending";
   const isReacting = reactState.status === "pending";
 
@@ -193,40 +190,7 @@ export function TrendCardReviewControls({
   return (
     <>
       <div className="flex flex-col gap-2 rounded-control border border-border-grey bg-white p-3">
-        <label
-          htmlFor={`founder-take-${cardId}`}
-          className="text-caption font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          Founder take
-        </label>
-        <Textarea
-          id={`founder-take-${cardId}`}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          maxLength={FOUNDER_TAKE_MAX_LENGTH}
-          rows={3}
-          placeholder="Add your take on this TrendCard..."
-        />
-
-        {saveState.status === "error" ? (
-          <p role="alert" className="text-small text-danger">
-            {saveState.message}
-          </p>
-        ) : null}
-
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              postJson("founder-take", { founderTake: draft }, setSaveState)
-            }
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save Founder Take"}
-          </Button>
-
           {approvedForIdeas ? (
             <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
           ) : canManageReview ? (
@@ -241,14 +205,18 @@ export function TrendCardReviewControls({
             </Button>
           ) : null}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setMode("react")}
-          >
-            React
-          </Button>
+          {reactionCount === 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setMode("react")}
+            >
+              React
+            </Button>
+          ) : (
+            <p className="text-small text-muted-foreground">Reaction recorded.</p>
+          )}
 
           {canManageReview ? (
             <Button
@@ -274,7 +242,7 @@ export function TrendCardReviewControls({
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         recordType="TrendCard"
-        recordTitle={founderTake || "Untitled TrendCard"}
+        recordTitle={cardTitle}
         onConfirm={async () => {
           const res = await fetch(`/api/client/${clientId}/trend-cards/${cardId}`, {
             method: "DELETE",
