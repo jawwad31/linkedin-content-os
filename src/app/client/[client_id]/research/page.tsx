@@ -65,12 +65,6 @@ export default async function ResearchPage({
         }
       />
 
-      {role && !canRoleRunResearchAgent(role) ? (
-        <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Client Users cannot run the Research Agent.
-        </p>
-      ) : null}
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="lg:col-span-2">
           <CardHeader>
