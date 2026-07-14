@@ -18,7 +18,7 @@ export function LoginForm() {
     <form action={formAction} className="flex flex-col gap-6">
       <div className="relative group">
         <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-body-md text-on-surface-variant font-medium">
+          <label htmlFor="email" className="text-small text-on-surface-variant font-medium">
             Email address
           </label>
           <div className="relative">
@@ -39,7 +39,7 @@ export function LoginForm() {
 
       <div className="relative group">
         <div className="flex flex-col gap-2">
-          <label htmlFor="password" className="text-body-md text-on-surface-variant font-medium">
+          <label htmlFor="password" className="text-small text-on-surface-variant font-medium">
             Password
           </label>
           <div className="relative">
@@ -69,7 +69,7 @@ export function LoginForm() {
 
 
       {state.error ? (
-        <p role="alert" className="text-body-md text-danger">
+        <p role="alert" className="text-small text-danger-strong">
           {state.error}
         </p>
       ) : null}
@@ -78,7 +78,7 @@ export function LoginForm() {
         type="submit"
         variant="gradient"
         disabled={isPending}
-        className="w-full h-12 rounded-full text-label-lg font-bold"
+        className="w-full h-12 rounded-full font-bold"
       >
         {isPending ? "Signing in..." : "Sign In"}
         <svg

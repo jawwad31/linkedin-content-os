@@ -121,13 +121,13 @@ export function RssSourceForm({
       {state.error ? (
         <p
           role="alert"
-          className="rounded-control bg-danger/10 px-3 py-2 text-small font-medium text-danger"
+          className="rounded-control bg-danger/10 px-3 py-2 text-small font-medium text-danger-strong"
         >
           {state.error}
         </p>
       ) : null}
       {state.success ? (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-small font-medium text-success">
+        <p className="rounded-control bg-success/10 px-3 py-2 text-small font-medium text-success-strong">
           {state.success}
         </p>
       ) : null}

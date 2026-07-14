@@ -83,7 +83,7 @@ export function GeneratePostButton({
           <FileText aria-hidden="true" className="h-4 w-4" />
           {label}
         </Link>
-        <p role="status" className="text-small text-success">
+        <p role="status" className="text-small text-success-strong">
           {state.alreadyGenerated
             ? "Post already generated."
             : "Post draft created."}
@@ -106,7 +106,7 @@ export function GeneratePostButton({
       </Button>
 
       {state.status === "error" ? (
-        <p role="alert" className="text-small text-danger">
+        <p role="alert" className="text-small text-danger-strong">
           {state.message}
         </p>
       ) : null}

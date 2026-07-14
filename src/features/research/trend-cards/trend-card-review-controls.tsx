@@ -142,7 +142,7 @@ export function TrendCardReviewControls({
         />
 
         {reactState.status === "error" ? (
-          <p role="alert" className="text-small text-danger">
+          <p role="alert" className="text-small text-danger-strong">
             {reactState.message}
           </p>
         ) : null}
@@ -209,7 +209,7 @@ export function TrendCardReviewControls({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-danger hover:bg-danger/10 hover:text-danger"
+                className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
                 Delete
@@ -231,7 +231,7 @@ export function TrendCardReviewControls({
         </div>
 
         {approveState.status === "error" ? (
-          <p role="alert" className="text-small text-danger">
+          <p role="alert" className="text-small text-danger-strong">
             {approveState.message}
           </p>
         ) : null}

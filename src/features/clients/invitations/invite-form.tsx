@@ -46,13 +46,13 @@ export function InviteForm({ clientId }: { clientId: string }) {
       </div>
 
       {state.error ? (
-        <p role="alert" className="text-small text-danger">
+        <p role="alert" className="text-small text-danger-strong">
           {state.error}
         </p>
       ) : null}
 
       {state.success ? (
-        <p className="text-small text-success">{state.success}</p>
+        <p className="text-small text-success-strong">{state.success}</p>
       ) : null}
 
       <Button type="submit" variant="gradient" disabled={isPending}>

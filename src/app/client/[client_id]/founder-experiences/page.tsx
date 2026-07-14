@@ -36,7 +36,7 @@ export default async function FounderExperiencesPage({
             experiences={result.experiences}
           />
         ) : (
-          <p className="text-small text-danger">
+          <p className="text-small text-danger-strong">
             We could not load founder experiences. Please try again.
           </p>
         )

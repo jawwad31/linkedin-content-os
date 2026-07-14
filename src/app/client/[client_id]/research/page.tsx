@@ -92,7 +92,7 @@ export default async function ResearchPage({
                   }
                 />
               ) : (
-                <p className="text-small text-danger">
+                <p className="text-small text-danger-strong">
                   We could not load collected articles. Please try again.
                 </p>
               )
@@ -117,7 +117,7 @@ export default async function ResearchPage({
                   cards={cardsResult.cards}
                 />
               ) : (
-                <p className="text-small text-danger">
+                <p className="text-small text-danger-strong">
                   We could not load TrendCards. Please try again.
                 </p>
               )
@@ -141,7 +141,7 @@ export default async function ResearchPage({
                   sources={result.sources}
                 />
               ) : (
-                <p className="text-small text-danger">
+                <p className="text-small text-danger-strong">
                   We could not load RSS sources. Please try again.
                 </p>
               )
@@ -161,7 +161,7 @@ export default async function ResearchPage({
               runsResult.ok ? (
                 <ResearchRunsPanel runs={runsResult.runs} />
               ) : (
-                <p className="text-small text-danger">
+                <p className="text-small text-danger-strong">
                   We could not load research runs. Please try again.
                 </p>
               )

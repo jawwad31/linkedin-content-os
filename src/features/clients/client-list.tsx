@@ -24,10 +24,10 @@ export function ClientList({
   if (clients.length === 0) {
     return (
       <div className="mt-6 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center">
-        <p className="text-title-md font-bold text-on-surface">
+        <p className="text-body font-bold text-on-surface">
           {emptyTitle}
         </p>
-        <p className="mt-2 text-body-md text-on-surface-variant max-w-md">
+        <p className="mt-2 text-small text-on-surface-variant max-w-md">
           {emptyDescription}
         </p>
       </div>
@@ -63,7 +63,7 @@ export function ClientList({
 
       {filteredClients.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center h-64">
-          <p className="text-title-md text-on-surface-variant">
+          <p className="text-body text-on-surface-variant">
             No Client Workspaces match your search.
           </p>
         </div>
@@ -81,14 +81,14 @@ export function ClientList({
                     <div className="h-14 w-14 bg-surface-container-high rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
                       <Rocket className="w-8 h-8 fill-current opacity-80" />
                     </div>
-                    <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full font-label-sm text-label-sm">
+                    <span className="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full text-caption font-medium">
                       {EFFECTIVE_ROLE_LABELS[client.role]}
                     </span>
                   </div>
-                  <h3 className="font-title-lg text-title-lg text-on-surface group-hover:bg-gradient-brand group-hover:text-transparent group-hover:bg-clip-text transition-all font-bold">
+                  <h3 className="text-card-title text-on-surface group-hover:bg-gradient-brand group-hover:text-transparent group-hover:bg-clip-text transition-all font-bold">
                     {client.name}
                   </h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 line-clamp-1">
+                  <p className="text-caption text-on-surface-variant mt-1 line-clamp-1">
                     {client.agencyName || client.founderName || client.industry
                       ? [client.agencyName, client.founderName, client.industry]
                           .filter(Boolean)
@@ -100,7 +100,7 @@ export function ClientList({
                 <div className="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
                   <div className="flex items-center gap-2 text-on-surface-variant">
                     <History className="w-4 h-4" />
-                    <span className="font-label-sm text-label-sm">Updated {formatUtcDate(client.updatedAt)}</span>
+                    <span className="text-caption font-medium">Updated {formatUtcDate(client.updatedAt)}</span>
                   </div>
                 </div>
               </div>

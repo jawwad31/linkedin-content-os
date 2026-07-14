@@ -123,8 +123,8 @@ export function PostReviewActions({
           role={state.status === "error" ? "alert" : "status"}
           className={
             state.status === "error"
-              ? "text-small text-danger"
-              : "text-small text-success"
+              ? "text-small text-danger-strong"
+              : "text-small text-success-strong"
           }
         >
           {state.message}
@@ -152,7 +152,7 @@ export function PostReviewActions({
             size="sm"
             disabled={!canReject || isPending}
             onClick={() => submitAction("reject")}
-            className="flex-1 rounded-full text-danger hover:bg-danger/10 hover:text-danger sm:flex-none"
+            className="flex-1 rounded-full text-danger-strong hover:bg-danger/10 hover:text-danger-strong sm:flex-none"
           >
             <XCircle aria-hidden="true" className="h-4 w-4" />
             {state.status === "pending" && state.action === "reject"

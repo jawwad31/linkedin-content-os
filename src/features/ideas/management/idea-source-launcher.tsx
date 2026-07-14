@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import {
+  REACTION_TYPE_LABELS,
+  type ReactionType,
+} from "@/features/research/trend-cards/schemas";
+import {
   canRoleMutateClientWorkflow,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
@@ -194,7 +198,15 @@ function TrendReactionsGroup({
           clientId={clientId}
           canGenerate={canGenerate}
         >
-          <SourceText label="Reaction type" value={source.reactionType} />
+          <SourceText
+            label="Reaction type"
+            value={
+              source.reactionType
+                ? (REACTION_TYPE_LABELS[source.reactionType as ReactionType] ??
+                  source.reactionType)
+                : null
+            }
+          />
           <SourceText label="Take" value={source.take} />
           <SourceText label="Proof or example" value={source.proofOrExample} />
           <SourceText

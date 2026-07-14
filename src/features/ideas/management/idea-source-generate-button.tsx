@@ -73,8 +73,8 @@ export function IdeaSourceGenerateButton({
           role={state.status === "error" ? "alert" : "status"}
           className={
             state.status === "error"
-              ? "text-small text-danger"
-              : "text-small text-success"
+              ? "text-small text-danger-strong"
+              : "text-small text-success-strong"
           }
         >
           {state.message}

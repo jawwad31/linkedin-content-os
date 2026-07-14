@@ -104,7 +104,7 @@ export function DestructiveConfirmDialog({
                   htmlFor="typed-confirmation-input"
                   className="text-xs font-semibold text-near-black"
                 >
-                  Type <span className="text-danger font-bold">DELETE</span> to confirm:
+                  Type <span className="text-danger-strong font-bold">DELETE</span> to confirm:
                 </label>
                 <Input
                   id="typed-confirmation-input"
@@ -113,7 +113,7 @@ export function DestructiveConfirmDialog({
                   value={typedConfirmation}
                   onChange={(e) => setTypedConfirmation(e.target.value)}
                   disabled={isDeleting}
-                  className="w-full uppercase font-mono tracking-wider"
+                  className="w-full font-mono tracking-wider"
                   autoComplete="off"
                 />
               </div>

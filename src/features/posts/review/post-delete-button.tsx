@@ -27,7 +27,7 @@ export function PostDeleteButton({
         type="button"
         variant="ghost"
         size="sm"
-        className="text-danger hover:bg-danger/10 hover:text-danger h-7 px-2 shrink-0 self-start"
+        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong h-7 px-2 shrink-0 self-start"
         onClick={() => setOpen(true)}
       >
         Delete

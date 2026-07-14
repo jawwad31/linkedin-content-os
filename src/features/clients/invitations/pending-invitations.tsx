@@ -13,7 +13,7 @@ export function PendingInvitations({
 
   return (
     <div className="mt-8 mb-6 flex flex-col gap-4">
-      <h2 className="text-title-md font-bold text-on-surface">
+      <h2 className="text-body font-bold text-on-surface">
         Pending Invitations
       </h2>
       <div className="flex flex-col gap-3">
@@ -24,17 +24,17 @@ export function PendingInvitations({
                 <Mail className="w-5 h-5 fill-current opacity-80" />
               </div>
               <div className="flex flex-col">
-                <p className="text-body-md text-on-surface">
+                <p className="text-small text-on-surface">
                   You have been invited to join a Workspace as <span className="font-bold">{CLIENT_ROLE_LABELS[invitation.role]}</span>
                 </p>
-                <p className="text-body-sm text-on-surface-variant">
+                <p className="text-caption text-on-surface-variant">
                   Accept the invitation to gain access to the client ecosystem.
                 </p>
               </div>
             </div>
             
             <form action={acceptInvitationAction.bind(null, invitation.id)} className="w-full sm:w-auto">
-              <button type="submit" className="w-full sm:w-auto bg-primary text-on-primary font-label-md px-6 py-2.5 rounded-full shadow hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+              <button type="submit" className="w-full sm:w-auto bg-brand-purple text-white text-small font-medium px-6 py-2.5 rounded-full shadow hover:opacity-90 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2">
                 <Check className="w-4 h-4" />
                 Accept Invite
               </button>

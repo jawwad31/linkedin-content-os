@@ -21,7 +21,7 @@ export default async function PostsPage({
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   if (!role) {
     return (
-      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
         You do not have access to this client.
       </div>
     );
@@ -39,7 +39,7 @@ export default async function PostsPage({
       {postsResult.ok ? (
         <PostsView clientId={clientId} posts={postsResult.posts} role={role} />
       ) : (
-        <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+        <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
           We could not load post drafts. Please try again.
         </div>
       )}

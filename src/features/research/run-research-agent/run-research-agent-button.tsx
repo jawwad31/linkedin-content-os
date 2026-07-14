@@ -100,7 +100,7 @@ export function RunResearchAgentButton({ clientId }: { clientId: string }) {
       ) : null}
 
       {state.status === "error" ? (
-        <p role="alert" className="text-small text-danger">
+        <p role="alert" className="text-small text-danger-strong">
           {state.message}
         </p>
       ) : null}

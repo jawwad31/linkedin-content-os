@@ -56,7 +56,7 @@ export default async function IdeasPage({
                 sources={sourcesResult.sources}
               />
             ) : (
-              <p className="text-small text-danger">
+              <p className="text-small text-danger-strong">
                 We could not load idea sources. Please try again.
               </p>
             )
@@ -81,7 +81,7 @@ export default async function IdeasPage({
                 ideas={ideasResult.ideas}
               />
             ) : (
-              <p className="text-small text-danger">
+              <p className="text-small text-danger-strong">
                 We could not load Content Ideas. Please try again.
               </p>
             )

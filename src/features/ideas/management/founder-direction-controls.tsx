@@ -102,8 +102,8 @@ export function FounderDirectionControls({
             role={directionState.status === "error" ? "alert" : "status"}
             className={
               directionState.status === "error"
-                ? "text-small text-danger"
-                : "text-small text-success"
+                ? "text-small text-danger-strong"
+                : "text-small text-success-strong"
             }
           >
             {directionState.message}
@@ -144,7 +144,7 @@ export function IdeaDeleteButton({
         type="button"
         variant="ghost"
         size="sm"
-        className="text-danger hover:bg-danger/10 hover:text-danger"
+        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong"
         onClick={() => setIsDeleteDialogOpen(true)}
       >
         Delete

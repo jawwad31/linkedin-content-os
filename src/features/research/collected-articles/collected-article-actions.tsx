@@ -87,7 +87,7 @@ export function CollectedArticleActions({
       </div>
 
       {state.status === "error" ? (
-        <p role="alert" className="text-small text-danger">
+        <p role="alert" className="text-small text-danger-strong">
           {state.message}
         </p>
       ) : null}
@@ -113,7 +113,7 @@ export function ArticleDeleteButton({
         type="button"
         variant="ghost"
         size="sm"
-        className="text-danger hover:bg-danger/10 hover:text-danger self-start"
+        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong self-start"
         onClick={() => setOpen(true)}
       >
         Delete

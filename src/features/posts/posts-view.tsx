@@ -186,7 +186,7 @@ export function PostsView({
 
                 {post.editNote && post.status === "needs_edit" && (
                   <div className="rounded-control border border-warning/20 bg-warning/5 px-3 py-2">
-                    <p className="text-caption font-medium uppercase tracking-wide text-warning-foreground">
+                    <p className="text-caption font-medium uppercase tracking-wide text-warning-strong">
                       Edit Note
                     </p>
                     <p className="mt-1 text-small text-near-black">
@@ -222,7 +222,7 @@ function PostDeleteButton({
         type="button"
         variant="ghost"
         size="sm"
-        className="text-danger hover:bg-danger/10 hover:text-danger h-7 px-2"
+        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong h-7 px-2"
         onClick={() => setOpen(true)}
       >
         Delete

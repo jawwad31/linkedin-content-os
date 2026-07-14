@@ -82,7 +82,7 @@ async function TeamAccessList({ clientId }: { clientId: string }) {
 
   if (!result.ok) {
     return (
-      <p className="text-small text-danger">
+      <p className="text-small text-danger-strong">
         We could not load team access. Please try again.
       </p>
     );
@@ -105,7 +105,7 @@ async function OperationalLogsSection({ clientId }: { clientId: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-small text-danger">
+          <p className="text-small text-danger-strong">
             We could not load operational logs. Please try again.
           </p>
         </CardContent>

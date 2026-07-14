@@ -254,7 +254,7 @@ function AiUsageRows({ logs }: { logs: OperationalLlmLog[] }) {
                 Cost: {formatCost(log.estimatedCost)}
               </span>
               {log.errorType ? (
-                <span className="rounded-full bg-danger/10 px-2.5 py-1 text-caption text-danger">
+                <span className="rounded-full bg-danger/10 px-2.5 py-1 text-caption text-danger-strong">
                   Error: {titleize(log.errorType)}
                 </span>
               ) : null}

@@ -41,7 +41,7 @@ export async function BusinessContextSection({
             context={result.context}
           />
         ) : (
-          <p className="text-small text-danger">
+          <p className="text-small text-danger-strong">
             We could not load business context. Please try again.
           </p>
         )}

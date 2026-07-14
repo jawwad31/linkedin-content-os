@@ -28,7 +28,7 @@ export function RevokeAccessButton({
         type="button"
         variant="ghost"
         size="sm"
-        className="text-danger hover:bg-danger/10 hover:text-danger"
+        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong"
         onClick={() => setOpen(true)}
       >
         Revoke

@@ -28,8 +28,8 @@ export default async function LoginPage() {
               <span className="text-4xl font-bold text-white leading-none tracking-tighter">A</span>
             </div>
             <div className="flex flex-col gap-1">
-              <h1 className="text-headline-sm font-bold tracking-tight text-on-surface">AIXelerate</h1>
-              <p className="text-body-md text-on-surface-variant">The Operating System for Content</p>
+              <h1 className="text-section-title font-bold tracking-tight text-on-surface">AIXelerate</h1>
+              <p className="text-small text-on-surface-variant">The Operating System for Content</p>
             </div>
           </div>
           

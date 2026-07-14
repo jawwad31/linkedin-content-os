@@ -40,12 +40,12 @@ export default async function PublishPage({
             publishedPosts={publishedPosts}
           />
         ) : (
-          <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+          <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
             We could not load approved posts. Please try again.
           </div>
         )
       ) : (
-        <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+        <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
           You do not have access to this client.
         </div>
       )}

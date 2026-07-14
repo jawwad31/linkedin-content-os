@@ -92,11 +92,11 @@ export function RssSourceCard({
         ) : null}
 
         {source.lastError ? (
-          <p className="break-words text-small text-danger">{source.lastError}</p>
+          <p className="break-words text-small text-danger-strong">{source.lastError}</p>
         ) : null}
 
         {toggleState.error ? (
-          <p role="alert" className="text-small text-danger">
+          <p role="alert" className="text-small text-danger-strong">
             {toggleState.error}
           </p>
         ) : null}
@@ -120,7 +120,7 @@ export function RssSourceCard({
               type="button"
               variant="ghost"
               size="sm"
-              className="text-danger hover:bg-danger/10 hover:text-danger"
+              className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong"
               onClick={() => setIsDeleteDialogOpen(true)}
             >
               Delete

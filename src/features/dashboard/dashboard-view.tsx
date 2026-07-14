@@ -286,7 +286,7 @@ export function DashboardView({
           title="Ideas"
           value={ideasCount}
           icon={Lightbulb}
-          tint="bg-success/10 text-success"
+          tint="bg-success/10 text-success-strong"
           ctaHref={ideasEmpty ? `/client/${clientId}/ideas` : undefined}
           ctaLabel={ideasEmpty ? "Open ideas" : undefined}
         />

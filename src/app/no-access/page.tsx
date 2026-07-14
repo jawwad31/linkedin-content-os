@@ -32,15 +32,15 @@ export default async function NoAccessPage() {
               <Lock className="w-8 h-8" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-headline-sm font-bold tracking-tight text-on-surface">Access Unavailable</h1>
-              <p className="text-body-md text-on-surface-variant">
+              <h1 className="text-section-title font-bold tracking-tight text-on-surface">Access Unavailable</h1>
+              <p className="text-small text-on-surface-variant">
                 You do not currently have access to an Agency or Client Workspace. Contact your administrator to request access.
               </p>
             </div>
           </div>
           
           <div className="flex flex-col gap-4">
-            <LogoutButton className="w-full h-12 rounded-full text-label-lg font-bold border border-outline hover:bg-surface-container-low" />
+            <LogoutButton className="w-full h-12 rounded-full font-bold border border-outline hover:bg-surface-container-low" />
           </div>
           
         </div>

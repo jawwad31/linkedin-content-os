@@ -35,13 +35,13 @@ export default async function ClientsPage() {
       {/* Welcome Section */}
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h1 className="text-headline-lg font-bold text-on-surface mb-2">Workspace Select</h1>
+          <h1 className="text-page-title-mobile sm:text-page-title font-bold text-on-surface mb-2">Workspace Select</h1>
           <p className="text-body-lg text-on-surface-variant max-w-xl">
             Select a Client Workspace to continue.
           </p>
         </div>
         <div className="w-full md:w-auto">
-          <LogoutButton className="h-12 w-full md:w-auto px-8 rounded-full text-label-lg font-bold border border-outline hover:bg-surface-container-low" />
+          <LogoutButton className="h-12 w-full md:w-auto px-8 rounded-full font-bold border border-outline hover:bg-surface-container-low" />
         </div>
       </section>
 
@@ -53,7 +53,7 @@ export default async function ClientsPage() {
         <ClientList clients={clientsResult.clients} />
       ) : (
         <div className="rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-8 flex flex-col items-center justify-center text-center h-64 mt-6">
-          <p className="text-title-md text-danger">
+          <p className="text-body text-danger-strong">
             We could not load your Client Workspaces. Please try again.
           </p>
         </div>

@@ -20,7 +20,7 @@ export default async function DashboardPage({
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   if (!role) {
     return (
-      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
         You do not have access to this client.
       </div>
     );
@@ -37,7 +37,7 @@ export default async function DashboardPage({
           role={role}
         />
       ) : (
-        <p className="text-small text-danger">
+        <p className="text-small text-danger-strong">
           Could not load dashboard metrics. Refresh and try again.
         </p>
       )}

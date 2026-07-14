@@ -103,7 +103,7 @@ function ProofNotesCard({ value }: { value: string | null }) {
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
       <div className="flex items-center gap-2">
-        <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-success" />
+        <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-success-strong" />
         <h3 className="text-small font-semibold text-near-black">Proof Notes</h3>
       </div>
       <div className="flex flex-col gap-2">
@@ -147,7 +147,7 @@ function RiskNotesCard({ value }: { value: string | null }) {
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
       <div className="flex items-center gap-2">
-        <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-danger" />
+        <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-danger-strong" />
         <h3 className="text-small font-semibold text-near-black">Risk Notes</h3>
       </div>
       <ul className="flex flex-col gap-2">
@@ -155,7 +155,7 @@ function RiskNotesCard({ value }: { value: string | null }) {
           <li key={index} className="flex items-start gap-2 text-small text-near-black">
             <AlertTriangle
               aria-hidden="true"
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-strong"
             />
             <span className="break-words">{line}</span>
           </li>
@@ -198,7 +198,7 @@ export default async function PostReviewPage({
   const role = await getCurrentUserRoleForClient(user.id, clientId);
   if (!role) {
     return (
-      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
+      <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
         You do not have access to this client.
       </div>
     );
@@ -357,7 +357,7 @@ export default async function PostReviewPage({
                 <span>{formatUtcDateTime(post.createdAt)}</span>
               </div>
               {post.approvedAt && (
-                <div className="flex justify-between gap-3 text-success">
+                <div className="flex justify-between gap-3 text-success-strong">
                   <span>Approved:</span>
                   <span>{formatUtcDateTime(post.approvedAt)}</span>
                 </div>

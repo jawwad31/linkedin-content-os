@@ -78,7 +78,7 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
           ) : null}
 
           {run.errorMessage ? (
-            <p className="break-words text-small text-danger">{run.errorMessage}</p>
+            <p className="break-words text-small text-danger-strong">{run.errorMessage}</p>
           ) : null}
         </div>
       ))}
