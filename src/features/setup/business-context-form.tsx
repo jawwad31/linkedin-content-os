@@ -1,6 +1,16 @@
 "use client";
 
-import { type ReactNode, useActionState, useState } from "react";
+import {
+  Building2,
+  Compass,
+  Mic,
+  Send,
+  ShieldAlert,
+  ShieldCheck,
+  Target,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,37 +24,106 @@ import { cn } from "@/lib/utils";
 import { saveBusinessContextAction, type SaveBusinessContextState } from "./actions";
 import type { ClientBusinessContext } from "./queries";
 
-type TabId = "profile" | "icp" | "pov" | "voice" | "publishing";
+type TabId =
+  | "profile"
+  | "icp"
+  | "pov"
+  | "voice"
+  | "proof"
+  | "guardrails"
+  | "publishing";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "profile", label: "Business Profile" },
-  { id: "icp", label: "ICP & Offer" },
-  { id: "pov", label: "POV & Pillars" },
-  { id: "voice", label: "Voice & Proof" },
-  { id: "publishing", label: "Publishing Preferences" },
+const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
+  { id: "profile", label: "Business Profile", icon: Building2 },
+  { id: "icp", label: "ICP & Offer", icon: Target },
+  { id: "pov", label: "POV & Content Pillars", icon: Compass },
+  { id: "voice", label: "Founder Voice", icon: Mic },
+  { id: "proof", label: "Proof & Reference Material", icon: ShieldCheck },
+  { id: "guardrails", label: "Guardrails & Banned Topics", icon: ShieldAlert },
+  { id: "publishing", label: "Publishing Preferences", icon: Send },
 ];
 
 function toLines(values: string[]): string {
   return values.join("\n");
 }
 
-function Field({
+function SectionIntro({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-brand-orange" />
+      <div>
+        <h3 className="text-body font-semibold text-near-black">{title}</h3>
+        <p className="mt-0.5 text-small text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function FieldBlock({
   label,
   htmlFor,
+  name,
+  value,
+  as = "input",
+  rows,
+  maxLength,
+  required,
   helperText,
-  children,
+  readOnly,
 }: {
   label: string;
   htmlFor: string;
+  name: string;
+  value: string;
+  as?: "input" | "textarea";
+  rows?: number;
+  maxLength: number;
+  required?: boolean;
   helperText?: string;
-  children: ReactNode;
+  readOnly: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-small font-medium">
+      <label
+        htmlFor={readOnly ? undefined : htmlFor}
+        className="text-small font-medium text-near-black"
+      >
         {label}
       </label>
-      {children}
+      {readOnly ? (
+        <p className="min-h-10 whitespace-pre-line break-words rounded-control border border-border-grey bg-soft-white px-3.5 py-2.5 text-body text-near-black">
+          {value.length > 0 ? (
+            value
+          ) : (
+            <span className="text-muted-foreground">Not set</span>
+          )}
+        </p>
+      ) : as === "textarea" ? (
+        <Textarea
+          id={htmlFor}
+          name={name}
+          rows={rows}
+          defaultValue={value}
+          maxLength={maxLength}
+          required={required}
+        />
+      ) : (
+        <Input
+          id={htmlFor}
+          name={name}
+          defaultValue={value}
+          maxLength={maxLength}
+          required={required}
+        />
+      )}
       {helperText ? (
         <p className="text-caption text-muted-foreground">{helperText}</p>
       ) : null}
@@ -75,7 +154,7 @@ export function BusinessContextForm({
     <form action={formAction} className="flex flex-col gap-6">
       {isReadOnly ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Client Users cannot edit Setup or business context.
+          Client Users can view Setup but cannot edit business context.
         </p>
       ) : null}
 
@@ -86,223 +165,242 @@ export function BusinessContextForm({
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
-              activeTab === tab.id &&
-                "bg-white text-near-black shadow-sm",
+              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
+              activeTab === tab.id && "bg-white text-near-black shadow-sm",
             )}
           >
+            <tab.icon aria-hidden="true" className="h-4 w-4 shrink-0" />
             {tab.label}
           </button>
         ))}
       </div>
 
       <p className="text-caption text-muted-foreground">
-        Founder Experiences are managed in the next setup step.
+        Founder Experiences are managed on their own dedicated page.
       </p>
 
       <div hidden={activeTab !== "profile"} className="flex flex-col gap-4">
-        <Field label="Client Workspace / business name" htmlFor="name">
-          <Input
-            id="name"
-            name="name"
-            defaultValue={context.name}
-            disabled={isReadOnly}
-            required
-            maxLength={200}
-          />
-        </Field>
-        <Field label="Founder name" htmlFor="founderName">
-          <Input
-            id="founderName"
+        <SectionIntro
+          icon={Building2}
+          title="Business Profile"
+          description="The core identity Research, Ideas, and Posts all reference."
+        />
+        <FieldBlock
+          label="Client Workspace / business name"
+          htmlFor="name"
+          name="name"
+          value={context.name}
+          maxLength={200}
+          required
+          readOnly={isReadOnly}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FieldBlock
+            label="Founder name"
+            htmlFor="founderName"
             name="founderName"
-            defaultValue={context.founderName ?? ""}
-            disabled={isReadOnly}
+            value={context.founderName ?? ""}
             maxLength={200}
+            readOnly={isReadOnly}
           />
-        </Field>
-        <Field label="Industry" htmlFor="industry">
-          <Input
-            id="industry"
+          <FieldBlock
+            label="Industry"
+            htmlFor="industry"
             name="industry"
-            defaultValue={context.industry ?? ""}
-            disabled={isReadOnly}
+            value={context.industry ?? ""}
             maxLength={200}
+            readOnly={isReadOnly}
           />
-        </Field>
-        <Field label="Business description" htmlFor="businessDescription">
-          <Textarea
-            id="businessDescription"
-            name="businessDescription"
-            rows={4}
-            defaultValue={context.businessDescription ?? ""}
-            disabled={isReadOnly}
-            maxLength={4000}
-          />
-        </Field>
+        </div>
+        <FieldBlock
+          label="Business description"
+          htmlFor="businessDescription"
+          name="businessDescription"
+          value={context.businessDescription ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4000}
+          readOnly={isReadOnly}
+        />
       </div>
 
       <div hidden={activeTab !== "icp"} className="flex flex-col gap-4">
-        <Field label="Primary ICP" htmlFor="primaryIcp">
-          <Textarea
-            id="primaryIcp"
-            name="primaryIcp"
-            rows={3}
-            defaultValue={context.primaryIcp ?? ""}
-            disabled={isReadOnly}
-            maxLength={2000}
-          />
-        </Field>
-        <Field label="Main offer" htmlFor="mainOffer">
-          <Textarea
-            id="mainOffer"
-            name="mainOffer"
-            rows={3}
-            defaultValue={context.mainOffer ?? ""}
-            disabled={isReadOnly}
-            maxLength={2000}
-          />
-        </Field>
+        <SectionIntro
+          icon={Target}
+          title="ICP & Offer"
+          description="Who the content is for, and what it's ultimately pointing toward."
+        />
+        <FieldBlock
+          label="Primary ICP"
+          htmlFor="primaryIcp"
+          name="primaryIcp"
+          value={context.primaryIcp ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2000}
+          readOnly={isReadOnly}
+        />
+        <FieldBlock
+          label="Main offer"
+          htmlFor="mainOffer"
+          name="mainOffer"
+          value={context.mainOffer ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2000}
+          readOnly={isReadOnly}
+        />
       </div>
 
       <div hidden={activeTab !== "pov"} className="flex flex-col gap-4">
-        <Field label="Core POV" htmlFor="corePov">
-          <Textarea
-            id="corePov"
-            name="corePov"
-            rows={4}
-            defaultValue={context.corePov ?? ""}
-            disabled={isReadOnly}
-            maxLength={4000}
-          />
-        </Field>
-        <Field
+        <SectionIntro
+          icon={Compass}
+          title="POV & Content Pillars"
+          description="The operator point of view and recurring themes that shape angles and research direction."
+        />
+        <FieldBlock
+          label="Core POV"
+          htmlFor="corePov"
+          name="corePov"
+          value={context.corePov ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4000}
+          readOnly={isReadOnly}
+        />
+        <FieldBlock
           label="Content pillars"
           htmlFor="contentPillars"
+          name="contentPillars"
+          value={toLines(context.contentPillars)}
+          as="textarea"
+          rows={4}
+          maxLength={4000}
           helperText="One per line."
-        >
-          <Textarea
-            id="contentPillars"
-            name="contentPillars"
-            rows={4}
-            defaultValue={toLines(context.contentPillars)}
-            disabled={isReadOnly}
-            maxLength={4000}
-          />
-        </Field>
-        <Field
+          readOnly={isReadOnly}
+        />
+        <FieldBlock
           label="Research keywords"
           htmlFor="researchKeywords"
+          name="researchKeywords"
+          value={toLines(context.researchKeywords)}
+          as="textarea"
+          rows={3}
+          maxLength={2000}
           helperText="One per line."
-        >
-          <Textarea
-            id="researchKeywords"
-            name="researchKeywords"
-            rows={3}
-            defaultValue={toLines(context.researchKeywords)}
-            disabled={isReadOnly}
-            maxLength={2000}
-          />
-        </Field>
-        <Field
-          label="Banned topics"
-          htmlFor="bannedTopics"
-          helperText="One per line."
-        >
-          <Textarea
-            id="bannedTopics"
-            name="bannedTopics"
-            rows={3}
-            defaultValue={toLines(context.bannedTopics)}
-            disabled={isReadOnly}
-            maxLength={2000}
-          />
-        </Field>
+          readOnly={isReadOnly}
+        />
       </div>
 
       <div hidden={activeTab !== "voice"} className="flex flex-col gap-4">
-        <Field label="Founder voice sample" htmlFor="founderVoiceSample">
-          <Textarea
-            id="founderVoiceSample"
-            name="founderVoiceSample"
-            rows={4}
-            defaultValue={context.founderVoiceSample ?? ""}
-            disabled={isReadOnly}
-            maxLength={4000}
-          />
-        </Field>
-        <Field
-          label="Phrases to use"
-          htmlFor="phrasesToUse"
-          helperText="One per line."
-        >
-          <Textarea
-            id="phrasesToUse"
+        <SectionIntro
+          icon={Mic}
+          title="Founder Voice"
+          description="How this founder actually sounds, so drafts read like them instead of a generic creator."
+        />
+        <FieldBlock
+          label="Founder voice sample"
+          htmlFor="founderVoiceSample"
+          name="founderVoiceSample"
+          value={context.founderVoiceSample ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4000}
+          readOnly={isReadOnly}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FieldBlock
+            label="Phrases to use"
+            htmlFor="phrasesToUse"
             name="phrasesToUse"
+            value={toLines(context.phrasesToUse)}
+            as="textarea"
             rows={3}
-            defaultValue={toLines(context.phrasesToUse)}
-            disabled={isReadOnly}
             maxLength={2000}
+            helperText="One per line."
+            readOnly={isReadOnly}
           />
-        </Field>
-        <Field
-          label="Phrases to avoid"
-          htmlFor="phrasesToAvoid"
-          helperText="One per line."
-        >
-          <Textarea
-            id="phrasesToAvoid"
+          <FieldBlock
+            label="Phrases to avoid"
+            htmlFor="phrasesToAvoid"
             name="phrasesToAvoid"
+            value={toLines(context.phrasesToAvoid)}
+            as="textarea"
             rows={3}
-            defaultValue={toLines(context.phrasesToAvoid)}
-            disabled={isReadOnly}
             maxLength={2000}
+            helperText="One per line."
+            readOnly={isReadOnly}
           />
-        </Field>
-        <Field
-          label="Approved proof"
-          htmlFor="approvedProof"
-          helperText="One per line. Only real, approved proof points."
-        >
-          <Textarea
-            id="approvedProof"
+        </div>
+      </div>
+
+      <div hidden={activeTab !== "proof"} className="flex flex-col gap-4">
+        <SectionIntro
+          icon={ShieldCheck}
+          title="Proof & Reference Material"
+          description="Only real, approved proof the Content Agent is allowed to draw from."
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FieldBlock
+            label="Approved proof"
+            htmlFor="approvedProof"
             name="approvedProof"
-            rows={4}
-            defaultValue={toLines(context.approvedProof)}
-            disabled={isReadOnly}
+            value={toLines(context.approvedProof)}
+            as="textarea"
+            rows={5}
             maxLength={4000}
+            helperText="One per line. Only real, approved proof points."
+            readOnly={isReadOnly}
           />
-        </Field>
-        <Field
-          label="Reference material"
-          htmlFor="referenceMaterial"
-          helperText="One per line."
-        >
-          <Textarea
-            id="referenceMaterial"
+          <FieldBlock
+            label="Reference material"
+            htmlFor="referenceMaterial"
             name="referenceMaterial"
-            rows={4}
-            defaultValue={toLines(context.referenceMaterial)}
-            disabled={isReadOnly}
+            value={toLines(context.referenceMaterial)}
+            as="textarea"
+            rows={5}
             maxLength={4000}
+            helperText="One per line."
+            readOnly={isReadOnly}
           />
-        </Field>
+        </div>
+      </div>
+
+      <div hidden={activeTab !== "guardrails"} className="flex flex-col gap-4">
+        <SectionIntro
+          icon={ShieldAlert}
+          title="Guardrails & Banned Topics"
+          description="Topics Research and Content Agents must never touch for this Client Workspace."
+        />
+        <FieldBlock
+          label="Banned topics"
+          htmlFor="bannedTopics"
+          name="bannedTopics"
+          value={toLines(context.bannedTopics)}
+          as="textarea"
+          rows={4}
+          maxLength={2000}
+          helperText="One per line."
+          readOnly={isReadOnly}
+        />
       </div>
 
       <div hidden={activeTab !== "publishing"} className="flex flex-col gap-4">
-        <Field
+        <SectionIntro
+          icon={Send}
+          title="Publishing Preferences"
+          description="Cadence, tone, or formatting notes that apply when posts are drafted for this Client Workspace."
+        />
+        <FieldBlock
           label="Publishing preferences"
           htmlFor="publishingPreferencesNotes"
-          helperText="Notes on cadence, tone, or formatting preferences for this Client Workspace."
-        >
-          <Textarea
-            id="publishingPreferencesNotes"
-            name="publishingPreferencesNotes"
-            rows={4}
-            defaultValue={context.publishingPreferencesNotes}
-            disabled={isReadOnly}
-            maxLength={2000}
-          />
-        </Field>
+          name="publishingPreferencesNotes"
+          value={context.publishingPreferencesNotes}
+          as="textarea"
+          rows={4}
+          maxLength={2000}
+          readOnly={isReadOnly}
+        />
       </div>
 
       {state.error ? (
@@ -323,6 +421,7 @@ export function BusinessContextForm({
         <Button
           type="submit"
           variant="gradient"
+          size="lg"
           disabled={isPending}
           className="self-start"
         >

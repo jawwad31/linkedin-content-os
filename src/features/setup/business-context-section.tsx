@@ -1,3 +1,5 @@
+import { FileText } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -22,9 +24,12 @@ export async function BusinessContextSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Business Context</CardTitle>
+        <div className="flex items-center gap-2">
+          <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+          <CardTitle>Business Context</CardTitle>
+        </div>
         <CardDescription>
-          Always-on context used across research, ideas, and post drafts for
+          The always-on context Research, Ideas, and Posts all draw from for
           this Client Workspace.
         </CardDescription>
       </CardHeader>

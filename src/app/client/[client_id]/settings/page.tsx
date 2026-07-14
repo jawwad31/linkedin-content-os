@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Users } from "lucide-react";
 
 import {
   Card,
@@ -40,8 +41,8 @@ export default async function SetupPage({
   return (
     <div>
       <PageHeader
-        title="Settings"
-        description="Business context for this Client Workspace."
+        title="Setup"
+        description="The always-on context Research, Ideas, and Posts use for this Client Workspace, plus who has access to it."
       />
 
       {role ? (
@@ -51,7 +52,10 @@ export default async function SetupPage({
           {canRoleManageClientUsers(role) ? (
             <Card>
               <CardHeader>
-                <CardTitle>Team Access</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Users aria-hidden="true" className="h-5 w-5 text-brand-purple" />
+                  <CardTitle>Team Access</CardTitle>
+                </div>
                 <CardDescription>
                   Invite collaborators and manage who has access to this
                   Client Workspace.
