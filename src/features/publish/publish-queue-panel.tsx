@@ -1,4 +1,4 @@
-import { ChevronRight, History, Send } from "lucide-react";
+import { History, Send } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,9 +9,8 @@ import {
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
 
+import { OpenFullPostButton } from "./open-full-post-dialog";
 import { PublishPostActions } from "./publish-post-actions";
-
-const HISTORY_PREVIEW_LENGTH = 220;
 
 function formatDate(value: string | null): string {
   if (!value) return "Not set";
@@ -20,7 +19,8 @@ function formatDate(value: string | null): string {
 
 /** Ready-to-publish cards: post text is the dominant element, with the
  * belief shift as one quiet supporting line underneath - CTA/proof/risk and
- * source metadata belong to Post Review, not the distribution queue. */
+ * source metadata belong to Post Review, not the distribution queue. Long
+ * text clamps to 4 lines here; "Open Full Post" reveals the rest. */
 function ReadyToPublishCard({
   clientId,
   role,
@@ -31,73 +31,49 @@ function ReadyToPublishCard({
   post: ReviewPost;
 }) {
   const canMarkPublished = canRoleManageWorkflowReview(role);
+  const approvedLabel = `Approved ${formatDate(post.approvedAt)}`;
 
   return (
     <article className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="success">Approved</Badge>
         <span className="font-mono text-caption text-muted-foreground">
-          Approved {formatDate(post.approvedAt)}
+          {approvedLabel}
         </span>
       </div>
 
-      <div className="whitespace-pre-line break-words text-body leading-relaxed text-near-black">
+      <div className="line-clamp-4 whitespace-pre-line break-words text-body leading-relaxed text-near-black">
         {post.finalPost}
       </div>
 
       {post.buyerBeliefShift ? (
-        <p className="whitespace-pre-line break-words text-small italic text-muted-foreground">
+        <p className="line-clamp-2 whitespace-pre-line break-words text-small italic text-muted-foreground">
           {post.buyerBeliefShift}
         </p>
       ) : null}
 
-      <PublishPostActions
-        clientId={clientId}
-        postId={post.id}
-        postText={post.finalPost}
-        canMarkPublished={canMarkPublished}
-      />
+      <div className="flex flex-col gap-2">
+        <OpenFullPostButton
+          postText={post.finalPost}
+          badgeLabel="Approved"
+          badgeVariant="success"
+          dateLabel={approvedLabel}
+        />
+        <PublishPostActions
+          clientId={clientId}
+          postId={post.id}
+          postText={post.finalPost}
+          canMarkPublished={canMarkPublished}
+        />
+      </div>
     </article>
   );
 }
 
 /** Published History is intentionally quieter than the ready queue: smaller
- * type, muted tonal background, and long posts collapse behind a native
- * <details> disclosure so the list stays scannable without hiding the
- * status/date, which remain outside the collapsible content. */
-function PublishedHistoryText({ text }: { text: string }) {
-  if (text.length <= HISTORY_PREVIEW_LENGTH) {
-    return (
-      <p className="whitespace-pre-line break-words text-small text-near-black">
-        {text}
-      </p>
-    );
-  }
-
-  const preview = text.slice(0, HISTORY_PREVIEW_LENGTH).trim();
-
-  return (
-    <details className="group">
-      <summary className="cursor-pointer select-none list-none marker:content-none [&::-webkit-details-marker]:hidden">
-        <span className="whitespace-pre-line break-words text-small text-near-black group-open:hidden">
-          {preview}&hellip;
-        </span>
-        <span className="mt-1 inline-flex items-center gap-1 text-caption font-medium text-brand-orange">
-          <span className="group-open:hidden">Show more</span>
-          <span className="hidden group-open:inline">Show less</span>
-          <ChevronRight
-            aria-hidden="true"
-            className="h-3 w-3 transition-transform duration-200 group-open:rotate-90"
-          />
-        </span>
-      </summary>
-      <p className="mt-2 whitespace-pre-line break-words text-small text-near-black">
-        {text}
-      </p>
-    </details>
-  );
-}
-
+ * type, muted tonal background, and long text clamps to 3 lines - "Open Full
+ * Post" reveals the rest without hiding status/date, which stay outside the
+ * clamp entirely. */
 function PublishedHistoryCard({
   clientId,
   post,
@@ -105,23 +81,35 @@ function PublishedHistoryCard({
   clientId: string;
   post: ReviewPost;
 }) {
+  const publishedLabel = `Published ${formatDate(post.publishedAt)}`;
+
   return (
     <article className="flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">Published</Badge>
         <span className="font-mono text-caption text-muted-foreground">
-          {formatDate(post.publishedAt)}
+          {publishedLabel}
         </span>
       </div>
 
-      <PublishedHistoryText text={post.finalPost} />
+      <p className="line-clamp-3 whitespace-pre-line break-words text-small text-near-black">
+        {post.finalPost}
+      </p>
 
-      <PublishPostActions
-        clientId={clientId}
-        postId={post.id}
-        postText={post.finalPost}
-        canMarkPublished={false}
-      />
+      <div className="flex flex-col gap-2">
+        <OpenFullPostButton
+          postText={post.finalPost}
+          badgeLabel="Published"
+          badgeVariant="info"
+          dateLabel={publishedLabel}
+        />
+        <PublishPostActions
+          clientId={clientId}
+          postId={post.id}
+          postText={post.finalPost}
+          canMarkPublished={false}
+        />
+      </div>
     </article>
   );
 }
