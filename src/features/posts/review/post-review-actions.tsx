@@ -91,7 +91,7 @@ export function PostReviewActions({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3">
+    <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label
@@ -131,46 +131,48 @@ export function PostReviewActions({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3 border-t border-border-grey pt-3 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="secondary"
           size="sm"
           disabled={!canNeedsEdit || isPending}
           onClick={() => submitAction("needs-edit")}
-          className="max-sm:flex-1"
+          className="w-full sm:w-auto"
         >
           <PenSquare aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "needs-edit"
             ? "Saving..."
             : "Needs Edit"}
         </Button>
-        <Button
-          type="button"
-          variant="accent-orange"
-          size="sm"
-          disabled={!canApprove || isPending}
-          onClick={() => submitAction("approve")}
-          className="max-sm:flex-1"
-        >
-          <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-          {state.status === "pending" && state.action === "approve"
-            ? "Approving..."
-            : "Approve"}
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          disabled={!canReject || isPending}
-          onClick={() => submitAction("reject")}
-          className="max-sm:flex-1"
-        >
-          <XCircle aria-hidden="true" className="h-4 w-4" />
-          {state.status === "pending" && state.action === "reject"
-            ? "Rejecting..."
-            : "Reject"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={!canReject || isPending}
+            onClick={() => submitAction("reject")}
+            className="flex-1 sm:flex-none"
+          >
+            <XCircle aria-hidden="true" className="h-4 w-4" />
+            {state.status === "pending" && state.action === "reject"
+              ? "Rejecting..."
+              : "Reject"}
+          </Button>
+          <Button
+            type="button"
+            variant="success"
+            size="sm"
+            disabled={!canApprove || isPending}
+            onClick={() => submitAction("approve")}
+            className="flex-1 sm:flex-none"
+          >
+            <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+            {state.status === "pending" && state.action === "approve"
+              ? "Approving..."
+              : "Approve"}
+          </Button>
+        </div>
       </div>
     </div>
   );
