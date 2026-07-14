@@ -31,7 +31,7 @@ Use the following actual visual references from the repository:
 | `ui-reference/client_selector_material_3/03_client_selector.png` | Client Selector | `/clients` | Covered |
 | `ui-reference/dashboard_m3_updated_colors/01_dashboard.png` | Overview | `/client/[client_id]/dashboard` | Covered |
 | `ui-reference/research_m3_updated_colors/02_research_hub.png` | Research | `/client/[client_id]/research` | Covered |
-| None | Founder Knowledge | `/client/[client_id]/founder-experiences` | Uncovered |
+| None | Founder Experiences | `/client/[client_id]/founder-experiences` | Uncovered |
 | `ui-reference/ideas_material_3/04_ideas.png` | Ideas | `/client/[client_id]/ideas` | Covered |
 | None | Posts | `/client/[client_id]/posts` | Uncovered |
 | `ui-reference/post_review_m3_updated_colors/06_post_review.png` | Post Review | `/client/[client_id]/posts/[post_id]/review` | Covered |
@@ -320,14 +320,14 @@ The navigation uses the following canonical order and labels on the desktop side
 
 1. **Overview** (Production route: `/client/[client_id]/dashboard`, maps to the production Overview screen)
 2. **Research** (Production route: `/client/[client_id]/research`)
-3. **Founder Knowledge** (Production route: `/client/[client_id]/founder-experiences`, points to the existing `founder-experiences` route)
+3. **Founder Experiences** (Production route: `/client/[client_id]/founder-experiences`, points to the existing `founder-experiences` route)
 4. **Ideas** (Production route: `/client/[client_id]/ideas`)
 5. **Posts** (Production route: `/client/[client_id]/posts`)
 6. **Publish** (Production route: `/client/[client_id]/publish`)
 7. **Settings** (Production route: `/client/[client_id]/settings`, maps to the production Settings screen)
 
 Post Review remains strictly contextual and is never a primary navigation link.
-Founder Knowledge remains a primary navigation item pointing to the existing `founder-experiences` route.
+Founder Experiences remains a primary navigation item pointing to the existing `founder-experiences` route.
 The reference layout labeled "Dashboard" maps to the production "Overview" screen.
 The reference layout labeled "Setup" maps to the production "Settings" screen.
 
@@ -1119,7 +1119,7 @@ Implement one screen or coherent component family at a time. Preserve accessibil
 
 For screens, layout components, and system states without a direct approved PNG or Stitch HTML reference, apply these rules:
 
-### 20.1 Founder Knowledge Page
+### 20.1 Founder Experiences Page
 - **Route**: `/client/[client_id]/founder-experiences`
 - **Visual Grid**: Reuses the core Research canvas structure (generous padding, page header with a single primary action).
 - **Form Layout**: The entry form inherits the spacing, input layouts, border radius, and label placements of the Settings/Business Context form.

@@ -136,28 +136,29 @@ export function CollectedArticlesPanel({
           key={article.id}
           className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
         >
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-small font-medium text-near-black underline-offset-2 hover:underline"
-          >
-            {article.title}
-          </a>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="min-w-0 flex-1 text-small font-medium text-near-black underline-offset-2 hover:underline"
+            >
+              {article.title}
+            </a>
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
+                {STATUS_LABEL[article.status]}
+              </Badge>
+              <Badge variant={getScoreBadgeVariant(article.relevanceScore)}>
+                {article.relevanceScore !== null ? `Relevance ${article.relevanceScore}/10` : "Not scored"}
+              </Badge>
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2 font-mono text-caption text-muted-foreground">
             <span>{article.sourceName ?? "Unknown source"}</span>
             <span>·</span>
             <span>{formatDate(article.publishedAt)}</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
-              {STATUS_LABEL[article.status]}
-            </Badge>
-            <Badge variant={getScoreBadgeVariant(article.relevanceScore)}>
-              {article.relevanceScore !== null ? `Relevance ${article.relevanceScore}/10` : "Not scored"}
-            </Badge>
           </div>
 
           {article.classificationReason ? (

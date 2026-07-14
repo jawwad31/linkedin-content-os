@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookOpen,
   LayoutDashboard,
   Lightbulb,
+  Quote,
   Radar,
   Send,
   Settings,
@@ -38,9 +38,9 @@ export function getNavItems(clientId: string): NavItem[] {
       accent: "purple",
     },
     {
-      label: "Founder Knowledge",
+      label: "Founder Experiences",
       href: `/client/${clientId}/founder-experiences`,
-      icon: BookOpen,
+      icon: Quote,
       accent: "purple",
     },
     {

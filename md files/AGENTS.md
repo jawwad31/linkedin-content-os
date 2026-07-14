@@ -69,9 +69,9 @@ Settings → Research → TrendCards → Ideas → Posts → Review → Publish
 ```
 
 Important details:
-- Founder Knowledge and Research are independent input paths.
+- Founder Experiences and Research are independent input paths.
 - Research internally runs sequentially: Collect RSS → Classify Articles → Synthesize TrendCards.
-- Ideas can originate from: Founder Knowledge, approved TrendCard, or Trend Reaction.
+- Ideas can originate from: Founder Experiences, approved TrendCard, or Trend Reaction.
 - One selected Content Idea produces one active Post.
 - Review follows Post generation.
 - Publishing remains manual (there is no automatic publishing or LinkedIn publishing API).
@@ -633,14 +633,14 @@ Protected:
 - `/clients`
 - `/client/[client_id]/dashboard` (Overview)
 - `/client/[client_id]/research` (Research)
-- `/client/[client_id]/founder-experiences` (Founder Knowledge)
+- `/client/[client_id]/founder-experiences` (Founder Experiences)
 - `/client/[client_id]/ideas` (Ideas)
 - `/client/[client_id]/posts` (Posts)
 - `/client/[client_id]/publish` (Publish)
 - `/client/[client_id]/settings` (Settings / Setup)
 - `/client/[client_id]/posts/[post_id]/review`
 
-Primary sidebar nav order: Overview, Research, Founder Knowledge, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
+Primary sidebar nav order: Overview, Research, Founder Experiences, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
 
 ---
 
@@ -655,7 +655,7 @@ The Settings page is the always-on business context editor for a client.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
 - Team Access / invitations remain part of Setup and must not be broken by business-context changes.
-- Founder Knowledge entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings/Setup at all.
+- Founder Experiences entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings/Setup at all.
 
 Supported Business Context fields (on `clients`):
 

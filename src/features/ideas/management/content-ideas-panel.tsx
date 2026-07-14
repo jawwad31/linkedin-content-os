@@ -1,4 +1,4 @@
-import { Lightbulb, FileText } from "lucide-react";
+import { ChevronRight, Lightbulb, FileText } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -150,11 +150,15 @@ export function ContentIdeasPanel({
             </div>
 
             {hasAngleControl ? (
-              <details className="rounded-control border border-border-grey p-3">
-                <summary className="cursor-pointer select-none text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                  Angle Control
+              <details className="group rounded-control border border-border-grey open:bg-soft-white/60">
+                <summary className="flex cursor-pointer select-none list-none items-center justify-between gap-2 p-3 text-caption font-medium uppercase tracking-wide text-muted-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span>Angle Control</span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-90"
+                  />
                 </summary>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 px-3 pb-3 sm:grid-cols-2">
                   <IdeaField label="Belief Shift" value={idea.beliefShift} />
                   <IdeaField label="Angle Boundary" value={idea.angleBoundary} />
                 </div>
@@ -162,11 +166,15 @@ export function ContentIdeasPanel({
             ) : null}
 
             {hasSourceDetail ? (
-              <details className="rounded-control border border-border-grey p-3">
-                <summary className="cursor-pointer select-none text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                  Why This Idea Exists
+              <details className="group rounded-control border border-border-grey open:bg-soft-white/60">
+                <summary className="flex cursor-pointer select-none list-none items-center justify-between gap-2 p-3 text-caption font-medium uppercase tracking-wide text-muted-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span>Why This Idea Exists</span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-90"
+                  />
                 </summary>
-                <div className="mt-3 flex flex-col gap-3">
+                <div className="flex flex-col gap-3 px-3 pb-3">
                   {idea.sourceTitle ? (
                     <div className="rounded-control bg-soft-white p-3">
                       <p className="text-small font-medium text-near-black">

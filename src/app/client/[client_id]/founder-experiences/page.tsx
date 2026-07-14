@@ -22,27 +22,25 @@ export default async function FounderExperiencesPage({
   const result = role ? await getFounderExperiences(clientId) : null;
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
-        title="Founder Knowledge"
-        description="Log real operator moments so future ideas can use lived experience instead of generic prompts."
+        title="Founder Experiences"
+        description="Log real operator moments so future Ideas and Posts can draw on lived experience instead of generic prompts."
       />
 
-      <div className="mt-6">
-        {role && result ? (
-          result.ok ? (
-            <FounderExperiencesPanel
-              clientId={clientId}
-              role={role}
-              experiences={result.experiences}
-            />
-          ) : (
-            <p className="text-small text-danger">
-              We could not load founder experiences. Please try again.
-            </p>
-          )
-        ) : null}
-      </div>
+      {role && result ? (
+        result.ok ? (
+          <FounderExperiencesPanel
+            clientId={clientId}
+            role={role}
+            experiences={result.experiences}
+          />
+        ) : (
+          <p className="text-small text-danger">
+            We could not load founder experiences. Please try again.
+          </p>
+        )
+      ) : null}
     </div>
   );
 }
