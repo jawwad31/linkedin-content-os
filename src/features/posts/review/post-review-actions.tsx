@@ -91,7 +91,7 @@ export function PostReviewActions({
   }
 
   return (
-    <div className="sticky bottom-4 z-10 flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-lg">
+    <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label

@@ -152,9 +152,19 @@ export async function getReviewPosts(
   };
 }
 
+export type ReviewPostClient = {
+  name: string;
+  founderName: string | null;
+};
+
 export type ReviewPostResult =
-  | { ok: true; post: ReviewPost }
+  | { ok: true; post: ReviewPost; client: ReviewPostClient }
   | { ok: false; code: string; message: string };
+
+type ClientIdentityRow = {
+  name: string;
+  founder_name: string | null;
+};
 
 /**
  * Fetch a single post by both client_id and post_id to enforce access scoping
@@ -166,15 +176,23 @@ export async function getReviewPost(
 ): Promise<ReviewPostResult> {
   const supabase = await createClient();
 
-  const { data: row, error } = await supabase
-    .from("posts")
-    .select(
-      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
-    )
-    .eq("client_id", clientId)
-    .eq("id", postId)
-    .is("deleted_at", null)
-    .maybeSingle<ReviewPostRow>();
+  const [{ data: row, error }, { data: clientRow }] = await Promise.all([
+    supabase
+      .from("posts")
+      .select(
+        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
+      )
+      .eq("client_id", clientId)
+      .eq("id", postId)
+      .is("deleted_at", null)
+      .maybeSingle<ReviewPostRow>(),
+    supabase
+      .from("clients")
+      .select("name, founder_name")
+      .eq("id", clientId)
+      .is("deleted_at", null)
+      .maybeSingle<ClientIdentityRow>(),
+  ]);
 
   if (error) {
     return { ok: false, code: "DATABASE_ERROR", message: "Failed to load post." };
@@ -182,6 +200,11 @@ export async function getReviewPost(
   if (!row) {
     return { ok: false, code: "NOT_FOUND", message: "Post not found." };
   }
+
+  const client: ReviewPostClient = {
+    name: clientRow?.name ?? "Client Workspace",
+    founderName: clientRow?.founder_name ?? null,
+  };
 
   let idea: ReviewPostIdea | null = null;
   if (row.content_idea_id) {
@@ -205,6 +228,7 @@ export async function getReviewPost(
 
   return {
     ok: true,
+    client,
     post: {
       id: row.id,
       contentIdeaId: row.content_idea_id,

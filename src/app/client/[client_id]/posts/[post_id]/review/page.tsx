@@ -4,7 +4,9 @@ import {
   AlertTriangle,
   ArrowLeft,
   ChevronRight,
+  Clock,
   FileText,
+  Globe,
   Repeat,
   ShieldCheck,
   Target,
@@ -12,20 +14,13 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { getReviewPost, type ReviewPostStatus } from "@/features/posts/review/queries";
 import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
 import { PostReviewActions } from "@/features/posts/review/post-review-actions";
 import { canRoleManageWorkflowReview } from "@/lib/access/roles";
-import { formatUtcDateTime } from "@/lib/format/date";
+import { formatUtcDate, formatUtcDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 import { getServerUser } from "@/lib/supabase/session";
 
@@ -67,33 +62,112 @@ function compactJson(value: unknown): string | null {
   return JSON.stringify(value, null, 2);
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0] + parts[parts.length - 1]![0]).toUpperCase();
+}
+
+/** Icon + title + flowing text. Used for fields that are a single free-text
+ * value (not a guaranteed list), so we never invent chip/bullet structure
+ * that the underlying content isn't guaranteed to have. */
 function ReviewField({
   label,
   value,
   icon: Icon,
   iconClassName,
+  labelClassName,
+  tone,
 }: {
   label: string;
   value: string | null;
   icon: LucideIcon;
   iconClassName: string;
+  labelClassName?: string;
+  tone?: "highlight";
 }) {
   if (!value) return null;
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center gap-2 space-y-0 border-b border-border-grey px-4 py-3">
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-card border border-border-grey p-5",
+        tone === "highlight" ? "bg-soft-white" : "bg-white",
+      )}
+    >
+      <div className="flex items-center gap-2">
         <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", iconClassName)} />
-        <CardTitle className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
+        <h3
+          className={cn(
+            "text-small font-semibold",
+            labelClassName ?? "text-near-black",
+          )}
+        >
           {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 pb-3 pt-3">
+        </h3>
+      </div>
+      <p className="whitespace-pre-line break-words text-small italic text-near-black">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/** Risk Notes: if the model already produced multiple newline-separated
+ * risks, show each as its own flagged line; otherwise render as one
+ * paragraph. This never splits on anything but real line breaks already in
+ * the stored text, so it can't fabricate structure that isn't there. */
+function RiskNotesCard({ value }: { value: string | null }) {
+  if (!value) return null;
+
+  const lines = value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
+      <div className="flex items-center gap-2">
+        <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-danger" />
+        <h3 className="text-small font-semibold text-danger-strong">Risk Notes</h3>
+      </div>
+      {lines.length > 1 ? (
+        <ul className="flex flex-col gap-2">
+          {lines.map((line, index) => (
+            <li key={index} className="flex items-start gap-2 text-small text-near-black">
+              <AlertTriangle
+                aria-hidden="true"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger"
+              />
+              <span className="break-words">{line}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
         <p className="whitespace-pre-line break-words text-small text-near-black">
           {value}
         </p>
-      </CardContent>
-    </Card>
+      )}
+    </div>
+  );
+}
+
+function CtaIntentCard({ value }: { value: string | null }) {
+  if (!value) return null;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-soft-white p-5">
+      <div className="flex items-center gap-2">
+        <Target aria-hidden="true" className="h-4 w-4 shrink-0 text-tertiary" />
+        <h3 className="text-small font-semibold text-tertiary">CTA Intent</h3>
+      </div>
+      <div className="rounded-control border border-border-grey bg-white p-3">
+        <p className="whitespace-pre-line break-words text-small text-near-black">
+          {value}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -140,9 +214,10 @@ export default async function PostReviewPage({
     );
   }
 
-  const { post } = postResult;
+  const { post, client } = postResult;
   const canManage = canRoleManageWorkflowReview(role);
   const sourceContext = compactJson(post.sourceContextUsed);
+  const displayName = client.founderName ?? client.name;
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,15 +259,30 @@ export default async function PostReviewPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[13fr_7fr] lg:items-start">
         {/* Left column: Post Preview (~65% on desktop) */}
         <div className="flex min-w-0 flex-col gap-4">
-          <Card>
-            <CardHeader className="border-b border-border-grey py-3.5">
-              <CardTitle>LinkedIn Draft</CardTitle>
-              <CardDescription>Generated text preview</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-5 whitespace-pre-line break-words text-body leading-relaxed text-near-black">
+          <div className="rounded-card border border-border-grey bg-white p-6 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-sm font-semibold text-white"
+              >
+                {getInitials(displayName)}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-small font-semibold text-near-black">
+                  {displayName}
+                </p>
+                <p className="flex items-center gap-1 text-caption text-muted-foreground">
+                  {formatUtcDate(post.createdAt)}
+                  <span aria-hidden="true">&middot;</span>
+                  <Globe aria-hidden="true" className="h-3 w-3" />
+                  <span>Draft preview</span>
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 whitespace-pre-line break-words text-body leading-relaxed text-near-black">
               {post.finalPost}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Review actions form panel at the bottom of the preview */}
           {canManage ? (
@@ -211,30 +301,6 @@ export default async function PostReviewPage({
 
         {/* Right column: Post metadata (~35% on desktop) */}
         <div className="flex min-w-0 flex-col gap-4">
-          <Card>
-            <CardHeader className="border-b border-border-grey px-4 py-3.5">
-              <CardTitle className="text-base font-semibold">Post History</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-3 font-mono text-caption text-muted-foreground">
-              <div className="flex justify-between gap-3">
-                <span>Created:</span>
-                <span>{formatUtcDateTime(post.createdAt)}</span>
-              </div>
-              {post.approvedAt && (
-                <div className="flex justify-between gap-3 text-success">
-                  <span>Approved:</span>
-                  <span>{formatUtcDateTime(post.approvedAt)}</span>
-                </div>
-              )}
-              {post.publishedAt && (
-                <div className="flex justify-between gap-3 text-info">
-                  <span>Published:</span>
-                  <span>{formatUtcDateTime(post.publishedAt)}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {post.editNote ? (
             <div className="rounded-control border border-warning/30 bg-warning/5 px-4 py-3">
               <p className="text-caption font-medium uppercase tracking-wide text-warning-strong">
@@ -249,27 +315,20 @@ export default async function PostReviewPage({
           <ReviewField
             icon={Repeat}
             iconClassName="text-brand-purple"
+            labelClassName="text-secondary-dark"
             label="Buyer Belief Shift"
             value={post.buyerBeliefShift}
+            tone="highlight"
           />
           <ReviewField
             icon={ShieldCheck}
             iconClassName="text-success"
+            labelClassName="text-success-strong"
             label="Proof Notes"
             value={post.proofNotes}
           />
-          <ReviewField
-            icon={AlertTriangle}
-            iconClassName="text-danger"
-            label="Risk Notes"
-            value={post.riskNotes}
-          />
-          <ReviewField
-            icon={Target}
-            iconClassName="text-tertiary"
-            label="CTA Intent"
-            value={post.ctaIntent}
-          />
+          <RiskNotesCard value={post.riskNotes} />
+          <CtaIntentCard value={post.ctaIntent} />
 
           {sourceContext ? (
             <details className="group rounded-control border border-border-grey open:bg-soft-white/60">
@@ -287,6 +346,31 @@ export default async function PostReviewPage({
               </div>
             </details>
           ) : null}
+
+          <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
+            <div className="flex items-center gap-2">
+              <Clock aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <h3 className="text-small font-semibold text-near-black">Post History</h3>
+            </div>
+            <div className="flex flex-col gap-2 font-mono text-caption text-muted-foreground">
+              <div className="flex justify-between gap-3">
+                <span>Created:</span>
+                <span>{formatUtcDateTime(post.createdAt)}</span>
+              </div>
+              {post.approvedAt && (
+                <div className="flex justify-between gap-3 text-success">
+                  <span>Approved:</span>
+                  <span>{formatUtcDateTime(post.approvedAt)}</span>
+                </div>
+              )}
+              {post.publishedAt && (
+                <div className="flex justify-between gap-3 text-info">
+                  <span>Published:</span>
+                  <span>{formatUtcDateTime(post.publishedAt)}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
