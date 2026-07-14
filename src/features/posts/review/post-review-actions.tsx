@@ -91,7 +91,7 @@ export function PostReviewActions({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
+    <div className="sticky bottom-4 z-10 flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-lg">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label
@@ -138,7 +138,7 @@ export function PostReviewActions({
           size="sm"
           disabled={!canNeedsEdit || isPending}
           onClick={() => submitAction("needs-edit")}
-          className="w-full sm:w-auto"
+          className="w-full rounded-full sm:w-auto"
         >
           <PenSquare aria-hidden="true" className="h-4 w-4" />
           {state.status === "pending" && state.action === "needs-edit"
@@ -148,11 +148,11 @@ export function PostReviewActions({
         <div className="flex items-center gap-2">
           <Button
             type="button"
-            variant="destructive"
+            variant="ghost"
             size="sm"
             disabled={!canReject || isPending}
             onClick={() => submitAction("reject")}
-            className="flex-1 sm:flex-none"
+            className="flex-1 rounded-full text-danger hover:bg-danger/10 hover:text-danger sm:flex-none"
           >
             <XCircle aria-hidden="true" className="h-4 w-4" />
             {state.status === "pending" && state.action === "reject"
@@ -161,11 +161,11 @@ export function PostReviewActions({
           </Button>
           <Button
             type="button"
-            variant="success"
+            variant="gradient"
             size="sm"
             disabled={!canApprove || isPending}
             onClick={() => submitAction("approve")}
-            className="flex-1 sm:flex-none"
+            className="flex-1 rounded-full px-6 sm:flex-none"
           >
             <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
             {state.status === "pending" && state.action === "approve"
