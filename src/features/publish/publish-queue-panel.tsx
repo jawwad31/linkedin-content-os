@@ -1,4 +1,4 @@
-import { CheckCircle2, ClipboardList } from "lucide-react";
+import { ChevronRight, History, Send } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,221 +11,118 @@ import { formatUtcDate } from "@/lib/format/date";
 
 import { PublishPostActions } from "./publish-post-actions";
 
-const SOURCE_LABELS: Record<string, string> = {
-  founder_experience: "Founder Experience",
-  trend_card: "TrendCard",
-  trend_reaction: "Trend Reaction",
-};
+const HISTORY_PREVIEW_LENGTH = 220;
 
 function formatDate(value: string | null): string {
   if (!value) return "Not set";
   return formatUtcDate(value);
 }
 
-function compactJson(value: unknown): string | null {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
-    Object.keys(value).length === 0
-  ) {
-    return null;
-  }
-
-  return JSON.stringify(value, null, 2);
-}
-
-function PublishField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
-  if (!value) return null;
-
-  return (
-    <div className="min-w-0 rounded-control border border-border-grey bg-soft-white px-3 py-2">
-      <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 whitespace-pre-line break-words text-small text-near-black">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function SourceMetadata({ post }: { post: ReviewPost }) {
-  const sourceContext = compactJson(post.sourceContextUsed);
-
-  if (!post.idea && !sourceContext) return null;
-
-  return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-      {post.idea ? (
-        <div className="min-w-0 rounded-control border border-border-grey bg-soft-white px-3 py-2">
-          <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-            Linked Idea
-          </p>
-          <p className="mt-1 break-words text-small font-medium text-near-black">
-            {post.idea.angle}
-          </p>
-          <p className="mt-1 text-caption text-muted-foreground">
-            {SOURCE_LABELS[post.idea.sourceType] ?? post.idea.sourceType}
-          </p>
-        </div>
-      ) : null}
-
-      {sourceContext ? (
-        <div className="min-w-0 rounded-control border border-border-grey bg-soft-white px-3 py-2">
-          <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-            Source Context Used
-          </p>
-          <pre className="mt-1 max-h-44 overflow-auto whitespace-pre-wrap break-words font-mono text-caption text-near-black">
-            {sourceContext}
-          </pre>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function PublishPostCard({
+/** Ready-to-publish cards: post text is the dominant element, with the
+ * belief shift as one quiet supporting line underneath - CTA/proof/risk and
+ * source metadata belong to Post Review, not the distribution queue. */
+function ReadyToPublishCard({
   clientId,
   role,
   post,
-  variant,
 }: {
   clientId: string;
   role: EffectiveClientRole;
   post: ReviewPost;
-  variant: "ready" | "published";
 }) {
-  const canManage = canRoleManageWorkflowReview(role);
-  const canMarkPublished = variant === "ready" && canManage;
+  const canMarkPublished = canRoleManageWorkflowReview(role);
 
   return (
-    <article className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge variant={variant === "ready" ? "success" : "info"}>
-              {variant === "ready" ? "Approved" : "Published"}
-            </Badge>
-            <span className="font-mono text-caption text-muted-foreground">
-              {variant === "ready"
-                ? `Approved ${formatDate(post.approvedAt)}`
-                : `Published ${formatDate(post.publishedAt)}`}
-            </span>
-          </div>
-          <h3 className="break-words font-heading text-card-title text-near-black">
-            {post.hook ?? "LinkedIn post"}
-          </h3>
-        </div>
-
-        <PublishPostActions
-          clientId={clientId}
-          postId={post.id}
-          postText={post.finalPost}
-          canMarkPublished={canMarkPublished}
-        />
+    <article className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-5 shadow-xs transition-shadow hover:shadow-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="success">Approved</Badge>
+        <span className="font-mono text-caption text-muted-foreground">
+          Approved {formatDate(post.approvedAt)}
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-        <div className="min-w-0 rounded-control border border-border-grey bg-white p-4">
-          <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-            Post Text
-          </p>
-          <div className="mt-3 whitespace-pre-line break-words text-body leading-7 text-near-black">
-            {post.finalPost}
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-3">
-          <PublishField label="CTA intent" value={post.ctaIntent} />
-          <PublishField
-            label="Buyer belief shift"
-            value={post.buyerBeliefShift}
-          />
-          <PublishField label="Proof notes" value={post.proofNotes} />
-          <PublishField label="Risk notes" value={post.riskNotes} />
-          <div className="min-w-0 rounded-control border border-border-grey bg-soft-white px-3 py-2">
-            <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-              Approved
-            </p>
-            <p className="mt-1 font-mono text-caption text-near-black">
-              {formatDate(post.approvedAt)}
-            </p>
-          </div>
-          {variant === "published" ? (
-            <div className="min-w-0 rounded-control border border-border-grey bg-soft-white px-3 py-2">
-              <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                Published
-              </p>
-              <p className="mt-1 font-mono text-caption text-near-black">
-                {formatDate(post.publishedAt)}
-              </p>
-            </div>
-          ) : null}
-        </div>
+      <div className="whitespace-pre-line break-words text-body leading-relaxed text-near-black">
+        {post.finalPost}
       </div>
 
-      <SourceMetadata post={post} />
+      {post.buyerBeliefShift ? (
+        <p className="whitespace-pre-line break-words text-small italic text-muted-foreground">
+          {post.buyerBeliefShift}
+        </p>
+      ) : null}
+
+      <PublishPostActions
+        clientId={clientId}
+        postId={post.id}
+        postText={post.finalPost}
+        canMarkPublished={canMarkPublished}
+      />
     </article>
   );
 }
 
-function PublishSection({
+/** Published History is intentionally quieter than the ready queue: smaller
+ * type, muted tonal background, and long posts collapse behind a native
+ * <details> disclosure so the list stays scannable without hiding the
+ * status/date, which remain outside the collapsible content. */
+function PublishedHistoryText({ text }: { text: string }) {
+  if (text.length <= HISTORY_PREVIEW_LENGTH) {
+    return (
+      <p className="whitespace-pre-line break-words text-small text-near-black">
+        {text}
+      </p>
+    );
+  }
+
+  const preview = text.slice(0, HISTORY_PREVIEW_LENGTH).trim();
+
+  return (
+    <details className="group">
+      <summary className="cursor-pointer select-none list-none marker:content-none [&::-webkit-details-marker]:hidden">
+        <span className="whitespace-pre-line break-words text-small text-near-black group-open:hidden">
+          {preview}&hellip;
+        </span>
+        <span className="mt-1 inline-flex items-center gap-1 text-caption font-medium text-brand-orange">
+          <span className="group-open:hidden">Show more</span>
+          <span className="hidden group-open:inline">Show less</span>
+          <ChevronRight
+            aria-hidden="true"
+            className="h-3 w-3 transition-transform duration-200 group-open:rotate-90"
+          />
+        </span>
+      </summary>
+      <p className="mt-2 whitespace-pre-line break-words text-small text-near-black">
+        {text}
+      </p>
+    </details>
+  );
+}
+
+function PublishedHistoryCard({
   clientId,
-  role,
-  title,
-  description,
-  emptyTitle,
-  emptyDescription,
-  posts,
-  variant,
+  post,
 }: {
   clientId: string;
-  role: EffectiveClientRole;
-  title: string;
-  description: string;
-  emptyTitle: string;
-  emptyDescription: string;
-  posts: ReviewPost[];
-  variant: "ready" | "published";
+  post: ReviewPost;
 }) {
   return (
-    <section className="flex flex-col gap-4">
-      <div>
-        <h2 className="font-heading text-section-title text-near-black">
-          {title}
-        </h2>
-        <p className="mt-1 text-small text-muted-foreground">{description}</p>
+    <article className="flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="info">Published</Badge>
+        <span className="font-mono text-caption text-muted-foreground">
+          {formatDate(post.publishedAt)}
+        </span>
       </div>
 
-      {posts.length === 0 ? (
-        <div className="rounded-card border border-border-grey bg-white p-6">
-          <EmptyState
-            icon={variant === "ready" ? ClipboardList : CheckCircle2}
-            title={emptyTitle}
-            description={emptyDescription}
-          />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {posts.map((post) => (
-            <PublishPostCard
-              key={post.id}
-              clientId={clientId}
-              role={role}
-              post={post}
-              variant={variant}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+      <PublishedHistoryText text={post.finalPost} />
+
+      <PublishPostActions
+        clientId={clientId}
+        postId={post.id}
+        postText={post.finalPost}
+        canMarkPublished={false}
+      />
+    </article>
   );
 }
 
@@ -240,29 +137,79 @@ export function PublishQueuePanel({
   approvedPosts: ReviewPost[];
   publishedPosts: ReviewPost[];
 }) {
-  return (
-    <div className="flex flex-col gap-8">
-      <PublishSection
-        clientId={clientId}
-        role={role}
-        title="Ready to Publish"
-        description="Approved posts ready to copy into LinkedIn manually."
-        emptyTitle="No approved posts ready"
-        emptyDescription="Approved posts will appear here when they are ready to copy into LinkedIn."
-        posts={approvedPosts}
-        variant="ready"
-      />
+  if (approvedPosts.length === 0 && publishedPosts.length === 0) {
+    return (
+      <div className="rounded-card border border-border-grey bg-white p-6">
+        <EmptyState
+          icon={Send}
+          title="Nothing to publish yet"
+          description="Approve a post in Post Review to send it here for manual publishing."
+        />
+      </div>
+    );
+  }
 
-      <PublishSection
-        clientId={clientId}
-        role={role}
-        title="Published History"
-        description="Posts marked as published after manual posting."
-        emptyTitle="No published posts yet"
-        emptyDescription="Posts you mark as published will appear here."
-        posts={publishedPosts}
-        variant="published"
-      />
+  return (
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Send aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+          <h2 className="font-heading text-section-title text-near-black">
+            Ready to Publish
+          </h2>
+          {approvedPosts.length > 0 ? (
+            <Badge variant="accent-orange">
+              {approvedPosts.length} Pending
+            </Badge>
+          ) : null}
+        </div>
+
+        {approvedPosts.length === 0 ? (
+          <div className="rounded-card border border-border-grey bg-white p-6">
+            <EmptyState
+              icon={Send}
+              title="No approved posts ready"
+              description="Approved posts will appear here when they are ready to copy into LinkedIn."
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {approvedPosts.map((post) => (
+              <ReadyToPublishCard
+                key={post.id}
+                clientId={clientId}
+                role={role}
+                post={post}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <History aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
+          <h2 className="font-heading text-section-title text-near-black">
+            Published History
+          </h2>
+        </div>
+
+        {publishedPosts.length === 0 ? (
+          <div className="rounded-card border border-border-grey bg-white p-6">
+            <EmptyState
+              icon={History}
+              title="No published posts yet"
+              description="Posts you mark as published will appear here."
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {publishedPosts.map((post) => (
+              <PublishedHistoryCard key={post.id} clientId={clientId} post={post} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

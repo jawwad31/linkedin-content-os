@@ -33,14 +33,12 @@ export default async function PublishPage({
 
       {role && postsResult ? (
         postsResult.ok ? (
-          <div className="flex flex-col gap-8">
-            <PublishQueuePanel
-              clientId={clientId}
-              role={role}
-              approvedPosts={approvedPosts}
-              publishedPosts={publishedPosts}
-            />
-          </div>
+          <PublishQueuePanel
+            clientId={clientId}
+            role={role}
+            approvedPosts={approvedPosts}
+            publishedPosts={publishedPosts}
+          />
         ) : (
           <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger">
             We could not load approved posts. Please try again.

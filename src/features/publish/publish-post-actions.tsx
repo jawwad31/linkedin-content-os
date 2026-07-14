@@ -90,30 +90,30 @@ export function PublishPostActions({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <Button
           type="button"
           variant="secondary"
           size="sm"
           onClick={copyPost}
           disabled={isPublishing}
-          className="max-sm:flex-1"
+          className="sm:flex-1"
         >
           <Clipboard aria-hidden="true" className="h-4 w-4" />
-          Copy Text
+          Copy Post Text
         </Button>
 
         {canMarkPublished ? (
           <Button
             type="button"
-            variant="accent-orange"
+            variant="success"
             size="sm"
             onClick={markPublished}
             disabled={isPublishing}
-            className="max-sm:flex-1"
+            className="sm:flex-1"
           >
             <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-            {isPublishing ? "Marking..." : "Mark Published"}
+            {isPublishing ? "Marking..." : "Mark as Published"}
           </Button>
         ) : null}
       </div>
