@@ -19,7 +19,10 @@ import {
   canRoleManageClientSetup,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
-import { cn } from "@/lib/utils";
+import {
+  SegmentedNavigation,
+  type SegmentedNavigationItem,
+} from "@/components/ui/segmented-navigation";
 
 import { saveBusinessContextAction, type SaveBusinessContextState } from "./actions";
 import type { ClientBusinessContext } from "./queries";
@@ -33,7 +36,7 @@ type TabId =
   | "guardrails"
   | "publishing";
 
-const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
+const TABS: SegmentedNavigationItem<TabId>[] = [
   { id: "profile", label: "Business Profile", icon: Building2 },
   { id: "icp", label: "ICP & Offer", icon: Target },
   { id: "pov", label: "POV & Content Pillars", icon: Compass },
@@ -158,22 +161,11 @@ export function BusinessContextForm({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-1.5 rounded-2xl bg-soft-white p-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
-              activeTab === tab.id && "bg-white text-near-black shadow-sm",
-            )}
-          >
-            <tab.icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedNavigation
+        items={TABS}
+        activeId={activeTab}
+        onChange={setActiveTab}
+      />
 
       <p className="text-caption text-muted-foreground">
         Founder Experiences are managed on their own dedicated page.

@@ -9,18 +9,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { formatUtcDate } from "@/lib/format/date";
-import { cn } from "@/lib/utils";
-import type { EffectiveClientRole } from "@/lib/access/roles";
 import type { ReviewPost, ReviewPostStatus } from "@/features/posts/review/queries";
+import { SegmentedNavigation } from "@/components/ui/segmented-navigation";
+import type { EffectiveClientRole } from "@/lib/access/roles";
 
 type TabId = "needs_review" | "approved" | "rejected" | "published";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "needs_review", label: "Needs Review" },
-  { id: "approved", label: "Approved" },
-  { id: "rejected", label: "Rejected" },
-  { id: "published", label: "Published" },
-];
 
 const STATUS_LABELS: Record<ReviewPostStatus, string> = {
   review: "Review",
@@ -53,13 +46,19 @@ export function PostsView({
   const isAdmin = role === "agency_admin" || role === "client_admin";
   const [activeTab, setActiveTab] = useState<TabId>("needs_review");
 
-  // Filtering based on workflow states
   const needsReviewPosts = posts.filter(
     (p) => p.status === "review" || p.status === "needs_edit"
   );
   const approvedPosts = posts.filter((p) => p.status === "approved");
   const rejectedPosts = posts.filter((p) => p.status === "rejected");
   const publishedPosts = posts.filter((p) => p.status === "published");
+
+  const segmentedItems = [
+    { id: "needs_review" as TabId, label: "Needs Review", count: needsReviewPosts.length },
+    { id: "approved" as TabId, label: "Approved", count: approvedPosts.length },
+    { id: "rejected" as TabId, label: "Rejected", count: rejectedPosts.length },
+    { id: "published" as TabId, label: "Published", count: publishedPosts.length },
+  ];
 
   const getFilteredPosts = () => {
     switch (activeTab) {
@@ -112,37 +111,12 @@ export function PostsView({
   return (
     <div className="flex flex-col gap-6">
       {/* Custom navigation tabs */}
-      <div className="flex flex-wrap gap-1.5 rounded-full bg-soft-white p-1.5 self-start">
-        {TABS.map((tab) => {
-          let count = 0;
-          if (tab.id === "needs_review") count = needsReviewPosts.length;
-          else if (tab.id === "approved") count = approvedPosts.length;
-          else if (tab.id === "rejected") count = rejectedPosts.length;
-          else if (tab.id === "published") count = publishedPosts.length;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
-                activeTab === tab.id && "bg-white text-near-black shadow-sm"
-              )}
-            >
-              {tab.label}
-              {count > 0 ? (
-                <span className={cn(
-                  "ml-1.5 rounded-full px-1.5 py-0.5 text-caption font-mono",
-                  activeTab === tab.id ? "bg-soft-white text-near-black" : "bg-soft-white text-muted-foreground"
-                )}>
-                  {count}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedNavigation
+        items={segmentedItems}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        className="self-start"
+      />
 
       {currentPosts.length === 0 ? (
         <EmptyState
