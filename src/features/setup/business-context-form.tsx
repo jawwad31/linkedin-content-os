@@ -158,14 +158,14 @@ export function BusinessContextForm({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-1.5 rounded-full bg-soft-white p-1.5">
+      <div className="flex flex-wrap gap-1.5 rounded-2xl bg-soft-white p-1.5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
+              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
               activeTab === tab.id && "bg-white text-near-black shadow-sm",
             )}
           >
@@ -420,10 +420,10 @@ export function BusinessContextForm({
       {isReadOnly ? null : (
         <Button
           type="submit"
-          variant="gradient"
+          variant="accent-purple"
           size="lg"
           disabled={isPending}
-          className="self-start"
+          className="self-start bg-[#C43EEA] hover:bg-[#C43EEA]/90"
         >
           {isPending ? "Saving..." : "Save business context"}
         </Button>
