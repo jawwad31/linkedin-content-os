@@ -1,8 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  CheckCircle2,
-  FileClock,
+  Inbox,
   Layers,
   Lightbulb,
   type LucideIcon,
@@ -12,13 +11,17 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatUtcDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
@@ -214,28 +217,12 @@ export function DashboardView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-card bg-near-black p-6 text-soft-white lg:flex-row lg:items-center lg:justify-between lg:p-8">
-        <div className="min-w-0">
-          <p className="text-caption font-mono uppercase tracking-wide text-soft-white/50">
-            Dashboard
-          </p>
-          <h1 className="mt-1 truncate text-card-title font-heading font-semibold">
-            {clientName ?? "This client"}
-          </h1>
-          <p className="mt-1 text-small text-soft-white/70">{statusMessage}</p>
-        </div>
-        {nextAction ? (
-          <Link
-            href={nextAction.href}
-            className="inline-flex shrink-0 items-center gap-2 rounded-btn bg-gradient-brand px-4 py-2 text-small font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black"
-          >
-            {nextAction.label}
-            <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </Link>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Overview"
+        description={`${clientName ?? "This client"} · workspace snapshot`}
+      />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="hover-lift">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
@@ -278,52 +265,6 @@ export function DashboardView({
           </CardContent>
         </Card>
 
-        <Card className="hover-lift">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <CardTitle>Latest research run</CardTitle>
-              <MetricIcon
-                icon={Radar}
-                tint="bg-brand-purple/10 text-brand-purple"
-              />
-            </div>
-            <CardDescription>
-              Most recent manual or worker research run for this client.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {latestResearchRun ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={
-                      RUN_STATUS_BADGE_VARIANT[latestResearchRun.status] ??
-                      "neutral"
-                    }
-                  >
-                    {RUN_STATUS_LABELS[latestResearchRun.status] ??
-                      latestResearchRun.status}
-                  </Badge>
-                  {latestResearchRun.stage ? (
-                    <span className="text-small text-muted-foreground">
-                      {latestResearchRun.stage}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="font-mono text-caption text-muted-foreground">
-                  {formatUtcDateTime(latestResearchRun.timestamp)}
-                </span>
-              </>
-            ) : (
-              <p className="text-small text-muted-foreground">
-                No research runs yet.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Collected Articles"
           value={collectedArticlesCount}
@@ -348,34 +289,132 @@ export function DashboardView({
           ctaHref={ideasEmpty ? `/client/${clientId}/ideas` : undefined}
           ctaLabel={ideasEmpty ? "Open ideas" : undefined}
         />
-        <MetricCard
-          title="Posts needing review"
-          value={postsNeedingReviewCount}
-          icon={FileClock}
-          tint="bg-warning/10 text-warning"
-          ctaHref={postsNeedingReviewCount > 0 ? `/client/${clientId}/posts` : undefined}
-          ctaLabel={postsNeedingReviewCount > 0 ? "Review posts" : undefined}
-        />
-        <MetricCard
-          title="Approved posts"
-          value={approvedPostsCount}
-          icon={CheckCircle2}
-          tint="bg-success/10 text-success"
-          ctaHref={approvedPostsCount > 0 ? `/client/${clientId}/publish` : undefined}
-          ctaLabel={approvedPostsCount > 0 ? "Open publish queue" : undefined}
-        />
       </div>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="hover-lift lg:col-span-2">
+          <CardHeader>
+            <Badge variant={nextAction ? "accent-orange" : "success"}>
+              {nextAction ? "Action needed" : "Fully caught up"}
+            </Badge>
+            <CardTitle>Next best action</CardTitle>
+            <CardDescription>{statusMessage}</CardDescription>
+          </CardHeader>
+          {nextAction ? (
+            <CardFooter>
+              <Link
+                href={nextAction.href}
+                className={cn(buttonVariants({ variant: "gradient" }), "gap-2")}
+              >
+                {nextAction.label}
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </CardFooter>
+          ) : null}
+        </Card>
+
+        <Card className="hover-lift">
+          <CardHeader>
+            <CardTitle>Post workflow</CardTitle>
+            <CardDescription>Where posts stand right now.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <Badge variant="warning">{postsNeedingReviewCount}</Badge>
+                <span className="truncate text-small text-near-black">
+                  {isUserAdmin ? "Needs review" : "Awaiting admin review"}
+                </span>
+              </div>
+              {postsNeedingReviewCount > 0 ? (
+                <Link
+                  href={`/client/${clientId}/posts`}
+                  className="shrink-0 rounded-control text-small font-medium text-brand-orange hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+                >
+                  {isUserAdmin ? "Review posts" : "View posts"}
+                </Link>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <Badge variant="success">{approvedPostsCount}</Badge>
+                <span className="truncate text-small text-near-black">
+                  {isUserAdmin ? "Approved" : "Ready for publishing"}
+                </span>
+              </div>
+              {approvedPostsCount > 0 ? (
+                <Link
+                  href={`/client/${clientId}/publish`}
+                  className="shrink-0 rounded-control text-small font-medium text-brand-orange hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+                >
+                  {isUserAdmin ? "Open publish queue" : "View approved posts"}
+                </Link>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="hover-lift">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle>Latest research run</CardTitle>
+            <MetricIcon
+              icon={Radar}
+              tint="bg-brand-purple/10 text-brand-purple"
+            />
+          </div>
+          <CardDescription>
+            Most recent manual or worker research run for this client.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {latestResearchRun ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    RUN_STATUS_BADGE_VARIANT[latestResearchRun.status] ??
+                    "neutral"
+                  }
+                >
+                  {RUN_STATUS_LABELS[latestResearchRun.status] ??
+                    latestResearchRun.status}
+                </Badge>
+                {latestResearchRun.stage ? (
+                  <span className="text-small text-muted-foreground">
+                    {latestResearchRun.stage}
+                  </span>
+                ) : null}
+              </div>
+              <span className="font-mono text-caption text-muted-foreground">
+                {formatUtcDateTime(latestResearchRun.timestamp)}
+              </span>
+            </>
+          ) : (
+            <p className="text-small text-muted-foreground">
+              No research runs yet.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {everythingEmpty ? (
-        <div className="rounded-card border border-border-grey bg-white p-8 text-center">
-          <p className="text-body font-medium">
-            Nothing here yet for this client.
-          </p>
-          <p className="mt-1 text-small text-muted-foreground">
-            Complete setup and run research to start building TrendCards,
-            Ideas, and Posts.
-          </p>
-        </div>
+        <EmptyState
+          icon={Inbox}
+          title="Nothing here yet for this client."
+          description={statusMessage}
+          action={
+            nextAction ? (
+              <Link
+                href={nextAction.href}
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+              >
+                {nextAction.label}
+              </Link>
+            ) : undefined
+          }
+        />
       ) : null}
     </div>
   );
