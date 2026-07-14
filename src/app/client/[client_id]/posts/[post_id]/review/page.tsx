@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
   ChevronRight,
   Clock,
@@ -11,7 +12,6 @@ import {
   ShieldCheck,
   Target,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,7 +21,6 @@ import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
 import { PostReviewActions } from "@/features/posts/review/post-review-actions";
 import { canRoleManageWorkflowReview } from "@/lib/access/roles";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/date";
-import { cn } from "@/lib/utils";
 import { getServerUser } from "@/lib/supabase/session";
 
 const STATUS_LABELS: Record<ReviewPostStatus, string> = {
@@ -69,86 +68,145 @@ function getInitials(name: string): string {
   return (parts[0]![0] + parts[parts.length - 1]![0]).toUpperCase();
 }
 
-/** Icon + title + flowing text. Used for fields that are a single free-text
- * value (not a guaranteed list), so we never invent chip/bullet structure
- * that the underlying content isn't guaranteed to have. */
-function ReviewField({
-  label,
-  value,
-  icon: Icon,
-  iconClassName,
-  labelClassName,
-  tone,
-}: {
-  label: string;
-  value: string | null;
-  icon: LucideIcon;
-  iconClassName: string;
-  labelClassName?: string;
-  tone?: "highlight";
-}) {
+/** The Planning Agent's prompt contract always writes belief_shift as
+ * "what the buyer currently believes -> what they should believe" (see
+ * planning-agent.ts), and posts.buyer_belief_shift is copied straight from
+ * that field. Splitting on the arrow is safe - it's a guaranteed part of the
+ * data contract, not a guess. Falls back to plain text for older records or
+ * anything that doesn't match. */
+function splitBeliefShift(value: string): { from: string; to: string } | null {
+  const parts = value.split(/\s*(?:->|→)\s*/);
+  if (parts.length !== 2) return null;
+
+  const clean = (part: string) => part.trim().replace(/^["“]+|["”]+$/g, "").trim();
+  const from = clean(parts[0]!);
+  const to = clean(parts[1]!);
+  if (!from || !to) return null;
+
+  return { from, to };
+}
+
+function BuyerBeliefShiftCard({ value }: { value: string | null }) {
   if (!value) return null;
 
+  const shift = splitBeliefShift(value);
+
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-3 rounded-card border border-border-grey p-5",
-        tone === "highlight" ? "bg-soft-white" : "bg-white",
-      )}
-    >
+    <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-soft-white p-5">
       <div className="flex items-center gap-2">
-        <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", iconClassName)} />
-        <h3
-          className={cn(
-            "text-small font-semibold",
-            labelClassName ?? "text-near-black",
-          )}
-        >
-          {label}
+        <Repeat aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-purple" />
+        <h3 className="text-small font-semibold text-secondary-dark">
+          Buyer Belief Shift
         </h3>
       </div>
-      <p className="whitespace-pre-line break-words text-small italic text-near-black">
-        {value}
-      </p>
+      {shift ? (
+        <div className="flex flex-col gap-2">
+          <div className="rounded-control border border-border-grey bg-white/70 p-3">
+            <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
+              Before
+            </p>
+            <p className="mt-1 whitespace-pre-line break-words text-small italic text-near-black">
+              &ldquo;{shift.from}&rdquo;
+            </p>
+          </div>
+          <div className="flex justify-center text-brand-purple">
+            <ArrowDown aria-hidden="true" className="h-4 w-4" />
+          </div>
+          <div className="rounded-control border border-brand-purple/25 bg-white p-3">
+            <p className="text-caption font-medium uppercase tracking-wide text-secondary-dark">
+              After
+            </p>
+            <p className="mt-1 whitespace-pre-line break-words text-small font-medium italic text-near-black">
+              &ldquo;{shift.to}&rdquo;
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-line break-words text-small italic text-near-black">
+          {value}
+        </p>
+      )}
     </div>
   );
 }
 
-/** Risk Notes: if the model already produced multiple newline-separated
- * risks, show each as its own flagged line; otherwise render as one
- * paragraph. This never splits on anything but real line breaks already in
- * the stored text, so it can't fabricate structure that isn't there. */
-function RiskNotesCard({ value }: { value: string | null }) {
+/** Breaks the free-text proof_notes value onto one line per sentence so it
+ * reads as short scannable statements instead of one dense block. This only
+ * adds line breaks at real sentence boundaries already in the text - no
+ * words are changed, reordered, or dropped. */
+function splitSentences(value: string): string[] {
+  return value
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"“(])/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+function ProofNotesCard({ value }: { value: string | null }) {
   if (!value) return null;
 
-  const lines = value
+  const sentences = splitSentences(value);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
+      <div className="flex items-center gap-2">
+        <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0 text-success" />
+        <h3 className="text-small font-semibold text-near-black">Proof Notes</h3>
+      </div>
+      <div className="flex flex-col gap-2">
+        {sentences.map((sentence, index) => (
+          <p
+            key={index}
+            className="whitespace-pre-line break-words text-small leading-relaxed text-near-black"
+          >
+            {sentence}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Splits risk_notes into one bullet per risk. Prefers real newlines the
+ * model already wrote; when the model instead wrote flowing prose, falls
+ * back to splitting on real sentence boundaries. Either way this only
+ * breaks the existing text at boundaries already present in it - nothing is
+ * changed, reordered, or dropped. */
+function splitRiskLines(value: string): string[] {
+  const byNewline = value
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+
+  if (byNewline.length > 1) return byNewline;
+
+  return value
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"“(])/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+function RiskNotesCard({ value }: { value: string | null }) {
+  if (!value) return null;
+
+  const lines = splitRiskLines(value);
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-5">
       <div className="flex items-center gap-2">
         <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-danger" />
-        <h3 className="text-small font-semibold text-danger-strong">Risk Notes</h3>
+        <h3 className="text-small font-semibold text-near-black">Risk Notes</h3>
       </div>
-      {lines.length > 1 ? (
-        <ul className="flex flex-col gap-2">
-          {lines.map((line, index) => (
-            <li key={index} className="flex items-start gap-2 text-small text-near-black">
-              <AlertTriangle
-                aria-hidden="true"
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger"
-              />
-              <span className="break-words">{line}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="whitespace-pre-line break-words text-small text-near-black">
-          {value}
-        </p>
-      )}
+      <ul className="flex flex-col gap-2">
+        {lines.map((line, index) => (
+          <li key={index} className="flex items-start gap-2 text-small text-near-black">
+            <AlertTriangle
+              aria-hidden="true"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger"
+            />
+            <span className="break-words">{line}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -312,21 +370,8 @@ export default async function PostReviewPage({
             </div>
           ) : null}
 
-          <ReviewField
-            icon={Repeat}
-            iconClassName="text-brand-purple"
-            labelClassName="text-secondary-dark"
-            label="Buyer Belief Shift"
-            value={post.buyerBeliefShift}
-            tone="highlight"
-          />
-          <ReviewField
-            icon={ShieldCheck}
-            iconClassName="text-success"
-            labelClassName="text-success-strong"
-            label="Proof Notes"
-            value={post.proofNotes}
-          />
+          <BuyerBeliefShiftCard value={post.buyerBeliefShift} />
+          <ProofNotesCard value={post.proofNotes} />
           <RiskNotesCard value={post.riskNotes} />
           <CtaIntentCard value={post.ctaIntent} />
 
