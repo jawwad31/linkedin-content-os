@@ -30,17 +30,24 @@ function groupByWeek(cards: TrendCard[]): Array<[string, TrendCard[]]> {
 function CardSection({
   label,
   text,
+  labelClassName,
 }: {
   label: string;
   text: string | null;
+  labelClassName?: string;
 }) {
   if (!text) return null;
   return (
     <div>
-      <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
+      <p
+        className={
+          "text-caption font-medium uppercase tracking-wide " +
+          (labelClassName ?? "text-muted-foreground")
+        }
+      >
         {label}
       </p>
-      <p className="mt-0.5 whitespace-pre-line text-small text-near-black">
+      <p className="mt-1 whitespace-pre-line text-body text-near-black">
         {text}
       </p>
     </div>
@@ -80,39 +87,43 @@ export function TrendCardsPanel({
           {weekCards.map((card) => (
             <div
               key={card.id}
-              className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
+              className="flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-small font-medium text-near-black">
-                  {card.title}
-                </p>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {card.confidenceScore !== null ? (
-                    <Badge variant="outline">
-                      Confidence {card.confidenceScore}/10
-                    </Badge>
-                  ) : null}
-                  {card.reactionCount > 0 ? (
-                    <Badge variant="accent-orange">
-                      {card.reactionCount} reaction
-                      {card.reactionCount === 1 ? "" : "s"}
-                    </Badge>
-                  ) : null}
-                  <Badge variant={card.approvedForIdeas ? "success" : "neutral"}>
-                    {card.approvedForIdeas
-                      ? "Approved for Ideas"
-                      : "Not yet approved"}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant={card.approvedForIdeas ? "success" : "neutral"}>
+                  {card.approvedForIdeas ? "Approved for Ideas" : "Pending Review"}
+                </Badge>
+                {card.confidenceScore !== null ? (
+                  <Badge variant="outline">
+                    Confidence {card.confidenceScore}/10
                   </Badge>
-                </div>
+                ) : null}
+                {card.reactionCount > 0 ? (
+                  <Badge variant="accent-orange">
+                    {card.reactionCount} reaction
+                    {card.reactionCount === 1 ? "" : "s"}
+                  </Badge>
+                ) : null}
               </div>
 
-              {card.shift ? (
-                <p className="text-small text-near-black">{card.shift}</p>
-              ) : null}
+              <p className="text-body font-medium text-near-black">
+                {card.title}
+              </p>
 
-              <CardSection label="Why it matters" text={card.whyItMatters} />
-              <CardSection label="Relevance to ICP" text={card.relevanceToIcp} />
-              <CardSection label="Content angle" text={card.contentAngle} />
+              <div className="grid grid-cols-1 gap-3 rounded-control bg-white p-3 sm:grid-cols-2">
+                <CardSection label="Market Shift" text={card.shift} />
+                <CardSection
+                  label="ICP Relevance"
+                  text={card.relevanceToIcp}
+                  labelClassName="text-brand-purple"
+                />
+                <CardSection label="Why It Matters" text={card.whyItMatters} />
+                <CardSection
+                  label="Suggested Content Angle"
+                  text={card.contentAngle}
+                  labelClassName="text-brand-orange"
+                />
+              </div>
 
               {card.sources.length > 0 ? (
                 <details>

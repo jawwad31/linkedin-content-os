@@ -77,8 +77,8 @@ function StatusFilterChips({
             href={href}
             className={
               isActive
-                ? "rounded-full bg-brand-orange/10 px-2.5 py-0.5 text-caption font-medium text-brand-orange"
-                : "rounded-full border border-border-grey px-2.5 py-0.5 text-caption font-medium text-muted-foreground hover:bg-soft-white"
+                ? "rounded-full bg-brand-orange/10 px-2.5 py-0.5 text-caption font-medium text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+                : "rounded-full border border-border-grey px-2.5 py-0.5 text-caption font-medium text-muted-foreground hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
             }
           >
             {filter.label}
@@ -136,29 +136,28 @@ export function CollectedArticlesPanel({
           key={article.id}
           className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3"
         >
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-small font-medium text-near-black underline-offset-2 hover:underline flex-1 min-w-[180px]"
-            >
-              {article.title}
-            </a>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
-                {STATUS_LABEL[article.status]}
-              </Badge>
-              <Badge variant={getScoreBadgeVariant(article.relevanceScore)}>
-                {article.relevanceScore !== null ? `Relevance ${article.relevanceScore}/10` : "Not scored"}
-              </Badge>
-            </div>
-          </div>
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-small font-medium text-near-black underline-offset-2 hover:underline"
+          >
+            {article.title}
+          </a>
 
           <div className="flex flex-wrap items-center gap-2 font-mono text-caption text-muted-foreground">
             <span>{article.sourceName ?? "Unknown source"}</span>
             <span>·</span>
             <span>{formatDate(article.publishedAt)}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant={STATUS_BADGE_VARIANT[article.status]}>
+              {STATUS_LABEL[article.status]}
+            </Badge>
+            <Badge variant={getScoreBadgeVariant(article.relevanceScore)}>
+              {article.relevanceScore !== null ? `Relevance ${article.relevanceScore}/10` : "Not scored"}
+            </Badge>
           </div>
 
           {article.classificationReason ? (

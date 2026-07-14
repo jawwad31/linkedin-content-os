@@ -54,7 +54,7 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
               <Badge variant={STATUS_BADGE_VARIANT[run.status]}>
                 {STATUS_LABEL[run.status]}
               </Badge>
-              <span className="text-small text-muted-foreground">
+              <span className="break-words text-small text-muted-foreground">
                 {run.triggerType === "worker" ? "Worker" : "Manual"}
                 {run.stage ? ` · ${run.stage}` : ""}
               </span>
@@ -76,7 +76,7 @@ export function ResearchRunsPanel({ runs }: { runs: ResearchRun[] }) {
           ) : null}
 
           {run.errorMessage ? (
-            <p className="text-small text-danger">{run.errorMessage}</p>
+            <p className="break-words text-small text-danger">{run.errorMessage}</p>
           ) : null}
         </div>
       ))}

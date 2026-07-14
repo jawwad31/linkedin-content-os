@@ -190,7 +190,34 @@ export function TrendCardReviewControls({
   return (
     <>
       <div className="flex flex-col gap-2 rounded-control border border-border-grey bg-white p-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {reactionCount === 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMode("react")}
+              >
+                React
+              </Button>
+            ) : (
+              <p className="text-small text-muted-foreground">Reaction recorded.</p>
+            )}
+
+            {canManageReview ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-danger hover:bg-danger/10 hover:text-danger"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                Delete
+              </Button>
+            ) : null}
+          </div>
+
           {approvedForIdeas ? (
             <p className="text-small text-muted-foreground">{APPROVED_MESSAGE}</p>
           ) : canManageReview ? (
@@ -202,31 +229,6 @@ export function TrendCardReviewControls({
               disabled={isApproving}
             >
               {isApproving ? "Approving..." : "Approve for Ideas"}
-            </Button>
-          ) : null}
-
-          {reactionCount === 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setMode("react")}
-            >
-              React
-            </Button>
-          ) : (
-            <p className="text-small text-muted-foreground">Reaction recorded.</p>
-          )}
-
-          {canManageReview ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-danger hover:bg-danger/10 hover:text-danger"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              Delete
             </Button>
           ) : null}
         </div>

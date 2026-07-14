@@ -1,4 +1,7 @@
-import { Rss } from "lucide-react";
+"use client";
+
+import { Plus, Rss } from "lucide-react";
+import { useState } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -20,16 +23,15 @@ export function RssSourcesPanel({
   sources: RssSource[];
 }) {
   const canManage = canRoleManageResearchSources(role);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {!canManage ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
           Client Users cannot manage RSS sources.
         </p>
       ) : null}
-
-      {canManage ? <RssSourceForm clientId={clientId} /> : null}
 
       {sources.length === 0 ? (
         <EmptyState
@@ -38,7 +40,7 @@ export function RssSourcesPanel({
           description="Add trusted industry feeds so Research can collect articles for TrendCards later."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
           {sources.map((source) => (
             <RssSourceCard
               key={source.id}
@@ -49,6 +51,25 @@ export function RssSourcesPanel({
           ))}
         </div>
       )}
+
+      {canManage ? (
+        isAddOpen ? (
+          <RssSourceForm
+            clientId={clientId}
+            onCancel={() => setIsAddOpen(false)}
+            onSaved={() => setIsAddOpen(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-1.5 self-start rounded-control px-1 py-1 text-small font-medium text-brand-orange hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Add RSS source
+          </button>
+        )
+      ) : null}
     </div>
   );
 }

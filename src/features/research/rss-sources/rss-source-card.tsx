@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import {
   canRoleManageResearchSources,
@@ -54,77 +53,81 @@ export function RssSourceCard({
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3">
-            <CardTitle className="text-base">{source.sourceName}</CardTitle>
-            <Badge variant={source.active ? "success" : "neutral"}>
+      <div className="flex flex-col gap-2 rounded-control border border-border-grey bg-soft-white p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-body font-medium text-near-black">
+              {source.sourceName}
+            </p>
+            <p
+              className="truncate text-small text-muted-foreground"
+              title={source.feedUrl}
+            >
+              {source.feedUrl}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+            {source.category ? (
+              <Badge variant="outline" className="w-fit">
+                {source.category}
+              </Badge>
+            ) : null}
+            <Badge variant="outline" className="w-fit">
+              Last {source.recencyDays} day{source.recencyDays === 1 ? "" : "s"}
+            </Badge>
+            <Badge variant={source.active ? "success" : "neutral"} className="w-fit">
               {source.active ? "Active" : "Inactive"}
             </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <p className="break-all text-small text-muted-foreground">
-            {source.feedUrl}
+        </div>
+
+        {source.lastCheckedAt ? (
+          <span className="break-words font-mono text-caption text-muted-foreground">
+            Last checked {formatUtcDateTime(source.lastCheckedAt)}
+            {source.lastSuccessAt
+              ? ` · Last success ${formatUtcDateTime(source.lastSuccessAt)}`
+              : ""}
+          </span>
+        ) : null}
+
+        {source.lastError ? (
+          <p className="break-words text-small text-danger">{source.lastError}</p>
+        ) : null}
+
+        {toggleState.error ? (
+          <p role="alert" className="text-small text-danger">
+            {toggleState.error}
           </p>
+        ) : null}
 
-          {source.category ? (
-            <Badge variant="outline" className="w-fit">
-              {source.category}
-            </Badge>
-          ) : null}
-
-          <Badge variant="outline" className="w-fit">
-            Last {source.recencyDays} day{source.recencyDays === 1 ? "" : "s"}
-          </Badge>
-
-          {source.lastError ? (
-            <p className="text-small text-danger">{source.lastError}</p>
-          ) : null}
-
-          {source.lastCheckedAt ? (
-            <span className="font-mono text-caption text-muted-foreground">
-              Last checked {formatUtcDateTime(source.lastCheckedAt)}
-              {source.lastSuccessAt
-                ? ` · Last success ${formatUtcDateTime(source.lastSuccessAt)}`
-                : ""}
-            </span>
-          ) : null}
-
-          {toggleState.error ? (
-            <p role="alert" className="text-small text-danger">
-              {toggleState.error}
-            </p>
-          ) : null}
-
-          {canManage ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setMode("edit")}
-              >
-                Edit
+        {canManage ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setMode("edit")}
+            >
+              Edit
+            </Button>
+            <form action={toggleAction}>
+              <Button type="submit" variant="outline" size="sm" disabled={isToggling}>
+                {isToggling ? "Updating..." : source.active ? "Deactivate" : "Activate"}
               </Button>
-              <form action={toggleAction}>
-                <Button type="submit" variant="outline" size="sm" disabled={isToggling}>
-                  {isToggling ? "Updating..." : source.active ? "Deactivate" : "Activate"}
-                </Button>
-              </form>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-danger hover:bg-danger/10 hover:text-danger"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                Delete
-              </Button>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+            </form>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-danger hover:bg-danger/10 hover:text-danger"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       <DestructiveConfirmDialog
         open={isDeleteDialogOpen}
