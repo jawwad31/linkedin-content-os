@@ -25,6 +25,8 @@ const buttonVariants = cva(
         ghost: "bg-transparent text-near-black hover:bg-soft-white",
         destructive:
           "bg-danger text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+        success:
+          "bg-success text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
       },
       size: {
         default: "h-10 px-4 py-2",

@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
-import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { FOUNDER_DIRECTION_MAX_LENGTH } from "./schemas";
 
@@ -23,23 +22,17 @@ const IDLE: RequestState = { status: "idle" };
 export function FounderDirectionControls({
   clientId,
   ideaId,
-  ideaAngle,
   founderDirection,
-  role,
 }: {
   clientId: string;
   ideaId: string;
-  ideaAngle: string;
   founderDirection: string | null;
-  role: EffectiveClientRole;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState(founderDirection ?? "");
   const [directionState, setDirectionState] = useState<RequestState>(IDLE);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const isSaving = directionState.status === "pending";
-  const isAdmin = role === "agency_admin" || role === "client_admin";
 
   async function saveDirection() {
     setDirectionState({ status: "pending" });
@@ -127,19 +120,35 @@ export function FounderDirectionControls({
           >
             {isSaving ? "Saving..." : "Save Direction"}
           </Button>
-          {isAdmin && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-danger hover:bg-danger/10 hover:text-danger"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              Delete
-            </Button>
-          )}
         </div>
       </div>
+    </>
+  );
+}
+
+export function IdeaDeleteButton({
+  clientId,
+  ideaId,
+  ideaAngle,
+}: {
+  clientId: string;
+  ideaId: string;
+  ideaAngle: string;
+}) {
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-danger hover:bg-danger/10 hover:text-danger"
+        onClick={() => setIsDeleteDialogOpen(true)}
+      >
+        Delete
+      </Button>
 
       <DestructiveConfirmDialog
         open={isDeleteDialogOpen}
