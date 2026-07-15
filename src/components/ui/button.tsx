@@ -12,22 +12,22 @@ const buttonVariants = cva(
         // complete setup, generation actions). Solid brand purple, not a
         // gradient, so every primary action reads as the same one color.
         brand:
-          "bg-brand-purple text-white shadow-sm hover:opacity-90 hover:shadow-md active:scale-[0.98]",
+          "bg-brand-purple !text-white shadow-sm hover:opacity-90 hover:shadow-md active:scale-[0.98]",
         // Accent orange — important but not global-primary actions.
         "accent-orange":
-          "bg-brand-orange text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "bg-brand-orange !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
         // Accent purple — AI/action emphasis where appropriate.
         "accent-purple":
-          "bg-brand-purple text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "bg-brand-purple !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
         secondary:
           "bg-white text-near-black border border-border-grey hover:bg-soft-white",
         outline:
           "bg-transparent text-near-black border border-border-grey hover:bg-soft-white",
         ghost: "bg-transparent text-near-black hover:bg-soft-white",
         destructive:
-          "bg-danger text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "bg-danger !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
         success:
-          "bg-success text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "bg-success !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
       },
       size: {
         default: "h-10 px-4 py-2",

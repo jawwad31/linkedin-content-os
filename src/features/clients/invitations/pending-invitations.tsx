@@ -34,7 +34,7 @@ export function PendingInvitations({
             </div>
             
             <form action={acceptInvitationAction.bind(null, invitation.id)} className="w-full sm:w-auto">
-              <button type="submit" className="w-full sm:w-auto bg-brand-purple text-white text-small font-medium px-6 py-2.5 rounded-full shadow hover:opacity-90 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2">
+              <button type="submit" className="w-full sm:w-auto bg-brand-purple !text-white text-small font-medium px-6 py-2.5 rounded-full shadow hover:opacity-90 transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2">
                 <Check className="w-4 h-4" />
                 Accept Invite
               </button>
