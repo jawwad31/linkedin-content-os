@@ -58,6 +58,24 @@ describe("stage prompt composition", () => {
     expect(prompt.system).not.toContain("Article Classification");
   });
 
+  it("no longer sends the idea-level fields duplicated by the generation plan", async () => {
+    const prompt = await buildContentPrompt({
+      businessContext: businessContextFixture,
+      idea: ideaFixture(),
+      sourceContext: sourceFixture("founder_experience"),
+    });
+    const payload = JSON.parse(prompt.user);
+
+    expect(Object.keys(payload.content_idea)).toEqual([
+      "id",
+      "angle",
+      "buyer_pain",
+      "commercial_relevance",
+      "founder_direction",
+      "edit_note",
+    ]);
+  });
+
   it("gives QA the draft, plan, source, and deterministic findings", async () => {
     const idea = ideaFixture() as ContentAgentIdeaContext;
     const prompt = await buildReviewPrompt({

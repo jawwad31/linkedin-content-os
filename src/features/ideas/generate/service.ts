@@ -561,21 +561,19 @@ function toInsertRows(input: {
 
     seenAngles.add(normalizedAngle);
 
+    // source_context stores only real source metadata (mode, ids, title).
+    // The planner no longer writes a free-text paraphrase here — that
+    // duplicated plan.strategy.primarySourceAnchor / proofToUse.
     const storedSourceContext = {
       mode: input.mode,
       source_ids: input.sourceIdsForIdea,
       source_title: input.sourceTitle,
-      generated_context: idea.sourceContext,
     };
     const ideaMetadata = {
       angle: idea.angle,
       buyerPain: idea.buyerPain,
       commercialRelevance: idea.commercialRelevance,
-      beliefShift: idea.beliefShift,
-      contentPillar: idea.contentPillar,
-      angleBoundary: idea.angleBoundary,
       sourceContext: storedSourceContext,
-      proofNotes: idea.proofNotes,
     };
     const strategyOverrides = {};
     const resourceId = idea.generationPlan.execution.resourceId;
@@ -588,11 +586,11 @@ function toInsertRows(input: {
         angle: idea.angle,
         buyer_pain: idea.buyerPain,
         commercial_relevance: idea.commercialRelevance,
-        belief_shift: idea.beliefShift,
-        content_pillar: idea.contentPillar,
-        angle_boundary: idea.angleBoundary,
+        belief_shift: null,
+        content_pillar: null,
+        angle_boundary: null,
         source_context: storedSourceContext,
-        proof_notes: idea.proofNotes,
+        proof_notes: null,
         founder_direction: null,
         generation_plan: idea.generationPlan,
         generation_plan_version: GENERATION_PLAN_VERSION,

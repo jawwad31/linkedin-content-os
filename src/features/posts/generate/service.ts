@@ -252,11 +252,6 @@ function toIdeaContext(
     angle: row.angle,
     buyerPain: row.buyer_pain,
     commercialRelevance: row.commercial_relevance,
-    beliefShift: row.belief_shift,
-    contentPillar: row.content_pillar,
-    angleBoundary: row.angle_boundary,
-    sourceContext: row.source_context,
-    proofNotes: row.proof_notes,
     founderDirection: row.founder_direction,
     editNote,
     generationPlan,
@@ -302,11 +297,6 @@ function ideaHashMetadata(idea: ContentIdeaRow) {
     angle: idea.angle,
     buyerPain: idea.buyer_pain,
     commercialRelevance: idea.commercial_relevance,
-    beliefShift: idea.belief_shift,
-    contentPillar: idea.content_pillar,
-    angleBoundary: idea.angle_boundary,
-    sourceContext: idea.source_context,
-    proofNotes: idea.proof_notes,
   };
 }
 

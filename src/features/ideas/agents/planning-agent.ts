@@ -61,11 +61,6 @@ export type GeneratedPlanningIdea = {
   angle: string;
   buyerPain: string;
   commercialRelevance: string;
-  beliefShift: string;
-  contentPillar: string;
-  angleBoundary: string;
-  sourceContext: string;
-  proofNotes: string;
   generationPlan: GenerationPlanV2;
 };
 
@@ -93,11 +88,6 @@ const ideaSchema = z.object({
   angle: z.string().trim().min(1).max(240),
   buyer_pain: z.string().trim().min(1).max(700),
   commercial_relevance: z.string().trim().min(1).max(700),
-  belief_shift: z.string().trim().min(1).max(700),
-  content_pillar: z.string().trim().min(1).max(160),
-  angle_boundary: z.string().trim().min(1).max(900),
-  source_context: z.string().trim().min(1).max(900),
-  proof_notes: z.string().trim().min(1).max(900),
   generation_plan: generationPlanV2Schema,
 });
 
@@ -115,24 +105,9 @@ const IDEA_JSON_SCHEMA = {
     angle: { type: "string" },
     buyer_pain: { type: "string" },
     commercial_relevance: { type: "string" },
-    belief_shift: { type: "string" },
-    content_pillar: { type: "string" },
-    angle_boundary: { type: "string" },
-    source_context: { type: "string" },
-    proof_notes: { type: "string" },
     generation_plan: GENERATION_PLAN_JSON_SCHEMA,
   },
-  required: [
-    "angle",
-    "buyer_pain",
-    "commercial_relevance",
-    "belief_shift",
-    "content_pillar",
-    "angle_boundary",
-    "source_context",
-    "proof_notes",
-    "generation_plan",
-  ],
+  required: ["angle", "buyer_pain", "commercial_relevance", "generation_plan"],
   additionalProperties: false,
 } as const;
 
@@ -184,7 +159,7 @@ export async function buildPlanningPrompt(input: {
     "Return only plans whose strategy.readiness is ready.",
     "A supporting or directional observation from the source is not proof of a primary cause. Do not upgrade correlation, or one contributing factor, into a claimed main reason unless the source states that directly.",
     "Ideas must differ in both core argument and angle type. At most one idea may use resource_post/comment_gate.",
-    "Keep legacy idea fields semantically consistent with the plan.",
+    "angle, buyer_pain, and commercial_relevance are short reader-facing summaries; keep them consistent with the plan's strategy.",
     "Return strict JSON only.",
   ].join("\n\n");
 
@@ -328,11 +303,6 @@ export async function runPlanningAgent(input: {
       angle: idea.angle,
       buyerPain: idea.buyer_pain,
       commercialRelevance: idea.commercial_relevance,
-      beliefShift: idea.belief_shift,
-      contentPillar: idea.content_pillar,
-      angleBoundary: idea.angle_boundary,
-      sourceContext: idea.source_context,
-      proofNotes: idea.proof_notes,
       generationPlan: idea.generation_plan,
     })),
   };

@@ -32,11 +32,6 @@ export type ContentAgentIdeaContext = {
   angle: string;
   buyerPain: string | null;
   commercialRelevance: string | null;
-  beliefShift: string | null;
-  contentPillar: string | null;
-  angleBoundary: string | null;
-  sourceContext: unknown;
-  proofNotes: string | null;
   founderDirection: string | null;
   editNote: string | null;
   generationPlan: GenerationPlanV2;
@@ -135,11 +130,6 @@ export async function buildContentPrompt(input: {
         angle: input.idea.angle,
         buyer_pain: input.idea.buyerPain,
         commercial_relevance: input.idea.commercialRelevance,
-        belief_shift: input.idea.beliefShift,
-        content_pillar: input.idea.contentPillar,
-        angle_boundary: input.idea.angleBoundary,
-        source_context: input.idea.sourceContext,
-        proof_notes: input.idea.proofNotes,
         founder_direction: input.idea.founderDirection,
         edit_note: input.idea.editNote,
       },
