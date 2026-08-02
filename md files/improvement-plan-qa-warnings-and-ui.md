@@ -6,18 +6,29 @@ Status: approved by Jawwad on 2026-08-03.
 |---|---|
 | 0 — Commit QA diagnostics checkpoint | **Done** (`4b0eae7`) |
 | 1 — QA becomes warn-only | **Done** (`4053213`) |
-| 2 — Content Idea simplification | Remaining |
-| 3 — Collapse / expand cards | Remaining |
-| 4 — Research page sub-tabs | Remaining |
+| 2 — Content Idea simplification | **Done** (`1e67d64`, `6c2623d`) |
+| 3 — Collapse / expand cards | **Done** (`1e67d64`) |
+| 4 — Research page sub-tabs | **Done** (`080321f`) |
 | 5 — Research Focus clarity | **Done** (`d19e0d1`) |
 
-Workstreams 2, 3, and 4 remain. Do them in the order listed. Each one ends at a
-committable, verifiable state. Do not mix workstreams into one commit.
+All planned workstreams are implemented, tested, linted, and built clean.
+Remaining work is manual QA in a real browser session — see the checklist
+provided separately. Notes for anyone extending this further:
 
-Note for whoever implements the rest: warnings are surfaced from
-`qa_result.warnings` via `src/lib/ai/playbooks/qa-warnings.ts`, and the labels
-in `QA_WARNING_LABELS` are the only text safe to render. Never display
-deterministic finding `detail` strings or raw QA `issues`.
+- Warnings are surfaced from `qa_result.warnings` via
+  `src/lib/ai/playbooks/qa-warnings.ts`, and the labels in
+  `QA_WARNING_LABELS` are the only text safe to render. Never display
+  deterministic finding `detail` strings or raw QA `issues`.
+- Content Idea cards default to collapsed and persist expand state in
+  localStorage per client (`src/components/shared/use-collapsible-cards.ts`).
+  Older ideas without a stored `generation_plan` still render from the
+  legacy `content_ideas` columns as a fallback.
+- `belief_shift`, `angle_boundary`, `proof_notes`, and `content_pillar` are no
+  longer written for new ideas (null instead) — the columns still exist for
+  old rows and are not migrated.
+- Research tabs are plain server-rendered links driven by `?tab=`, not client
+  state — this was a deliberate choice to avoid adding client JS for
+  something links already do natively.
 
 Read `AGENTS.md` and `CONTRIBUTING.md` before starting. Work directly on `main`.
 Run `npm test`, `npm run lint`, and `npm run build` before every commit.
