@@ -1,10 +1,23 @@
 # Improvement Plan — Warn-Only QA, Idea Simplification, and Research UI
 
-Status: approved by Jawwad on 2026-08-03. Ready for implementation.
+Status: approved by Jawwad on 2026-08-03.
 
-This plan has five independent workstreams. Do them in the order listed. Each
-one ends at a committable, verifiable state. Do not mix workstreams into one
-commit.
+| Workstream | State |
+|---|---|
+| 0 — Commit QA diagnostics checkpoint | **Done** (`4b0eae7`) |
+| 1 — QA becomes warn-only | **Done** (`4053213`) |
+| 2 — Content Idea simplification | Remaining |
+| 3 — Collapse / expand cards | Remaining |
+| 4 — Research page sub-tabs | Remaining |
+| 5 — Research Focus clarity | **Done** (`d19e0d1`) |
+
+Workstreams 2, 3, and 4 remain. Do them in the order listed. Each one ends at a
+committable, verifiable state. Do not mix workstreams into one commit.
+
+Note for whoever implements the rest: warnings are surfaced from
+`qa_result.warnings` via `src/lib/ai/playbooks/qa-warnings.ts`, and the labels
+in `QA_WARNING_LABELS` are the only text safe to render. Never display
+deterministic finding `detail` strings or raw QA `issues`.
 
 Read `AGENTS.md` and `CONTRIBUTING.md` before starting. Work directly on `main`.
 Run `npm test`, `npm run lint`, and `npm run build` before every commit.
