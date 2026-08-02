@@ -81,5 +81,61 @@ describe("stage prompt composition", () => {
     );
     expect(payload.draft.body).toContain("12%");
     expect(prompt.system).toContain("Final QA and Format Recommendation");
+    expect(prompt.system).not.toContain("This is a corrective pass.");
+  });
+
+  it("tells QA a corrective pass reviews the already-reviewed draft, not the original", async () => {
+    const idea = ideaFixture() as ContentAgentIdeaContext;
+    const priorQa = {
+      verdict: "revised" as const,
+      finalPost: "The review found 12% duplicate routing. Fix routing first.",
+      finalCta: "Fix routing first.",
+      proofNotes: "Documented routing review.",
+      riskNotes: "Do not generalize.",
+      checks: {
+        sourceFidelity: "pass" as const,
+        credibility: "pass" as const,
+        icpFit: "pass" as const,
+        beliefShiftClarity: "pass" as const,
+        voice: "pass" as const,
+        structure: "pass" as const,
+        ctaFit: "pass" as const,
+        readability: "pass" as const,
+      },
+      issues: [],
+      revisionsMade: [],
+      formatRecommendation: null,
+    };
+    const prompt = await buildReviewPrompt({
+      businessContext: businessContextFixture,
+      idea,
+      sourceContext: sourceFixture("founder_experience"),
+      plan: planFixture,
+      draft: {
+        hook: "",
+        body: priorQa.finalPost,
+        cta: priorQa.finalCta,
+        format: "text",
+        proofUsed: priorQa.proofNotes,
+        riskNotes: priorQa.riskNotes,
+      },
+      deterministicIssues: [
+        { code: "unsupported_numeric_claim", detail: "Numeric claim: 12%" },
+      ],
+      priorQa,
+    });
+    const payload = JSON.parse(prompt.user);
+    expect(prompt.system).toContain("This is a corrective pass.");
+    expect(payload.draft.body).toBe(priorQa.finalPost);
+    expect(payload.prior_qa.finalPost).toBe(priorQa.finalPost);
+  });
+
+  it("tells the Content Agent not to fake quotation marks around paraphrased beliefs", async () => {
+    const prompt = await buildContentPrompt({
+      businessContext: businessContextFixture,
+      idea: ideaFixture(),
+      sourceContext: sourceFixture("founder_experience"),
+    });
+    expect(prompt.system).toContain("Quotation marks are reserved for exact evidence quotes");
   });
 });

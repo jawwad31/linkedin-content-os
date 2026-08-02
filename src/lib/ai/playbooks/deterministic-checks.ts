@@ -69,11 +69,13 @@ function quotedClaims(value: string): string[] {
 function countCtaSignals(cta: string): number {
   if (!cta.trim()) return 0;
   const questionCount = (cta.match(/\?/g) ?? []).length;
-  const imperativeCount = (
+  const imperativeMatches =
     cta.match(/\b(comment|follow|subscribe|download|book|dm|message|reply|share|save)\b/gi) ??
-    []
-  ).length;
-  return Math.max(1, questionCount + imperativeCount);
+    [];
+  const distinctImperatives = new Set(
+    imperativeMatches.map((match) => match.toLowerCase()),
+  );
+  return Math.max(1, questionCount + distinctImperatives.size);
 }
 
 export function runDeterministicPostChecks(input: {
@@ -85,6 +87,13 @@ export function runDeterministicPostChecks(input: {
   phrasesToAvoid: unknown;
   bannedTopics: unknown;
   selectedResource?: unknown;
+  /**
+   * User-authored ICP text from business context. Numbers here (ARR bands,
+   * headcount ranges) are descriptors, not performance claims. Only the saved
+   * value is trusted — never the plan's LLM-written targetIcp, which would let
+   * the model authorize its own numbers.
+   */
+  primaryIcp?: string | null;
 }): DeterministicCheckIssue[] {
   const issues: DeterministicCheckIssue[] = [];
   const lowerPost = input.finalPost.toLowerCase();
@@ -114,7 +123,9 @@ export function runDeterministicPostChecks(input: {
     approvedProof: input.approvedProof,
     selectedSource: input.selectedSource,
   }).join(" ");
-  const allowedNumbers = numericTokens(evidenceText);
+  const allowedNumbers = numericTokens(
+    `${evidenceText} ${input.primaryIcp ?? ""}`,
+  );
 
   for (const token of numericTokens(input.finalPost)) {
     if (!allowedNumbers.has(token)) {
@@ -152,11 +163,17 @@ export function runDeterministicPostChecks(input: {
     });
   }
 
+  const EXPERIENTIAL_VERB =
+    "(?:seen|noticed|learned|found|tested|tried|built|run|ran|worked|spent|watched|helped|shipped)";
+  // Allows up to two intervening words so "I have personally seen" is still
+  // caught, while "we have entered a new era" stays allowed.
+  const EXPERIENTIAL_CLAIM = `(?:i|we) have (?:\\w+ ){0,2}?${EXPERIENTIAL_VERB}`;
   if (
     input.plan.sourceMode === "trend_card" &&
-    /\b(i(?:'|’)ve|i have|we(?:'|’)ve|we have|i saw|we saw|i noticed|we noticed|in my experience|in our experience)\b/i.test(
-      input.finalPost,
-    )
+    new RegExp(
+      `\\b(i(?:'|’)ve|we(?:'|’)ve|${EXPERIENTIAL_CLAIM}|i saw|we saw|i noticed|we noticed|in my experience|in our experience)\\b`,
+      "i",
+    ).test(input.finalPost)
   ) {
     issues.push({
       code: "source_mode_drift",

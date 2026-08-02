@@ -33,6 +33,7 @@ export async function POST(
       result.code,
       result.message,
       statusForErrorCode(result.code),
+      result.details,
     );
   }
 

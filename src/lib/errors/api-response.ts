@@ -10,6 +10,7 @@ export type ApiFailure = {
   error: {
     code: string;
     message: string;
+    details?: Record<string, unknown>;
   };
 };
 
@@ -25,13 +26,14 @@ export function apiFailure(
   code: string,
   message: string,
   init: number | ResponseInit = 400,
+  details?: Record<string, unknown>,
 ) {
   const responseInit = typeof init === "number" ? { status: init } : init;
   return Response.json(
     {
       success: false,
       data: null,
-      error: { code, message },
+      error: details ? { code, message, details } : { code, message },
     } satisfies ApiFailure,
     responseInit,
   );
@@ -46,6 +48,7 @@ const STATUS_BY_ERROR_CODE: Record<string, number> = {
   RUN_IN_PROGRESS: 409,
   DEPENDENCY_CONFLICT: 409,
   RATE_LIMITED: 429,
+  QA_BLOCKED: 422,
   UNKNOWN_ERROR: 500,
 };
 

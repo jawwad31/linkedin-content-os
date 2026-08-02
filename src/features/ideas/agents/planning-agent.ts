@@ -87,7 +87,7 @@ export type PlanningAgentResult =
 
 export type ReplanningAgentResult =
   | { ok: true; generationPlan: GenerationPlanV2 }
-  | { ok: false; reason: "not_configured" | "error" };
+  | { ok: false; reason: "not_configured" | "error" | "blocked" };
 
 const ideaSchema = z.object({
   angle: z.string().trim().min(1).max(240),
@@ -182,6 +182,7 @@ export async function buildPlanningPrompt(input: {
     "The generation plan sourceMode must exactly equal the selected source mode.",
     "Use only choices in the supplied compatibility catalog.",
     "Return only plans whose strategy.readiness is ready.",
+    "A supporting or directional observation from the source is not proof of a primary cause. Do not upgrade correlation, or one contributing factor, into a claimed main reason unless the source states that directly.",
     "Ideas must differ in both core argument and angle type. At most one idea may use resource_post/comment_gate.",
     "Keep legacy idea fields semantically consistent with the plan.",
     "Return strict JSON only.",
@@ -215,7 +216,9 @@ export async function buildReplanningPrompt(input: {
     "Return one complete GenerationPlanV2. Preserve the selected idea's core topic.",
     "Apply Founder Direction and safe strategy overrides, but never weaken source or proof boundaries.",
     "A non-comment-gate CTA override requires resourceId null and a non-resource archetype. A resource override requires resource_post plus comment_gate.",
-    "Use only choices in the supplied compatibility catalog. Return strategy.readiness ready.",
+    "Use only choices in the supplied compatibility catalog.",
+    "Set strategy.readiness to blocked instead of ready when the core argument needs missing proof, a stronger source, or a narrower claim to stay defensible. Do not force readiness to look complete.",
+    "A supporting or directional observation from the source is not proof of a primary cause. Do not upgrade correlation, or one contributing factor, into a claimed main reason unless the source states that directly.",
     "The generation plan sourceMode must exactly equal the selected source mode.",
     "Return strict JSON only.",
   ].join("\n\n");
@@ -371,8 +374,15 @@ export async function replanContentIdea(input: {
     PLANNING_AGENT_FEATURE,
   );
 
+  if (!result.ok) {
+    return { ok: false, reason: "error" };
+  }
+
+  if (result.data.generation_plan.strategy.readiness !== "ready") {
+    return { ok: false, reason: "blocked" };
+  }
+
   if (
-    !result.ok ||
     result.data.generation_plan.sourceMode !== input.sourceContext.mode ||
     validatePlanAgainstCompatibility(
       result.data.generation_plan,

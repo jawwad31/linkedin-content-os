@@ -111,6 +111,7 @@ export async function buildContentPrompt(input: {
       "Follow the production playbook below as binding methodology.",
       playbook,
       "Validate proof, write the body, then write a hook the body can deliver, then write the CTA.",
+      "Do not wrap a paraphrased or rhetorical belief in quotation marks. Quotation marks are reserved for exact evidence quotes; write paraphrased beliefs as plain assertions instead.",
       "Draft exactly one public-facing LinkedIn text post from the stored GenerationPlanV2.",
       "Treat the plan and idea metadata as private scaffolding. Never expose field labels or workflow terms.",
       "The draft will be checked deterministically and reviewed by a separate QA agent.",

@@ -113,6 +113,13 @@ export async function buildReviewPrompt(input: {
       "Follow the production playbook below as binding methodology.",
       playbook,
       "A deterministic finding must be resolved or the draft must be blocked.",
+      "Do not wrap a paraphrased or rhetorical belief in quotation marks. Quotation marks are reserved for exact evidence quotes; render paraphrased beliefs as plain assertions instead of pretending they are sourced quotations.",
+      ...(input.priorQa
+        ? [
+            "This is a corrective pass. The supplied draft is the version you already reviewed and returned; deterministic_findings apply to this exact draft, not to any earlier version.",
+            "Resolve every finding by deleting or narrowing language already present in this draft. Do not reintroduce an issue that prior_qa already fixed.",
+          ]
+        : []),
       "For pass or revised, finalPost must contain the complete publishable post.",
       "finalCta must contain only the final CTA/closing ask, or an empty string when CTA type is none.",
       "For blocked, finalPost must be null and finalCta must be empty.",

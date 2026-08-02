@@ -6,6 +6,12 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  parseQaBlockDetails,
+  QA_RECOMMENDED_ACTION_LABELS,
+  QA_REASON_CODE_LABELS,
+  type QaBlockDetails,
+} from "@/lib/ai/playbooks/qa-block-reasons";
 
 import type { ReviewPostStatus } from "./queries";
 import { EDIT_NOTE_MAX_LENGTH } from "./schemas";
@@ -17,7 +23,7 @@ type ActionName = "approve" | "needs-edit" | "redraft" | "reject";
 type RequestState =
   | { status: "idle" }
   | { status: "pending"; action: ActionName }
-  | { status: "error"; message: string }
+  | { status: "error"; message: string; details?: QaBlockDetails }
   | { status: "success"; message: string };
 
 const IDLE: RequestState = { status: "idle" };
@@ -84,6 +90,7 @@ export function PostReviewActions({
             typeof payload?.error?.message === "string"
               ? payload.error.message
               : GENERIC_ERROR_COPY,
+          details: parseQaBlockDetails(payload?.error?.details),
         });
         return;
       }
@@ -125,16 +132,35 @@ export function PostReviewActions({
       </div> : null}
 
       {state.status === "error" || state.status === "success" ? (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          className={
-            state.status === "error"
-              ? "text-small text-danger-strong"
-              : "text-small text-success-strong"
-          }
-        >
-          {state.message}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p
+            role={state.status === "error" ? "alert" : "status"}
+            className={
+              state.status === "error"
+                ? "text-small text-danger-strong"
+                : "text-small text-success-strong"
+            }
+          >
+            {state.message}
+          </p>
+          {state.status === "error" && state.details ? (
+            <div className="flex flex-col gap-1 text-small text-muted-foreground">
+              <ul className="list-disc pl-4">
+                {state.details.reasonCodes.map((code) => (
+                  <li key={code}>{QA_REASON_CODE_LABELS[code]}</li>
+                ))}
+              </ul>
+              {state.details.recommendedActions.length > 0 ? (
+                <p>
+                  Try:{" "}
+                  {state.details.recommendedActions
+                    .map((action) => QA_RECOMMENDED_ACTION_LABELS[action])
+                    .join(", ")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-3 border-t border-border-grey pt-3 sm:flex-row sm:items-center sm:justify-between">

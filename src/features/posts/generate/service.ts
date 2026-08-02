@@ -10,6 +10,7 @@ import {
   type ContentAgentBusinessContext,
   type ContentAgentIdeaContext,
   type ContentAgentSourceContext,
+  type GeneratedPostDraft,
 } from "@/features/posts/agents/content-agent";
 import { runReviewAgent } from "@/features/posts/agents/review-agent";
 import {
@@ -31,6 +32,10 @@ import {
   computeGenerationPlanInputHash,
 } from "@/lib/ai/playbooks/plan-hash";
 import { writeAuditLog } from "@/lib/audit/log";
+import {
+  buildQaBlockDetails,
+  type QaBlockDetails,
+} from "@/lib/ai/playbooks/qa-block-reasons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -45,7 +50,7 @@ import type { PlanningResource } from "@/features/ideas/agents/planning-agent";
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
-  | { ok: false; code: string; message: string };
+  | { ok: false; code: string; message: string; details?: QaBlockDetails };
 
 export type GeneratePostData = {
   postId: string;
@@ -188,12 +193,22 @@ const REVIEW_AGENT_NOT_CONFIGURED = {
   message: "AI post review is not configured.",
 };
 
-const QA_BLOCKED = {
-  ok: false as const,
-  code: "VALIDATION_ERROR",
-  message:
-    "AI review blocked this draft because it needs stronger proof or a strategy change. The idea remains ready for editing.",
-};
+const QA_BLOCKED_MESSAGE =
+  "AI review blocked this draft because it needs stronger proof or a strategy change. The idea remains ready for editing.";
+
+function qaBlockedFailure(details: QaBlockDetails): {
+  ok: false;
+  code: string;
+  message: string;
+  details: QaBlockDetails;
+} {
+  return {
+    ok: false,
+    code: "QA_BLOCKED",
+    message: QA_BLOCKED_MESSAGE,
+    details,
+  };
+}
 
 const GENERIC_FAILURE = {
   ok: false as const,
@@ -852,6 +867,23 @@ async function produceReviewedPost(input: {
     });
 
     if (!replanResult.ok) {
+      if (replanResult.reason === "blocked") {
+        const details = buildQaBlockDetails({ stage: "initial_review" });
+        await writeAuditLog({
+          clientId: input.clientId,
+          userId: input.userId,
+          action: "post_generation_blocked_by_qa",
+          entityType: "content_idea",
+          entityId: input.idea.id,
+          metadata: {
+            idea_id: input.idea.id,
+            source_type: input.idea.source_type,
+            blocked_stage: details.blockedStage,
+            reason_codes: details.reasonCodes,
+          },
+        });
+        return { ok: false, failure: qaBlockedFailure(details) };
+      }
       return {
         ok: false,
         failure:
@@ -936,6 +968,7 @@ async function produceReviewedPost(input: {
     phrasesToAvoid: input.businessContext.phrasesToAvoid,
     bannedTopics: input.businessContext.bannedTopics,
     selectedResource,
+    primaryIcp: input.businessContext.primaryIcp,
   });
 
   let reviewResult = await runReviewAgent({
@@ -960,6 +993,11 @@ async function produceReviewedPost(input: {
   }
 
   if (reviewResult.qa.verdict === "blocked" || !reviewResult.qa.finalPost) {
+    const details = buildQaBlockDetails({
+      stage: "initial_review",
+      deterministicIssues: initialDeterministicIssues,
+      qaChecks: reviewResult.qa.checks,
+    });
     await writeAuditLog({
       clientId: input.clientId,
       userId: input.userId,
@@ -969,10 +1007,12 @@ async function produceReviewedPost(input: {
       metadata: {
         idea_id: input.idea.id,
         source_type: input.idea.source_type,
+        blocked_stage: details.blockedStage,
+        reason_codes: details.reasonCodes,
         issue_count: reviewResult.qa.issues.length,
       },
     });
-    return { ok: false, failure: QA_BLOCKED };
+    return { ok: false, failure: qaBlockedFailure(details) };
   }
 
   let finalDeterministicIssues = runDeterministicPostChecks({
@@ -984,9 +1024,19 @@ async function produceReviewedPost(input: {
     phrasesToAvoid: input.businessContext.phrasesToAvoid,
     bannedTopics: input.businessContext.bannedTopics,
     selectedResource,
+    primaryIcp: input.businessContext.primaryIcp,
   });
 
   if (finalDeterministicIssues.length > 0) {
+    const priorQa = reviewResult.qa;
+    const reviewedDraft: GeneratedPostDraft = {
+      hook: "",
+      body: priorQa.finalPost!,
+      cta: priorQa.finalCta,
+      format: "text",
+      proofUsed: priorQa.proofNotes,
+      riskNotes: priorQa.riskNotes,
+    };
     reviewResult = await runReviewAgent({
       clientId: input.clientId,
       userId: input.userId,
@@ -994,9 +1044,9 @@ async function produceReviewedPost(input: {
       idea: contentIdeaContext,
       sourceContext,
       plan: generationPlan,
-      draft: agentResult.draft,
+      draft: reviewedDraft,
       deterministicIssues: finalDeterministicIssues,
-      priorQa: reviewResult.qa,
+      priorQa,
     });
 
     if (
@@ -1004,10 +1054,29 @@ async function produceReviewedPost(input: {
       reviewResult.qa.verdict === "blocked" ||
       !reviewResult.qa.finalPost
     ) {
-      return {
-        ok: false,
-        failure: reviewResult.ok ? QA_BLOCKED : GENERIC_FAILURE,
-      };
+      if (!reviewResult.ok) {
+        return { ok: false, failure: GENERIC_FAILURE };
+      }
+      const details = buildQaBlockDetails({
+        stage: "corrective_review",
+        deterministicIssues: finalDeterministicIssues,
+        qaChecks: reviewResult.qa.checks,
+      });
+      await writeAuditLog({
+        clientId: input.clientId,
+        userId: input.userId,
+        action: "post_generation_blocked_by_qa",
+        entityType: "content_idea",
+        entityId: input.idea.id,
+        metadata: {
+          idea_id: input.idea.id,
+          source_type: input.idea.source_type,
+          blocked_stage: details.blockedStage,
+          reason_codes: details.reasonCodes,
+          issue_count: reviewResult.qa.issues.length,
+        },
+      });
+      return { ok: false, failure: qaBlockedFailure(details) };
     }
 
     finalDeterministicIssues = runDeterministicPostChecks({
@@ -1019,10 +1088,29 @@ async function produceReviewedPost(input: {
       phrasesToAvoid: input.businessContext.phrasesToAvoid,
       bannedTopics: input.businessContext.bannedTopics,
       selectedResource,
+      primaryIcp: input.businessContext.primaryIcp,
     });
 
     if (finalDeterministicIssues.length > 0) {
-      return { ok: false, failure: QA_BLOCKED };
+      const details = buildQaBlockDetails({
+        stage: "final_validation",
+        deterministicIssues: finalDeterministicIssues,
+      });
+      await writeAuditLog({
+        clientId: input.clientId,
+        userId: input.userId,
+        action: "post_generation_blocked_by_qa",
+        entityType: "content_idea",
+        entityId: input.idea.id,
+        metadata: {
+          idea_id: input.idea.id,
+          source_type: input.idea.source_type,
+          blocked_stage: details.blockedStage,
+          reason_codes: details.reasonCodes,
+          issue_count: finalDeterministicIssues.length,
+        },
+      });
+      return { ok: false, failure: qaBlockedFailure(details) };
     }
   }
 
