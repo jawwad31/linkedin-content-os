@@ -50,7 +50,7 @@ The system prioritizes:
 The system must avoid:
 
 - fake proof
-- comment bait
+- generic comment bait; controlled resource gating is allowed only for an active approved Content Resource
 - generic creator-growth advice
 - automatic publishing
 - visual/image generation
@@ -85,6 +85,7 @@ Important rules:
 
 - Business context is always-on background context.
 - Business context is not a standalone generation mode.
+- Business context is never a fourth idea source.
 - There must be no `business_context_only` mode.
 - Humans review before posts move to publish queue.
 - No scheduler should auto-generate ideas or posts.
@@ -130,7 +131,7 @@ Do not design for public self-serve signup in v1.
 | Budget target | Under $50/month during MVP |
 | Signup | No public signup |
 | Collaboration | One user can access multiple clients; multiple users can access one client |
-| Invitations | Email invitations |
+| User provisioning | Manual administrator creation; no invitation or reset email |
 | Access model | Agency model with `agency_admin`, `client_admin`, and `client_user` only |
 | Audit logs | Lightweight logs: user, action, timestamp, client |
 | Delete policy | Soft delete business records; hard delete temporary logs |
@@ -169,10 +170,10 @@ Verified live migration state on 2026-07-10:
 
 Role rules:
 
-- `agency_admin` can access all Client Workspaces under the Agency, manage Setup, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
-- `client_admin` can access only assigned Client Workspaces, manage Setup, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
-- `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add Founder Take / Trend Reaction, generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
-- `client_user` cannot edit Setup/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
+- `agency_admin` (Agency Admin) can access all Accounts under the Agency, manage Agency and Account users, set temporary passwords, manage Settings and research sources, run the Research Agent, and use every workflow capability.
+- `client_admin` (Account Admin) can access only assigned Accounts and manage their Settings, users, research sources, and full workflow. An Account Admin may reset a user password only when that user has no Agency or other Account access.
+- `client_user` (Account User) can access only assigned Accounts. Its write access is selected per membership from `research_contribute`, `founder_experience_manage`, `ideas_manage`, `posts_draft`, `posts_review`, and `posts_publish`.
+- `client_user` cannot edit Settings/business context, manage users, manage RSS sources, run the Research Agent, hard-delete business records, view operational logs, access Agency-level pages, or access other Accounts. Unselected workflow permissions are denied server-side and by RLS.
 
 ---
 
@@ -216,7 +217,7 @@ Never copy from either reference:
 Build in v1:
 
 1. Supabase Auth login with no public signup.
-2. Email invitations for client collaboration.
+2. Manual administrator-created users with temporary passwords; no SMTP or email invitation flow.
 3. Client selector with many users ↔ many clients.
 4. Agency access roles: `agency_admin`, `client_admin`, and `client_user`.
 5. Client setup / always-on business context.
@@ -387,17 +388,27 @@ linkedin-content-os
 │   └── skills
 │       ├── content/SKILL.md
 │       ├── planning/SKILL.md
-│       └── research/SKILL.md
+│       ├── research/SKILL.md
+│       └── review/SKILL.md
 └── resources
     ├── context/business-context.md
-    ├── craft/cta-engagement.md
-    ├── craft/formats.md
+    ├── craft/body-frameworks.md
+    ├── craft/cta.md
     ├── craft/hooks.md
-    ├── craft/storytelling.md
-    └── principles
-        ├── icp-first-content.md
-        └── proof-safety.md
+    ├── craft/linkedin-writing-guide.md
+    ├── principles/icp-first-content.md
+    ├── principles/source-proof-safety.md
+    ├── quality/final-qa.md
+    ├── research/article-classification.md
+    ├── research/trend-card-synthesis.md
+    ├── strategy/angle-types.md
+    ├── strategy/content-strategy.md
+    └── strategy/post-structures.md
 ```
+
+`SKILL.md` is a compact developer router and is not injected into application
+prompts. Production stages load only allowlisted stage skills and resources
+through the server-only TypeScript playbook manifest.
 
 Do not create:
 
@@ -466,15 +477,15 @@ Turn source material into Content Ideas.
 
 Always receives business context:
 
+- business description
 - ICP
 - offer
-- POV
-- content pillars
-- approved proof
+- approved evidence
 - banned topics
-- founder voice
-- reference material
-- publishing preferences
+
+Founder voice, style inspiration, and phrase preferences are drafting/review
+inputs. Content Resources are separately managed and available only for
+compatible resource-post planning.
 
 Allowed modes only:
 
@@ -500,12 +511,19 @@ Output contract:
 - `angle_boundary`
 - `source_context`
 - `proof_notes`
+- complete `generation_plan` matching `GenerationPlanV2`
+
+Every GenerationPlanV2 includes the fixed source mode, an eight-part visible
+strategy, compatible execution choices, hidden claim boundaries, and an
+optional approved resource. New ideas store the plan, version, input hash, and
+safe overrides. Generate Post replans only when those inputs changed.
 
 ### Content Agent
 
 Purpose:
 
-Turn one approved ContentIdea into a final LinkedIn post.
+Turn one approved ContentIdea and GenerationPlanV2 into a draft for independent
+QA.
 
 Inputs:
 
@@ -513,8 +531,9 @@ Inputs:
 - business context
 - founder_direction
 - approved proof
-- reference material
-- edit_note when redrafting
+- selected source material
+- optional selected approved Content Resource
+- GenerationPlanV2
 
 Output contract:
 
@@ -532,11 +551,25 @@ Rules:
 - do not invent founder stories
 - do not invent client results
 - do not use banned topics
-- do not use comment bait
+- use comment gating only for a selected active approved Content Resource
 - do not use generic P.S. engagement questions
 - do not write for competitors/generic creators
 - write for the ICP
 - build around one buyer belief shift
+
+Deterministic checks cover scaffolding, banned language, unsupported numbers
+and quotes, CTA count, taxonomy validity, and source-mode drift. A separate QA
+agent returns `pass`, `revised`, or `blocked`; blocked drafts are not stored and
+one bounded corrective retry is allowed. Raw prompts, sensitive context, and
+post copy are not written to LLM or audit logs.
+
+### Review Agent
+
+Independently validates source fidelity, credibility, ICP fit, belief-shift
+clarity, voice, structure, CTA fit, and readability. Pass/revised posts enter
+human review. Needs Edit, Approve, Reject, and manual Publish remain human
+workflow actions. QA also stores an advisory format recommendation without
+creating carousel, video, poll, or newsletter assets.
 
 ---
 
@@ -596,6 +629,7 @@ Agent service structure:
 src/features/research/agents/researchAgent.ts
 src/features/ideas/agents/planningAgent.ts
 src/features/posts/agents/contentAgent.ts
+src/features/posts/agents/reviewAgent.ts
 ```
 
 Each agent owns:
@@ -620,27 +654,29 @@ Protected:
 - `/client/[client_id]/dashboard`
 - `/client/[client_id]/research`
 - `/client/[client_id]/founder-experiences`
+- `/client/[client_id]/resources`
 - `/client/[client_id]/ideas`
+- `/client/[client_id]/posts`
 - `/client/[client_id]/publish`
 - `/client/[client_id]/settings`
 - `/client/[client_id]/posts/[post_id]/review`
 
-Primary sidebar nav order: Dashboard, Research, Founder Experiences, Ideas, Publish, Setup. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
+Primary sidebar nav order: Overview, Research, Founder Experiences, Resources, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
 
 ---
 
-## Setup / Business Context Rules
+## Settings / Business Context Rules
 
-The Setup page is the always-on business context editor for a client.
+The Settings page is the always-on business context editor for a client.
 
-- User-facing nav label: **Setup**. Route stays `/client/[client_id]/settings`.
+- User-facing nav label: **Settings**. Route stays `/client/[client_id]/settings`.
 - Business context lives on the `clients` table — no separate business-context table.
-- `agency_admin` and `client_admin` can edit; `client_user` cannot edit Setup/business context.
+- `agency_admin` and `client_admin` can edit; `client_user` cannot edit Settings/business context.
 - Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted access, and `agency_admin` or `client_admin` permission.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
-- Team Access / invitations remain part of Setup and must not be broken by business-context changes.
-- Founder Experiences are separate records (Feature 11) with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Setup at all, not part of Business Context Settings.
+- Account Team Access remains part of Settings and must not be broken by business-context changes. Access is created immediately; no pending invitation is created.
+- Founder Experiences are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings.
 
 Supported Business Context fields (on `clients`):
 
@@ -650,16 +686,17 @@ Supported Business Context fields (on `clients`):
 - `business_description`
 - `primary_icp`
 - `main_offer`
-- `core_pov`
-- `content_pillars`
-- `research_keywords`
 - `banned_topics`
 - `founder_voice_sample`
+- `founder_voice_examples` (up to three style-only post examples)
 - `phrases_to_use`
 - `phrases_to_avoid`
 - `approved_proof`
-- `reference_material`
-- `publishing_preferences`
+
+`research_keywords` is edited on Research. Legacy POV, content-pillar,
+reference-material, and publishing-preference columns are not active
+generation context. Content Resources are separate records and never a source
+mode.
 
 ---
 
@@ -710,13 +747,9 @@ GET    /api/client/[client_id]
 PATCH  /api/client/[client_id]
 ```
 
-Invitations:
-
-```text
-POST /api/client/[client_id]/invites
-POST /api/invites/[invite_id]/accept
-POST /api/invites/[invite_id]/revoke
-```
+User management uses authenticated Server Actions from Account Settings and
+Agency Settings. Do not reintroduce public signup, pending invitation APIs, or
+email acceptance links without an approved SMTP/email phase.
 
 Founder Experiences:
 
@@ -842,16 +875,17 @@ Key fields:
 - `business_description`
 - `primary_icp`
 - `main_offer`
-- `core_pov`
-- `content_pillars`
-- `research_keywords`
+- `core_pov` (legacy; not injected into generation)
+- `content_pillars` (legacy; not injected into generation)
+- `research_keywords` (Research-only)
 - `banned_topics`
 - `founder_voice_sample`
+- `founder_voice_examples`
 - `phrases_to_use`
 - `phrases_to_avoid`
 - `approved_proof`
-- `reference_material`
-- `publishing_preferences`
+- `reference_material` (legacy; not injected into generation)
+- `publishing_preferences` (legacy; not injected into generation)
 - `deleted_at`
 
 ### client_access
@@ -863,8 +897,9 @@ Key fields:
 - `client_id`
 - `user_id`
 - `role`: client_admin | client_user
+- `permissions`: allowlisted Account User capabilities; empty for Account Admin
 - `invited_email`
-- `invitation_status`: pending | accepted | revoked
+- `invitation_status`: accepted | revoked in the active manual-provisioning flow
 - `invited_by_user_id`
 
 ### rss_sources
@@ -956,6 +991,25 @@ Key fields:
 - `source_trend_card_id`
 - `deleted_at`
 
+### content_resources
+
+Approved assets that may support an occasional resource post.
+
+Key fields:
+
+- `client_id`
+- `title`
+- `resource_type`
+- `description`
+- `problem_solved`
+- `target_use_case`
+- `keyword`
+- `delivery_url`
+- `delivery_instructions`
+- `active`
+- `comment_gate_approved`
+- `deleted_at`
+
 ### content_ideas
 
 Generated ideas.
@@ -974,6 +1028,11 @@ Key fields:
 - `source_context`
 - `proof_notes`
 - `founder_direction`
+- `generation_plan`
+- `generation_plan_version`
+- `generation_plan_input_hash`
+- `strategy_overrides`
+- `selected_resource_id`
 - `status`: draft | ready | used | archived
 - `deleted_at`
 
@@ -990,6 +1049,8 @@ Key fields:
 - `proof_notes`
 - `risk_notes`
 - `cta_intent`
+- `qa_result`
+- `format_recommendation`
 - `source_context_used`
 - `status`: review | needs_edit | approved | published | rejected
 - `edit_note`
@@ -1114,10 +1175,11 @@ The MVP is done when:
 
 - User can log in.
 - User can select a client.
-- Agency admins and client admins can invite collaborators by email, subject to client scope.
+- Agency Admins can create Agency Admins, Account Admins, and Account Users. Account Admins can create Account Admins and Account Users only inside their Account.
+- New users receive an administrator-set temporary password and must replace it at first login. Existing users keep their current password when another membership is added.
 - User roles are enforced.
 - No viewer-level role exists.
-- `client_user` can contribute to safe workflow content but cannot manage Setup, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
+- Account User capabilities are enforced independently from the six-permission allowlist; Account Users never manage Settings, users, RSS sources, the Research Agent, hard deletes, operational logs, Agency pages, or other Accounts.
 - Client data is scoped by `client_id`.
 - User can create/update business context.
 - User can create Founder Experiences.

@@ -1,60 +1,29 @@
 ---
 name: aixelerate-content
-description: Write final ICP-first LinkedIn posts for AIXelerate Content OS from one approved content idea and business context. Use when the user has selected or approved an idea and wants a polished LinkedIn post. Returns the final post plus buyer belief shift and proof notes, with strict proof-safety.
+description: Draft one proof-safe ICP-first LinkedIn text post from one approved Content Idea and GenerationPlanV2. Produces structured hook, body, and CTA output for a separate Review Agent, never a published post.
 ---
 
 # Content Agent
 
-Turn one approved idea into a sharp LinkedIn post for a B2B founder or operator. The post must make the target buyer feel understood and move them toward a useful belief shift.
+Turn one stored strategy into one natural reader-facing draft. Planning metadata
+is private scaffolding and must never appear as labels in public copy.
 
-## Load First
+## Load
 
-- Business context: `{SKILL_BASE}/resources/context/business-context.md`
-- ICP-first rules: `{SKILL_BASE}/resources/principles/icp-first-content.md`
-- Proof-safety rules: `{SKILL_BASE}/resources/principles/proof-safety.md`
-- Hook guidance: `{SKILL_BASE}/resources/craft/hooks.md`
-- Storytelling guidance: `{SKILL_BASE}/resources/craft/storytelling.md`
-- CTA and engagement guidance: `{SKILL_BASE}/resources/craft/cta-engagement.md`
-- Format guidance: `{SKILL_BASE}/resources/craft/formats.md`
+- `{SKILL_BASE}/resources/principles/icp-first-content.md`
+- `{SKILL_BASE}/resources/principles/source-proof-safety.md`
+- `{SKILL_BASE}/resources/strategy/content-strategy.md`
+- `{SKILL_BASE}/resources/craft/linkedin-writing-guide.md`
+- only the selected post-structure, hook, body-framework, and CTA sections
 
-## Required Input
+Validate proof first, write the body, then write a hook the body can deliver,
+then add the selected CTA. Follow the stored target ICP, belief shift, source
+anchor, argument, outline, claim boundaries, and execution choices. Use only
+the selected source, Approved Evidence, and selected Content Resource. Match
+the founder voice and inspiration posts without copying claims or wording.
 
-Use one approved content idea. If the user provides multiple ideas, ask which one to write or choose the highest-ranked idea if the ranking is explicit.
-
-If proof is required but missing, do not fabricate it. Write around the missing proof or include it in proof notes.
-
-## Writing Process
-
-1. Identify the target buyer and their current belief.
-2. Define the intended buyer belief shift.
-3. Choose a simple structure that fits the idea.
-4. Write a strong first 210 characters.
-5. Use operator-led, concrete language.
-6. Include a CTA only when it supports the ICP and business goal.
-7. Run proof-safety before finalizing.
-
-## Output Format
-
-Return only:
-
-```markdown
-## Final LinkedIn post
-
-[Post copy]
-
-## Buyer belief shift
-From: [current buyer belief]
-To: [new buyer belief]
-
-## Proof notes
-[List the proof used, proof avoided, or missing proof. If no unsupported claims remain, say so.]
-```
-
-## Rules
-
-- Write one post around one idea.
-- Do not include multiple hook options in the final output.
-- Do not invent metrics, stories, client results, quotes, or examples.
-- Do not write broad creator-facing content.
-- Do not use comment-gating as a default tactic.
-- Do not include profile optimization, scheduling advice, DM sequences, or repurposing guidance.
+Return strict JSON matching the draft schema. Never expose strategy labels,
+source IDs, JSON fields, or workflow language. Never invent metrics, stories,
+quotes, examples, or resource contents. Comment gating is allowed only for a
+valid `resource_post` plan with an approved selected resource. Never stack
+CTAs. Draft text only and do not create a visual asset.

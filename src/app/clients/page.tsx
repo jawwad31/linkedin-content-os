@@ -2,8 +2,6 @@ import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/features/auth/logout-button";
 import { ClientList } from "@/features/clients/client-list";
-import { PendingInvitations } from "@/features/clients/invitations/pending-invitations";
-import { getPendingInvitationsForCurrentUser } from "@/features/clients/invitations/queries";
 import { getAccessibleClients } from "@/features/clients/queries";
 import { resolveAuthenticatedDestination } from "@/lib/access/destination";
 import { getServerUser } from "@/lib/supabase/session";
@@ -25,10 +23,7 @@ export default async function ClientsPage() {
     redirect(destination);
   }
 
-  const [clientsResult, invitationsResult] = await Promise.all([
-    getAccessibleClients(user.id),
-    getPendingInvitationsForCurrentUser(),
-  ]);
+  const clientsResult = await getAccessibleClients(user.id);
 
   return (
     <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-8">
@@ -44,10 +39,6 @@ export default async function ClientsPage() {
           <LogoutButton className="h-12 w-full md:w-auto px-8 rounded-full font-bold border border-outline hover:bg-surface-container-low" />
         </div>
       </section>
-
-      {invitationsResult.ok && invitationsResult.invitations.length > 0 ? (
-        <PendingInvitations invitations={invitationsResult.invitations} />
-      ) : null}
 
       {clientsResult.ok ? (
         <ClientList clients={clientsResult.clients} />

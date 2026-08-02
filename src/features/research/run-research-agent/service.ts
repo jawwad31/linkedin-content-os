@@ -199,6 +199,14 @@ export async function runResearchAgentManually(
       const cardsCreated = synthesize.summary.signalsCreated;
       const errorCount = synthesize.summary.synthesisErrorCount;
       const attemptedCount = synthesize.summary.attemptedItemCount;
+      const itemsMarkedUsed = synthesize.summary.itemsMarkedUsed;
+      const usedExplanation = itemsMarkedUsed
+        ? ` ${itemsMarkedUsed} relevant article${
+            itemsMarkedUsed === 1 ? " is" : "s are"
+          } now shown as Used because ${itemsMarkedUsed === 1 ? "it supports" : "they support"} the new TrendCard${
+            cardsCreated === 1 ? "" : "s"
+          }.`
+        : "";
 
       if (cardsCreated === 0 && errorCount === 0) {
         if (attemptedCount === 0) {
@@ -209,9 +217,13 @@ export async function runResearchAgentManually(
       } else if (cardsCreated === 0 && errorCount > 0) {
         synthesisMessage = "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
       } else if (cardsCreated > 0 && errorCount === 0) {
-        synthesisMessage = `${cardsCreated} TrendCard${cardsCreated === 1 ? "" : "s"} created.`;
+        synthesisMessage = `${cardsCreated} TrendCard${
+          cardsCreated === 1 ? "" : "s"
+        } created.${usedExplanation}`;
       } else if (cardsCreated > 0 && errorCount > 0) {
-        synthesisMessage = `${cardsCreated} TrendCard${cardsCreated === 1 ? "" : "s"} created. Some synthesis work could not complete.`;
+        synthesisMessage = `${cardsCreated} TrendCard${
+          cardsCreated === 1 ? "" : "s"
+        } created.${usedExplanation} Some synthesis work could not complete.`;
       }
     }
 

@@ -290,43 +290,47 @@ feat: add client selector
 
 ---
 
-## Feature 07 — Email Invitations
+## Feature 07 — Manual User Provisioning
 
 Goal:
 
-Allow admins to invite users by email.
+Allow administrators to create or assign users without SMTP or email delivery.
 
 Dependencies:
 
 - Feature 06
 
-API:
+UI:
 
-- create invite
-- accept invite
-- revoke invite
+- `/agency/settings`
+- `/client/[client_id]/settings`
+- `/change-password`
 
 Acceptance Criteria:
 
-- `agency_admin` and scoped `client_admin` can invite.
-- `client_user` cannot invite.
-- Role is validated.
-- Role validation allows only `client_admin` and `client_user`.
-- Status tracked.
-- Audit log written.
-- Manual fallback works if email provider is not configured.
+- Agency Admin can add Agency Admin, Account Admin, or Account User access.
+- Account Admin can add Account Admin or Account User access only to its Account.
+- Account User cannot manage users.
+- Existing emails reuse the Auth user without changing its password.
+- New users receive a strong temporary password and immediate accepted access.
+- New/reset users must change the password before using protected app/API routes.
+- Account User permissions are selected from the six-value allowlist and enforced server-side and by RLS.
+- Account Admin password reset is blocked for users with Agency or another Account membership.
+- Access, role/permission changes, and password events write safe audit logs without passwords or email values.
 
 Test:
 
-- Invite `client_admin`.
-- Invite `client_user`.
-- Accept invite.
-- Try invite as `client_user`.
+- Create each role as Agency Admin.
+- Create Account Admin and Account User as Account Admin.
+- Reuse an existing email.
+- Exercise every Account User permission independently.
+- Verify first-login password replacement and reset boundaries.
+- Try provisioning as Account User.
 
 Commit:
 
 ```text
-feat: add client invitations
+feat: add manual user provisioning
 ```
 
 ---
@@ -849,6 +853,16 @@ Acceptance Criteria:
 - Business context always passed.
 - No `business_context_only`.
 - Ideas store required fields.
+- Every new idea stores a complete `GenerationPlanV2`, version, and input hash.
+- The visible strategy contains target ICP, current belief, desired belief, core
+  argument, primary source anchor, proof, angle, and risk/readiness.
+- Execution and safety fields store the compatible archetype, structure,
+  framework, hook, CTA, argument outline, optional resource, allowed claims,
+  and claim boundaries.
+- The planner loads universal selection guidance, while drafting and QA load
+  only the selected craft sections.
+- Up to five distinct ideas may be returned; core arguments and angle types
+  must differ, and at most one may be a resource/comment-gated idea.
 - Safe LLM logs only.
 
 Test:
@@ -880,7 +894,16 @@ Acceptance Criteria:
 
 - Idea cards/table display required fields.
 - Founder Direction can be saved.
+- Compact generated strategy summary is visible on each idea.
+- Collapsed Advanced controls allow safe angle, post-structure, approved
+  Content Resource, and CTA overrides.
 - `client_user` can save Founder Direction.
+- `client_user`, `client_admin`, and `agency_admin` can save safe idea-level overrides.
+- A Resources page lets all workspace roles view saved resources and lets
+  Agency/Account Admins create, update, approve, deactivate, and archive them.
+- Resource selection automatically pairs `resource_post` with `comment_gate`.
+- Comment gating is disabled when one of the five most recent active,
+  non-rejected posts already uses it.
 - Direction is passed to post generation.
 - Audit logs written.
 
@@ -915,6 +938,8 @@ Output:
 - proof_notes
 - risk_notes
 - cta_intent
+- qa_result
+- format_recommendation
 - source_context_used
 
 Acceptance Criteria:
@@ -922,10 +947,18 @@ Acceptance Criteria:
 - Generates one post from one idea.
 - No invented proof/metrics/stories/results.
 - Uses banned topic rules.
+- Reuses an unchanged current plan and replans only when plan inputs changed.
+- Runs deterministic checks for scaffolding, banned language, unsupported numeric claims and quotes, CTA count, taxonomy validity, source-mode drift, and invalid resource/comment-gate pairing.
+- Runs a separate AI QA/finalization stage.
+- QA returns pass, revised, or blocked; blocked drafts are not stored.
+- Stores structured `qa_result` for pass/revised posts.
+- Stores one advisory format recommendation for pass/revised text posts without
+  creating carousel, video, poll, or newsletter assets.
 - Starts in review status.
 - Safe logs only.
 - Model routing: `OPENROUTER_CONTENT_MODEL` falling back to `OPENROUTER_MODEL`.
-- Private planning scaffolding hygiene: checks hook, body, CTA copy. Corrective retry if tags appear, then falls back to safe generic error.
+- Private planning scaffolding hygiene is enforced before and after QA.
+- One bounded corrective QA retry is allowed.
 - One active post per content idea: partial unique database index context. Existing post returned on racing requests. UI shows "Post Drafted" and disables generation once generated.
 
 Test:
@@ -965,6 +998,7 @@ Actions:
 Acceptance Criteria:
 
 - Review page shows post and metadata.
+- Review page shows the advisory next-format recommendation.
 - Needs Edit stores edit_note.
 - Redraft uses edit_note.
 - Approve sets approved_at.
@@ -1150,6 +1184,9 @@ Acceptance Criteria:
 - [x] TrendCard audit counts only actual used → relevant transitions.
 - [x] Duplicate Collected Article delete route removed; canonical `/market-items/` remains.
 - [x] Normal confirmation dialog for most records; typed "DELETE" confirmation for approved/published posts.
+- [x] Admin-only bulk selection and deletion for visible Collected Articles, TrendCards, Content Ideas, and Posts.
+- [x] Deliberate selection mode with mixed-state Select All, Shift-click range selection, selected-card highlighting, Clear/Cancel actions, and a 100-record cap.
+- [x] One validated batch request delegates to the existing per-record delete services and reports partial success without cascading through dependencies; failed records remain selected.
 - [ ] Verified on staging/production (Pending manual verification)
 
 Commits:
@@ -1201,6 +1238,24 @@ Rules:
 
 Suggested Commit:
 `feat: expand posts and research filters`
+
+## V2.03 — Founder Experience Templates [Deferred]
+
+Deferred structured templates for capturing different kinds of founder
+experience, such as a winning result, mistake and lesson, decision, process
+change, client example, or behind-the-build event.
+
+Rules:
+
+- The current free-form Founder Experience flow remains unchanged.
+- Templates must improve evidence capture without forcing every experience into
+  the same narrative.
+- Metrics, before/after states, timelines, and attributable quotes remain
+  optional and must never be inferred.
+- Templates may not introduce a new idea source mode.
+
+Suggested Commit:
+`feat: add founder experience capture templates`
 
 ---
 

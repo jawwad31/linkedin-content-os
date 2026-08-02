@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Manual local Supabase fixture helper; it is not application or test code.
+    "test-setup.js",
   ]),
 ]);
 

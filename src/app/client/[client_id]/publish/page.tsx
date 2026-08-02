@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/ui/page-header";
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { getReviewPosts } from "@/features/posts/review/queries";
 import { PublishQueuePanel } from "@/features/publish/publish-queue-panel";
 import { getServerUser } from "@/lib/supabase/session";
+import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 
 export default async function PublishPage({
   params,
@@ -18,7 +18,8 @@ export default async function PublishPage({
     redirect("/login");
   }
 
-  const role = await getCurrentUserRoleForClient(user.id, clientId);
+  const access = await getCurrentUserAccessForClient(user.id, clientId);
+  const role = access?.role ?? null;
   const postsResult = role ? await getReviewPosts(clientId) : null;
   const posts = postsResult?.ok ? postsResult.posts : [];
   const approvedPosts = posts.filter((post) => post.status === "approved");
@@ -36,6 +37,7 @@ export default async function PublishPage({
           <PublishQueuePanel
             clientId={clientId}
             role={role}
+            permissions={access?.permissions ?? []}
             approvedPosts={approvedPosts}
             publishedPosts={publishedPosts}
           />

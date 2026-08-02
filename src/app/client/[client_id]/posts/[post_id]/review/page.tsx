@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   Globe,
+  LayoutTemplate,
   Repeat,
   ShieldCheck,
   Target,
@@ -15,13 +16,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { getReviewPost, type ReviewPostStatus } from "@/features/posts/review/queries";
 import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
 import { PostReviewActions } from "@/features/posts/review/post-review-actions";
-import { canRoleManageWorkflowReview } from "@/lib/access/roles";
+import {
+  canRoleDraftPosts,
+  canRoleManageWorkflowReview,
+  canRoleReviewPosts,
+} from "@/lib/access/roles";
+import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/date";
 import { getServerUser } from "@/lib/supabase/session";
+import type { FormatRecommendation } from "@/lib/ai/playbooks/contracts";
 
 const STATUS_LABELS: Record<ReviewPostStatus, string> = {
   review: "Review",
@@ -46,6 +52,14 @@ const SOURCE_LABELS: Record<string, string> = {
   founder_experience: "Founder Experience",
   trend_card: "TrendCard",
   trend_reaction: "Trend Reaction",
+};
+
+const FORMAT_LABELS: Record<FormatRecommendation["primaryFormat"], string> = {
+  text: "Text post",
+  carousel: "Carousel",
+  video: "Video",
+  poll: "Poll",
+  newsletter: "Newsletter",
 };
 
 function compactJson(value: unknown): string | null {
@@ -183,6 +197,57 @@ function CtaIntentCard({ value }: { value: string | null }) {
   );
 }
 
+function FormatRecommendationCard({
+  value,
+}: {
+  value: FormatRecommendation | null;
+}) {
+  if (!value) return null;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-soft-white p-5">
+      <div className="flex items-center gap-2">
+        <LayoutTemplate
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-brand-purple"
+        />
+        <h3 className="text-small font-semibold text-secondary-dark">
+          Suggested Next Format
+        </h3>
+      </div>
+      <div>
+        <Badge variant="outline">{FORMAT_LABELS[value.primaryFormat]}</Badge>
+        <p className="mt-2 text-small leading-relaxed text-near-black">
+          {value.rationale}
+        </p>
+      </div>
+      {value.alternativeFormats.length > 0 ? (
+        <p className="text-caption text-muted-foreground">
+          Alternatives:{" "}
+          {value.alternativeFormats
+            .map((format) => FORMAT_LABELS[format])
+            .join(", ")}
+        </p>
+      ) : null}
+      {value.adaptationNotes.length > 0 ? (
+        <details className="group">
+          <summary className="cursor-pointer text-caption font-medium text-secondary-dark">
+            Adaptation notes
+          </summary>
+          <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-caption text-muted-foreground">
+            {value.adaptationNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      <p className="text-caption text-muted-foreground">
+        Advisory only. The saved draft remains a text post.
+      </p>
+    </div>
+  );
+}
+
 export default async function PostReviewPage({
   params,
 }: {
@@ -195,8 +260,8 @@ export default async function PostReviewPage({
     redirect("/login");
   }
 
-  const role = await getCurrentUserRoleForClient(user.id, clientId);
-  if (!role) {
+  const access = await getCurrentUserAccessForClient(user.id, clientId);
+  if (!access) {
     return (
       <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
         You do not have access to this client.
@@ -227,7 +292,9 @@ export default async function PostReviewPage({
   }
 
   const { post, client } = postResult;
-  const canManage = canRoleManageWorkflowReview(role);
+  const canReview = canRoleReviewPosts(access.role, access.permissions);
+  const canRedraft = canRoleDraftPosts(access.role, access.permissions);
+  const canDelete = canRoleManageWorkflowReview(access.role);
   const sourceContext = compactJson(post.sourceContextUsed);
   const displayName = client.founderName ?? client.name;
 
@@ -263,7 +330,7 @@ export default async function PostReviewPage({
             </p>
           ) : null}
         </div>
-        {canManage ? (
+        {canDelete ? (
           <PostDeleteButton clientId={clientId} post={post} redirectToPosts />
         ) : null}
       </div>
@@ -297,16 +364,17 @@ export default async function PostReviewPage({
           </div>
 
           {/* Review actions form panel at the bottom of the preview */}
-          {canManage ? (
+          {canReview || canRedraft ? (
             <PostReviewActions
               clientId={clientId}
               postId={post.id}
               status={post.status}
+              canReview={canReview}
+              canRedraft={canRedraft}
             />
           ) : (
             <div className="rounded-control border border-border-grey bg-white px-4 py-3 text-small text-muted-foreground">
-              Client Users can view this draft but cannot approve, reject, mark
-              needs edit, or delete posts.
+              Your Account access does not include Post review actions.
             </div>
           )}
         </div>
@@ -328,6 +396,7 @@ export default async function PostReviewPage({
           <ProofNotesCard value={post.proofNotes} />
           <RiskNotesCard value={post.riskNotes} />
           <CtaIntentCard value={post.ctaIntent} />
+          <FormatRecommendationCard value={post.formatRecommendation} />
 
           {sourceContext ? (
             <details className="group rounded-control border border-border-grey open:bg-soft-white/60">

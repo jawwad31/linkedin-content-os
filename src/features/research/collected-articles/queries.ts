@@ -2,6 +2,11 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
+import {
+  DEFAULT_COLLECTED_ARTICLE_PAGE_SIZE,
+  type CollectedArticlePageSize,
+} from "./pagination";
+
 export type CollectedArticleStatus = "new" | "relevant" | "irrelevant" | "used";
 
 export type CollectedArticle = {
@@ -27,7 +32,11 @@ type CollectedArticleRow = {
 };
 
 export type RecentCollectedArticlesResult =
-  | { ok: true; articles: CollectedArticle[] }
+  | {
+      ok: true;
+      articles: CollectedArticle[];
+      pagination: CollectedArticlesPagination;
+    }
   | { ok: false };
 
 export type CollectedArticleStatusFilter = CollectedArticleStatus | "all";
@@ -39,6 +48,13 @@ export type CollectedArticleCounts = Record<CollectedArticleStatus, number> & {
 export type CollectedArticleCountsResult =
   | { ok: true; counts: CollectedArticleCounts }
   | { ok: false };
+
+export type CollectedArticlesPagination = {
+  page: number;
+  pageSize: CollectedArticlePageSize;
+  total: number;
+  totalPages: number;
+};
 
 const ARTICLE_STATUSES: CollectedArticleStatus[] = [
   "new",
@@ -65,14 +81,19 @@ export function parseArticleStatusFilter(
 export async function getRecentCollectedArticles(
   clientId: string,
   status: CollectedArticleStatusFilter = "all",
-  limit = 20,
+  page = 1,
+  pageSize: CollectedArticlePageSize = DEFAULT_COLLECTED_ARTICLE_PAGE_SIZE,
 ): Promise<RecentCollectedArticlesResult> {
   const supabase = await createClient();
+  const safePage = Math.max(1, Math.floor(page));
+  const from = (safePage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let query = supabase
     .from("market_signal_items")
     .select(
       "id, title, source_name, status, relevance_score, classification_reason, published_at, url",
+      { count: "exact" },
     )
     .eq("client_id", clientId)
     .is("deleted_at", null);
@@ -81,9 +102,9 @@ export async function getRecentCollectedArticles(
     query = query.eq("status", status);
   }
 
-  const { data, error } = await query
+  const { data, count, error } = await query
     .order("collected_at", { ascending: false })
-    .limit(limit)
+    .range(from, to)
     .returns<CollectedArticleRow[]>();
 
   if (error) return { ok: false };
@@ -100,6 +121,12 @@ export async function getRecentCollectedArticles(
       publishedAt: row.published_at,
       url: row.url,
     })),
+    pagination: {
+      page: safePage,
+      pageSize,
+      total: count ?? 0,
+      totalPages: Math.max(1, Math.ceil((count ?? 0) / pageSize)),
+    },
   };
 }
 

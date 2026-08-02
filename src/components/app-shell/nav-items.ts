@@ -7,6 +7,7 @@ import {
   Send,
   Settings,
   FileText,
+  Library,
 } from "lucide-react";
 
 export type NavItem = {
@@ -47,6 +48,12 @@ export function getNavItems(clientId: string): NavItem[] {
       label: "Ideas",
       href: `/client/${clientId}/ideas`,
       icon: Lightbulb,
+      accent: "purple",
+    },
+    {
+      label: "Resources",
+      href: `/client/${clientId}/resources`,
+      icon: Library,
       accent: "purple",
     },
     {

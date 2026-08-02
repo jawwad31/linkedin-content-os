@@ -4,7 +4,8 @@ import {
   type ReactionType,
 } from "@/features/research/trend-cards/schemas";
 import {
-  canRoleMutateClientWorkflow,
+  canRoleManageIdeas,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatDateOnly, formatUtcDate } from "@/lib/format/date";
@@ -254,13 +255,15 @@ function SourceGroup({
 export function IdeaSourceLauncher({
   clientId,
   role,
+  permissions,
   sources,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   sources: IdeaSources;
 }) {
-  const canGenerate = canRoleMutateClientWorkflow(role);
+  const canGenerate = canRoleManageIdeas(role, permissions);
 
   return (
     <div className="flex flex-col gap-5">

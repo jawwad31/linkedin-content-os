@@ -8,12 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
 import { ContentIdeasPanel } from "@/features/ideas/management/content-ideas-panel";
 import { IdeaSourceLauncher } from "@/features/ideas/management/idea-source-launcher";
 import { getContentIdeas } from "@/features/ideas/management/queries";
 import { getIdeaSources } from "@/features/ideas/management/source-queries";
 import { getServerUser } from "@/lib/supabase/session";
+import { getContentResources } from "@/features/resources/queries";
+import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 
 export default async function IdeasPage({
   params,
@@ -27,10 +28,15 @@ export default async function IdeasPage({
     redirect("/login");
   }
 
-  const role = await getCurrentUserRoleForClient(user.id, clientId);
-  const [ideasResult, sourcesResult] = role
-    ? await Promise.all([getContentIdeas(clientId), getIdeaSources(clientId)])
-    : [null, null];
+  const access = await getCurrentUserAccessForClient(user.id, clientId);
+  const role = access?.role ?? null;
+  const [ideasResult, sourcesResult, resourcesResult] = role
+    ? await Promise.all([
+        getContentIdeas(clientId),
+        getIdeaSources(clientId),
+        getContentResources(clientId),
+      ])
+    : [null, null, null];
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +59,7 @@ export default async function IdeasPage({
               <IdeaSourceLauncher
                 clientId={clientId}
                 role={role}
+                permissions={access?.permissions ?? []}
                 sources={sourcesResult.sources}
               />
             ) : (
@@ -78,7 +85,16 @@ export default async function IdeasPage({
               <ContentIdeasPanel
                 clientId={clientId}
                 role={role}
+                permissions={access?.permissions ?? []}
                 ideas={ideasResult.ideas}
+                resources={
+                  resourcesResult?.ok
+                    ? resourcesResult.resources.filter(
+                        (resource) =>
+                          resource.active && resource.commentGateApproved,
+                      )
+                    : []
+                }
               />
             ) : (
               <p className="text-small text-danger-strong">

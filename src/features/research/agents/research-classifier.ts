@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { writeAuditLog } from "@/lib/audit/log";
+import { loadStagePlaybook } from "@/lib/ai/playbooks/loader";
 import { writeLlmLog } from "@/lib/llm/log";
 import {
   getOpenRouterConfig,
@@ -108,12 +109,15 @@ async function getUnclassifiedItems(
   }));
 }
 
-function buildPrompt(
+export async function buildResearchClassificationPrompt(
   context: ClientBusinessContext,
   items: ClassifiableItem[],
-): { system: string; user: string } {
+): Promise<{ system: string; user: string }> {
+  const playbook = await loadStagePlaybook("research-classification");
   const system = [
     "You are a research classification assistant for a B2B content operating system.",
+    "Follow the production playbook below as binding methodology.",
+    playbook,
     "Classify each article for relevance to this client's ICP and content strategy.",
     'The status field must be exactly the word "relevant" or exactly the word "irrelevant" — no other value, category, or label is allowed, ever.',
     "Relevant means useful for this client's ICP/content strategy.",
@@ -130,8 +134,6 @@ function buildPrompt(
       business_description: context.businessDescription,
       primary_icp: context.primaryIcp,
       main_offer: context.mainOffer,
-      core_pov: context.corePov,
-      content_pillars: context.contentPillars,
       research_keywords: context.researchKeywords,
       banned_topics: context.bannedTopics,
     },
@@ -177,7 +179,7 @@ async function classifyBatch(
   batch: ClassifiableItem[],
 ): Promise<BatchOutcome> {
   const validIds = new Set(batch.map((item) => item.id));
-  const { system, user } = buildPrompt(context, batch);
+  const { system, user } = await buildResearchClassificationPrompt(context, batch);
 
   const result = await requestStructuredCompletion(
     config,

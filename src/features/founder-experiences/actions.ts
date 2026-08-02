@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canMutateClientWorkflow } from "@/lib/access/client-access";
+import { canManageFounderExperiences } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -44,7 +44,7 @@ async function verifyWorkflowContributor(
   const { user } = await getServerUser();
   if (!user) return { ok: false };
 
-  const canMutate = await canMutateClientWorkflow(user.id, clientId);
+  const canMutate = await canManageFounderExperiences(user.id, clientId);
   if (!canMutate) return { ok: false };
 
   return { ok: true, userId: user.id };
@@ -190,6 +190,8 @@ export async function archiveFounderExperienceAction(
   _prevState: ArchiveFounderExperienceState,
   _formData: FormData,
 ): Promise<ArchiveFounderExperienceState> {
+  void _prevState;
+  void _formData;
   const clientIdResult = uuidSchema.safeParse(clientId);
   const experienceIdResult = uuidSchema.safeParse(experienceId);
   if (!clientIdResult.success || !experienceIdResult.success) {

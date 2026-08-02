@@ -13,7 +13,7 @@ import type { AccessibleClient } from "./queries";
 export function ClientList({
   clients,
   emptyTitle = "You have no Client Workspaces yet.",
-  emptyDescription = "Ask an admin to invite you, or check back once a Client Workspace has been set up for you.",
+  emptyDescription = "Ask an administrator to add your Account access, or check back once an Account has been set up for you.",
 }: {
   clients: AccessibleClient[];
   emptyTitle?: string;

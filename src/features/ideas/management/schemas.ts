@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  ANGLE_TYPES,
+  CTA_TYPES,
+  POST_STRUCTURES,
+} from "@/lib/ai/playbooks/taxonomies";
+
 export const FOUNDER_DIRECTION_MAX_LENGTH = 2000;
 
 export const founderDirectionRequestSchema = z.object({
@@ -14,4 +20,17 @@ export const founderDirectionRequestSchema = z.object({
 
 export type FounderDirectionRequest = z.infer<
   typeof founderDirectionRequestSchema
+>;
+
+export const strategyOverridesRequestSchema = z
+  .object({
+    angleType: z.enum(ANGLE_TYPES).nullable().optional(),
+    postStructure: z.enum(POST_STRUCTURES).nullable().optional(),
+    ctaType: z.enum(CTA_TYPES).nullable().optional(),
+    resourceId: z.string().uuid().nullable().optional(),
+  })
+  .strict();
+
+export type StrategyOverridesRequest = z.infer<
+  typeof strategyOverridesRequestSchema
 >;

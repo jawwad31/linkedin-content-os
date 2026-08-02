@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ReviewPost } from "@/features/posts/review/queries";
 import {
-  canRoleManageWorkflowReview,
+  canRolePublishPosts,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
@@ -24,13 +25,15 @@ function formatDate(value: string | null): string {
 function ReadyToPublishCard({
   clientId,
   role,
+  permissions,
   post,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   post: ReviewPost;
 }) {
-  const canMarkPublished = canRoleManageWorkflowReview(role);
+  const canMarkPublished = canRolePublishPosts(role, permissions);
   const approvedLabel = `Approved ${formatDate(post.approvedAt)}`;
 
   return (
@@ -117,11 +120,13 @@ function PublishedHistoryCard({
 export function PublishQueuePanel({
   clientId,
   role,
+  permissions,
   approvedPosts,
   publishedPosts,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   approvedPosts: ReviewPost[];
   publishedPosts: ReviewPost[];
 }) {
@@ -167,6 +172,7 @@ export function PublishQueuePanel({
                 key={post.id}
                 clientId={clientId}
                 role={role}
+                permissions={permissions}
                 post={post}
               />
             ))}

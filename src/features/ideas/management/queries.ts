@@ -1,6 +1,12 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  generationPlanV2Schema,
+  strategyOverridesSchema,
+  type GenerationPlanV2,
+  type StrategyOverrides,
+} from "@/lib/ai/playbooks/contracts";
 
 export type ContentIdeaSourceType =
   | "founder_experience"
@@ -23,6 +29,8 @@ export type ContentIdea = {
   angleBoundary: string | null;
   proofNotes: string | null;
   founderDirection: string | null;
+  generationPlan: GenerationPlanV2 | null;
+  strategyOverrides: StrategyOverrides;
   status: ContentIdeaStatus;
   existingPostId: string | null;
   createdAt: string;
@@ -40,6 +48,8 @@ type ContentIdeaRow = {
   angle_boundary: string | null;
   proof_notes: string | null;
   founder_direction: string | null;
+  generation_plan: unknown;
+  strategy_overrides: unknown;
   status: ContentIdeaStatus;
   created_at: string;
 };
@@ -99,7 +109,7 @@ export async function getContentIdeas(
   const { data, error } = await supabase
     .from("content_ideas")
     .select(
-      "id, source_type, source_context, angle, buyer_pain, commercial_relevance, belief_shift, content_pillar, angle_boundary, proof_notes, founder_direction, status, created_at",
+      "id, source_type, source_context, angle, buyer_pain, commercial_relevance, belief_shift, content_pillar, angle_boundary, proof_notes, founder_direction, generation_plan, strategy_overrides, status, created_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -136,6 +146,8 @@ export async function getContentIdeas(
     ok: true,
     ideas: data.map((row) => {
       const source = formatSourceContext(row.source_context);
+      const plan = generationPlanV2Schema.safeParse(row.generation_plan);
+      const overrides = strategyOverridesSchema.safeParse(row.strategy_overrides);
       return {
         id: row.id,
         sourceType: row.source_type,
@@ -150,6 +162,8 @@ export async function getContentIdeas(
         angleBoundary: row.angle_boundary,
         proofNotes: row.proof_notes,
         founderDirection: row.founder_direction,
+        generationPlan: plan.success ? plan.data : null,
+        strategyOverrides: overrides.success ? overrides.data : {},
         status: row.status,
         existingPostId: postIdByIdeaId.get(row.id) ?? null,
         createdAt: row.created_at,

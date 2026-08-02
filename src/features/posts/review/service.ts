@@ -3,7 +3,12 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canManageWorkflowReview } from "@/lib/access/client-access";
+import {
+  canAccessClient,
+  canManageWorkflowReview,
+  canPublishPosts,
+  canReviewPosts,
+} from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -45,7 +50,7 @@ const NO_ACCESS = {
 const REVIEW_FORBIDDEN = {
   ok: false as const,
   code: "FORBIDDEN",
-  message: "You do not have permission to review or publish posts for this Client Workspace.",
+  message: "You do not have permission to perform this Post action.",
 };
 
 const POST_NOT_AVAILABLE = {
@@ -73,6 +78,7 @@ type AuthorizedMutation =
 async function authorizeMutation(
   clientId: string,
   postId: string,
+  permission: "review" | "publish" | "archive",
 ): Promise<AuthorizedMutation> {
   const { user } = await getServerUser();
   if (!user) return { ok: false, failure: AUTH_REQUIRED };
@@ -86,8 +92,13 @@ async function authorizeMutation(
   const hasAccess = await canAccessClient(user.id, clientIdResult.data);
   if (!hasAccess) return { ok: false, failure: NO_ACCESS };
 
-  const canReview = await canManageWorkflowReview(user.id, clientIdResult.data);
-  if (!canReview) {
+  const allowed =
+    permission === "review"
+      ? await canReviewPosts(user.id, clientIdResult.data)
+      : permission === "publish"
+        ? await canPublishPosts(user.id, clientIdResult.data)
+        : await canManageWorkflowReview(user.id, clientIdResult.data);
+  if (!allowed) {
     return { ok: false, failure: REVIEW_FORBIDDEN };
   }
 
@@ -210,7 +221,11 @@ async function getAuthorizedPostForAction(
   | { ok: true; auth: Extract<AuthorizedMutation, { ok: true }>; post: PostStatusRow }
   | { ok: false; failure: ServiceResult<never> }
 > {
-  const auth = await authorizeMutation(clientId, postId);
+  const auth = await authorizeMutation(
+    clientId,
+    postId,
+    action === "archive" ? "archive" : "review",
+  );
   if (!auth.ok) return { ok: false, failure: auth.failure };
 
   const post = await getPostStatus(auth.clientId, auth.postId);
@@ -321,7 +336,7 @@ export async function markPostPublished(
   clientId: string,
   postId: string,
 ): Promise<ServiceResult<Record<string, never>>> {
-  const auth = await authorizeMutation(clientId, postId);
+  const auth = await authorizeMutation(clientId, postId, "publish");
   if (!auth.ok) return auth.failure;
 
   const post = await getPostStatus(auth.clientId, auth.postId);

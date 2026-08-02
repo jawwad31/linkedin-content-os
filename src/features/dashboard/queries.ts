@@ -9,11 +9,7 @@ type ClientSetupFieldsRow = {
   business_description: string | null;
   primary_icp: string | null;
   main_offer: string | null;
-  core_pov: string | null;
-  content_pillars: unknown;
-  research_keywords: unknown;
-  approved_proof: unknown;
-  publishing_preferences: unknown;
+  founder_voice_sample: string | null;
 };
 
 const SETUP_FIELD_KEYS = [
@@ -23,11 +19,7 @@ const SETUP_FIELD_KEYS = [
   "business_description",
   "primary_icp",
   "main_offer",
-  "core_pov",
-  "content_pillars",
-  "research_keywords",
-  "approved_proof",
-  "publishing_preferences",
+  "founder_voice_sample",
 ] as const satisfies readonly (keyof ClientSetupFieldsRow)[];
 
 function isFieldComplete(value: unknown): boolean {

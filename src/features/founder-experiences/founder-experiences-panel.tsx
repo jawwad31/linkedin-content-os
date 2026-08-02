@@ -6,7 +6,8 @@ import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  canRoleMutateClientWorkflow,
+  canRoleManageFounderExperiences,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { cn } from "@/lib/utils";
@@ -18,13 +19,15 @@ import type { FounderExperience } from "./queries";
 export function FounderExperiencesPanel({
   clientId,
   role,
+  permissions,
   experiences,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   experiences: FounderExperience[];
 }) {
-  const canManage = canRoleMutateClientWorkflow(role);
+  const canManage = canRoleManageFounderExperiences(role, permissions);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
@@ -73,6 +76,7 @@ export function FounderExperiencesPanel({
                 key={experience.id}
                 clientId={clientId}
                 role={role}
+                permissions={permissions}
                 experience={experience}
               />
             ))}

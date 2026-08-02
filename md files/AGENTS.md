@@ -50,7 +50,7 @@ The system prioritizes:
 The system must avoid:
 
 - fake proof
-- comment bait
+- generic comment bait; controlled resource gating is allowed only for an active approved Content Resource
 - generic creator-growth advice
 - automatic publishing
 - visual/image generation
@@ -78,6 +78,7 @@ Important details:
 
 Important rules:
 - Business context is always-on background context.
+- Business context is never a fourth idea source.
 - Business context is not a standalone generation mode.
 - There must be no `business_context_only` mode.
 - Humans review before posts move to publish queue.
@@ -124,7 +125,7 @@ Do not design for public self-serve signup in v1.
 | Budget target | Under $50/month during MVP |
 | Signup | No public signup |
 | Collaboration | One user can access multiple clients; multiple users can access one client |
-| Invitations | Email invitations |
+| User provisioning | Manual administrator creation; no invitation or reset email |
 | Access model | Agency model with `agency_admin`, `client_admin`, and `client_user` only |
 | Audit logs | Lightweight logs: user, action, timestamp, client |
 | Delete policy | Soft delete by default; Admin hard delete for 6 specific entity types; hard delete temporary logs |
@@ -163,10 +164,10 @@ Verified live migration state on 2026-07-10:
 
 Role rules:
 
-- `agency_admin` can access all Client Workspaces under the Agency, manage Settings, manage client users, manage RSS sources, run Research Agent, approve/reject/mark published, and view operational logs.
-- `client_admin` can access only assigned Client Workspaces, manage Settings, manage client users, manage RSS sources, run Research Agent, and approve/reject/mark published. `client_admin` cannot access Agency-level pages or agency-admin-only operational logs.
-- `client_user` can access only assigned Client Workspaces, create/edit safe workflow content records, mark articles relevant/irrelevant, add a Trend Reaction (one per TrendCard), generate Ideas, add Founder Direction, generate Posts, and copy approved posts.
-- `client_user` cannot edit Settings/business context, manage users, manage RSS sources, run Research Agent, approve/reject/archive posts, mark posts published, view operational logs, access Agency-level pages, or access other Client Workspaces.
+- `agency_admin` (Agency Admin) can access all Accounts under the Agency, manage Agency and Account users, set temporary passwords, manage Settings and research sources, run the Research Agent, and use every workflow capability.
+- `client_admin` (Account Admin) can access only assigned Accounts and manage their Settings, users, research sources, and full workflow. An Account Admin may reset a user password only when that user has no Agency or other Account access.
+- `client_user` (Account User) can access only assigned Accounts. Its write access is selected per membership from `research_contribute`, `founder_experience_manage`, `ideas_manage`, `posts_draft`, `posts_review`, and `posts_publish`.
+- `client_user` cannot edit Settings/business context, manage users, manage RSS sources, run the Research Agent, hard-delete business records, view operational logs, access Agency-level pages, or access other Accounts. Unselected workflow permissions are denied server-side and by RLS.
 
 ---
 
@@ -210,7 +211,7 @@ Never copy from either reference:
 Build in v1:
 
 1. Supabase Auth login with no public signup.
-2. Email invitations for client collaboration.
+2. Manual administrator-created users with temporary passwords; no SMTP or email invitation flow.
 3. Client selector with many users ↔ many clients.
 4. Agency access roles: `agency_admin`, `client_admin`, and `client_user`.
 5. Client Settings / always-on business context.
@@ -381,17 +382,27 @@ linkedin-content-os
 │   └── skills
 │       ├── content/SKILL.md
 │       ├── planning/SKILL.md
-│       └── research/SKILL.md
+│       ├── research/SKILL.md
+│       └── review/SKILL.md
 └── resources
     ├── context/business-context.md
-    ├── craft/cta-engagement.md
-    ├── craft/formats.md
+    ├── craft/body-frameworks.md
+    ├── craft/cta.md
     ├── craft/hooks.md
-    ├── craft/storytelling.md
-    └── principles
-        ├── icp-first-content.md
-        └── proof-safety.md
+    ├── craft/linkedin-writing-guide.md
+    ├── principles/icp-first-content.md
+    ├── principles/source-proof-safety.md
+    ├── quality/final-qa.md
+    ├── research/article-classification.md
+    ├── research/trend-card-synthesis.md
+    ├── strategy/angle-types.md
+    ├── strategy/content-strategy.md
+    └── strategy/post-structures.md
 ```
+
+`SKILL.md` is a compact Codex/developer router and is never injected into
+application prompts. Production stages load only explicitly allowlisted stage
+skills and resources through the server-only TypeScript playbook manifest.
 
 Do not create:
 
@@ -467,15 +478,15 @@ Turn source material into Content Ideas.
 
 Always receives business context:
 
+- business description
 - ICP
 - offer
-- POV
-- content pillars
-- approved proof
+- approved evidence
 - banned topics
-- founder voice
-- reference material
-- publishing preferences
+
+Founder voice, style inspiration, and phrase preferences are drafting/review
+inputs, not idea sources. Content Resources are separately managed and are
+available only for compatible resource-post planning.
 
 Allowed modes only:
 
@@ -501,6 +512,25 @@ Output contract:
 - `angle_boundary`
 - `source_context`
 - `proof_notes`
+- complete `generation_plan` matching `GenerationPlanV2`
+
+`GenerationPlanV2` contains:
+
+- exactly one of the three source modes
+- a visible eight-part strategy: target ICP, current belief, desired belief,
+  core argument, source anchor, proof, angle, and risk/readiness
+- hidden safety fields for allowed claims and claim boundaries
+- one of 15 angle types
+- one of 6 content archetypes, including controlled `resource_post`
+- one of 4 macro post structures
+- one of 6 body frameworks
+- one of 7 hook types
+- one of 7 CTA types, including `comment_gate` and `none`
+- an argument outline and optional approved resource ID
+
+All generated posts remain text in this version. Review may store an advisory
+recommendation for text, carousel, video, poll, or newsletter without creating
+that asset.
 
 Current Agent Behavior:
 - **Always-on Context**: Business context is injected into every Planning run.
@@ -509,12 +539,14 @@ Current Agent Behavior:
 - **Angle Deduplication**: Excludes filler and duplicate angles that overlap with recent content ideas.
 - **Factual Restraints**: Never invents proof, results, metrics, stories, quotes, or experiences.
 - **POV Rules**: TrendCard sources provide market context, not founder experience. Trend Reaction uses the founder's reaction text as the primary POV.
+- **Plan Persistence**: New ideas store the plan, version, input hash, and safe idea-level overrides. Generate Post reuses a compatible current plan and replans only when inputs changed.
 
 ### Content Agent
 
 Purpose:
 
-Turn one approved ContentIdea into a final LinkedIn post.
+Turn one approved ContentIdea and stored GenerationPlanV2 into a draft for
+independent QA.
 
 Inputs:
 
@@ -522,8 +554,9 @@ Inputs:
 - business context
 - founder_direction
 - approved proof
-- reference material
-- edit_note when redrafting
+- selected source material
+- optional selected approved Content Resource
+- GenerationPlanV2
 
 Output contract:
 
@@ -541,7 +574,8 @@ Rules:
 - do not invent founder stories
 - do not invent client results
 - do not use banned topics
-- do not use comment bait
+- use comment gating only for a selected active approved Content Resource, with
+  the saved keyword and no automatic-delivery promise
 - do not use generic P.S. engagement questions
 - do not write for competitors/generic creators
 - write for the ICP
@@ -550,7 +584,23 @@ Rules:
 Current Agent Behavior:
 - **Model Routing**: Router targets `OPENROUTER_CONTENT_MODEL` if configured, falling back to `OPENROUTER_MODEL` otherwise. (Do not hardcode specific model names).
 - **One Post per Idea Workflow**: One approved/ready Content Idea generates exactly one active Post. A partial unique index enforces this constraint (`deleted_at IS NULL` context). Repeated generation requests return the existing active Post instead of duplicating it, and race conditions are handled safely. The Idea status becomes `used` once its Post is successfully generated. The Ideas list shows `Post Drafted` and `Open Post`, and disabling the generation action. Alternative drafts must be requested using the Needs Edit → Edit Note → Redraft workflow.
-- **Scaffolding Hygiene**: Planning metadata (buyer pain, belief shift, commercial relevance, content pillar, angle boundary, source context, proof notes, target ICP) is private and must not appear as internal labels in public Post copy. The belief shift must be expressed naturally. A hygiene check scans hooks, bodies, and CTAs. One corrective retry is performed if scaffolding tags are detected; a second failure returns a safe generic error. Raw prompts and generated Posts are not logged in LLM logs.
+- **Scaffolding Hygiene**: Planning metadata is private and must not appear as internal labels in public Post copy. Deterministic checks scan scaffolding, banned language, unsupported numbers and quotes, multiple CTAs, taxonomy values, and source-mode drift.
+- **Independent Review**: A separate QA/finalization agent checks source fidelity, credibility, ICP fit, belief-shift clarity, voice, structure, CTA fit, and readability. It returns `pass`, `revised`, or `blocked`. Pass/revised posts enter human review; blocked drafts are not stored. One bounded corrective QA retry is allowed.
+- **Safe Logging**: Raw prompts, sensitive context, drafts, and final posts are not written to LLM or audit logs.
+
+### Review Agent
+
+Purpose:
+
+Independently validate and safely finalize one generated draft.
+
+Persistence:
+
+- structured `qa_result` is stored only with pass/revised posts
+- structured `format_recommendation` is advisory and is stored only with a
+  pass/revised text draft
+- blocked drafts are not inserted
+- human Needs Edit, Redraft, Approve, Reject, and manual Publish remain authoritative
 
 ---
 
@@ -610,6 +660,7 @@ Agent service structure:
 src/features/research/agents/researchAgent.ts
 src/features/ideas/agents/planningAgent.ts
 src/features/posts/agents/contentAgent.ts
+src/features/posts/agents/reviewAgent.ts
 ```
 
 Each agent owns:
@@ -634,13 +685,14 @@ Protected:
 - `/client/[client_id]/dashboard` (Overview)
 - `/client/[client_id]/research` (Research)
 - `/client/[client_id]/founder-experiences` (Founder Experiences)
+- `/client/[client_id]/resources` (Content Resources)
 - `/client/[client_id]/ideas` (Ideas)
 - `/client/[client_id]/posts` (Posts)
 - `/client/[client_id]/publish` (Publish)
 - `/client/[client_id]/settings` (Settings)
 - `/client/[client_id]/posts/[post_id]/review`
 
-Primary sidebar nav order: Overview, Research, Founder Experiences, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
+Primary sidebar nav order: Overview, Research, Founder Experiences, Resources, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
 
 ---
 
@@ -654,7 +706,7 @@ The Settings page is the always-on business context editor for a client.
 - Every update is scoped by `client_id` and verifies, server-side: authenticated user, accepted access, and `agency_admin` or `client_admin` permission.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
-- Team Access / invitations remain part of Settings and must not be broken by business-context changes.
+- Account Team Access remains part of Settings and must not be broken by business-context changes. Access is created immediately; no pending invitation is created.
 - Founder Experiences entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings at all.
 
 Supported Business Context fields (on `clients`):
@@ -665,16 +717,20 @@ Supported Business Context fields (on `clients`):
 - `business_description`
 - `primary_icp`
 - `main_offer`
-- `core_pov`
-- `content_pillars`
-- `research_keywords`
 - `banned_topics`
 - `founder_voice_sample`
+- `founder_voice_examples` (up to three style-only post examples)
 - `phrases_to_use`
 - `phrases_to_avoid`
 - `approved_proof`
-- `reference_material`
-- `publishing_preferences`
+
+`research_keywords` remains on `clients` but is edited on Research, not
+Settings. Legacy POV, content-pillar, reference-material, and publishing-
+preference columns may remain for migration compatibility but are not active
+generation context.
+
+Content Resources are separate client-scoped records. They are not reference
+material and do not become a fourth source mode.
 
 ---
 
@@ -725,13 +781,9 @@ GET    /api/client/[client_id]
 PATCH  /api/client/[client_id]
 ```
 
-Invitations:
-
-```text
-POST /api/client/[client_id]/invites
-POST /api/invites/[invite_id]/accept
-POST /api/invites/[invite_id]/revoke
-```
+User management uses authenticated Server Actions from Account Settings and
+Agency Settings. Do not reintroduce public signup, pending invitation APIs, or
+email acceptance links without an approved SMTP/email phase.
 
 Founder Experiences:
 
@@ -821,6 +873,8 @@ Security & Isolation:
 - Every Delete request uses the authenticated session-bound Supabase client so that the custom DELETE RLS policies remain active.
 - No `SUPABASE_SERVICE_ROLE_KEY` bypass is used.
 - Cross-client and cross-Agency deletions are denied.
+- Bulk deletion for Collected Articles, TrendCards, Content Ideas, and Posts uses one authenticated `POST /api/client/[client_id]/batch-delete` request. The request has a strict entity allowlist, UUID validation, exact `DELETE` confirmation, a 100-record limit, and bounded server concurrency.
+- The batch endpoint delegates every item to the existing entity delete service. Per-record client scoping, dependency checks, returned-row verification, audit logging, RLS, and safe error mapping therefore remain authoritative; partial success never bypasses a failed record.
 
 Dependency & Conflict Behavior:
 - Never silently cascade-delete downstream business content. If a dependency exists, return a `DEPENDENCY_CONFLICT` (HTTP 409) status with a safe error message.
@@ -834,6 +888,7 @@ Dependency & Conflict Behavior:
 Permanent Confirmation Requirements:
 - Every Delete control requires confirmation: "Delete this {record type}? This permanently deletes \"{record title}\". This action cannot be undone."
 - For Approved or Published Posts, the API and UI require the user to type exactly "DELETE" to confirm. Deleting an internal published Post does not remove the actual LinkedIn post.
+- Every bulk delete requires the administrator to type exactly `DELETE`; dependency-blocked or failed records remain selected and are reported by safe grouped messages.
 
 Audit Logs:
 - RSS Source: `rss_source_hard_deleted`
@@ -907,16 +962,17 @@ Key fields:
 - `business_description`
 - `primary_icp`
 - `main_offer`
-- `core_pov`
-- `content_pillars`
-- `research_keywords`
+- `core_pov` (legacy; not injected into generation)
+- `content_pillars` (legacy; not injected into generation)
+- `research_keywords` (Research-only)
 - `banned_topics`
 - `founder_voice_sample`
+- `founder_voice_examples`
 - `phrases_to_use`
 - `phrases_to_avoid`
 - `approved_proof`
-- `reference_material`
-- `publishing_preferences`
+- `reference_material` (legacy; not injected into generation)
+- `publishing_preferences` (legacy; not injected into generation)
 - `deleted_at`
 
 ### client_access
@@ -928,8 +984,9 @@ Key fields:
 - `client_id`
 - `user_id`
 - `role`: client_admin | client_user
+- `permissions`: allowlisted Account User capabilities; empty for Account Admin
 - `invited_email`
-- `invitation_status`: pending | accepted | revoked
+- `invitation_status`: accepted | revoked in the active manual-provisioning flow
 - `invited_by_user_id`
 
 ### rss_sources
@@ -1021,6 +1078,25 @@ Key fields:
 - `source_trend_card_id`
 - `deleted_at`
 
+### content_resources
+
+Approved assets that may support an occasional resource post.
+
+Key fields:
+
+- `client_id`
+- `title`
+- `resource_type`
+- `description`
+- `problem_solved`
+- `target_use_case`
+- `keyword`
+- `delivery_url`
+- `delivery_instructions`
+- `active`
+- `comment_gate_approved`
+- `deleted_at`
+
 ### content_ideas
 
 Generated ideas.
@@ -1039,6 +1115,11 @@ Key fields:
 - `source_context`
 - `proof_notes`
 - `founder_direction`
+- `generation_plan`
+- `generation_plan_version`
+- `generation_plan_input_hash`
+- `strategy_overrides`
+- `selected_resource_id`
 - `status`: draft | ready | used | archived
 - `deleted_at`
 
@@ -1055,6 +1136,8 @@ Key fields:
 - `proof_notes`
 - `risk_notes`
 - `cta_intent`
+- `qa_result`
+- `format_recommendation`
 - `source_context_used`
 - `status`: review | needs_edit | approved | published | rejected
 - `edit_note`
@@ -1181,10 +1264,11 @@ The MVP is done when:
 
 - User can log in.
 - User can select a client.
-- Agency admins and client admins can invite collaborators by email, subject to client scope.
+- Agency Admins can create Agency Admins, Account Admins, and Account Users. Account Admins can create Account Admins and Account Users only inside their Account.
+- New users receive an administrator-set temporary password and must replace it at first login. Existing users keep their current password when another membership is added.
 - User roles are enforced.
 - No viewer-level role exists.
-- `client_user` can contribute to safe workflow content but cannot manage Settings, users, RSS sources, Research Agent, post approvals, publishing state, operational logs, Agency-level pages, or other Client Workspaces.
+- Account User capabilities are enforced independently from the six-permission allowlist; Account Users never manage Settings, users, RSS sources, the Research Agent, hard deletes, operational logs, Agency pages, or other Accounts.
 - Client data is scoped by `client_id`.
 - User can create/update business context.
 - User can create Founder Experiences.

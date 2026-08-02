@@ -1,70 +1,42 @@
 ---
 name: aixelerate-planning
-description: Generate multiple ranked LinkedIn post ideas for AIXelerate Content OS from founder experience, provided TrendCards, or founder reactions to TrendCards. Use when the user wants content ideas, angles, or a planning pass before writing. Each idea includes Angle, Buyer pain, and Commercial relevance.
+description: Generate distinct proof-safe Content Ideas and GenerationPlanV2 strategies from exactly one approved source mode. Use after Generate Ideas or when a selected idea must be replanned because strategy inputs changed.
 ---
 
 # Planning Agent
 
-Turn inputs into ranked LinkedIn post ideas for B2B founders and operators. Do not write final posts unless the user explicitly moves to the Content Agent workflow.
+Turn one approved source plus background business context into up to five
+distinct ideas. Every ready idea includes its complete strategy, execution
+choices, and safety boundaries. Do not write public copy.
 
-## Load First
+## Load
 
-- Business context: `{SKILL_BASE}/resources/context/business-context.md`
-- ICP-first rules: `{SKILL_BASE}/resources/principles/icp-first-content.md`
-- Proof-safety rules: `{SKILL_BASE}/resources/principles/proof-safety.md`
+- `{SKILL_BASE}/resources/context/business-context.md`
+- `{SKILL_BASE}/resources/principles/icp-first-content.md`
+- `{SKILL_BASE}/resources/principles/source-proof-safety.md`
+- `{SKILL_BASE}/resources/strategy/content-strategy.md`
+- `{SKILL_BASE}/resources/strategy/angle-types.md`
+- selection sections from post structures, hooks, body frameworks, and CTAs
 
-## Idea Source Modes
+## Source Modes
 
-Use one of three modes:
+Use exactly one:
 
-1. `founder_experience`: ideas from real founder/operator experience.
-2. `trend_card`: ideas from an approved TrendCard.
-3. `trend_reaction`: ideas from an approved TrendCard plus the founder's take or opinion.
+1. `founder_experience`
+2. `trend_card`
+3. `trend_reaction`
 
-If the mode is not stated, infer the closest mode from the input and mention the assumption.
+Never infer or introduce a fourth mode.
 
-## Ranking Criteria
+## Planning Standard
 
-Rank ideas by:
+Select ideas by ICP relevance, commercial importance, a clear belief shift,
+source fit, and proof safety. Define the eight-part visible strategy, then
+select compatible execution choices and hidden claim boundaries.
 
-- ICP relevance
-- Specific buyer pain
-- Commercial relevance to the client's offer
-- Proof-safety
-- Potential for a clear buyer belief shift
-
-Do not rank ideas by generic virality alone.
-
-## Output Format
-
-Return multiple ranked ideas:
-
-```markdown
-## Ranked post ideas
-
-### 1. [Short idea title]
-Angle: [The content angle in one sentence.]
-Buyer pain: [The specific buyer pain this speaks to.]
-Commercial relevance: [Why this matters to the business, offer, pipeline, buying decision, or category POV.]
-
-### 2. [Short idea title]
-Angle: ...
-Buyer pain: ...
-Commercial relevance: ...
-
-### 3. [Short idea title]
-Angle: ...
-Buyer pain: ...
-Commercial relevance: ...
-
-## Proof notes
-[Call out any ideas that require proof, metrics, founder experience, customer evidence, or source support before writing.]
-```
-
-## Rules
-
-- Produce buyer-relevant ideas, not generic LinkedIn topics.
-- Prefer practical tension over broad inspiration.
-- Keep each idea to one clear point.
-- Do not invent founder experience, client results, metrics, or market facts.
-- Do not include full drafts, hooks, or CTAs in planning output.
+Return strict JSON matching the application schema. Keep legacy idea fields
+populated and include one complete `GenerationPlanV2` for every idea. Return
+only ready ideas. Core arguments and angle types must be meaningfully distinct.
+At most one idea may use an approved Content Resource with `resource_post` and
+`comment_gate`. Founder Direction and safe overrides may steer strategy but
+never weaken proof rules.

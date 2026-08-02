@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/*": [".agents/skills/**/*.md", "resources/**/*.md"],
+  },
   async headers() {
     return [
       {

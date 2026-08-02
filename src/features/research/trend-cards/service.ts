@@ -5,8 +5,8 @@ import { z } from "zod";
 
 import {
   canAccessClient,
+  canContributeResearch,
   canManageWorkflowReview,
-  canMutateClientWorkflow,
   canUserDeleteBusinessRecords,
 } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -108,7 +108,7 @@ async function authorizeMutation(
 
   const isAllowed =
     permission === "workflow"
-      ? await canMutateClientWorkflow(user.id, clientIdResult.data)
+      ? await canContributeResearch(user.id, clientIdResult.data)
       : await canManageWorkflowReview(user.id, clientIdResult.data);
 
   if (!isAllowed) {

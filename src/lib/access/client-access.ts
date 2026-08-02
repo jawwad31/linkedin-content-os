@@ -6,14 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
 import {
+  CLIENT_PERMISSIONS,
   canRoleManageClientSetup,
   canRoleManageClientUsers,
   canRoleManageResearchSources,
   canRoleManageWorkflowReview,
-  canRoleMutateClientWorkflow,
   canRoleRunResearchAgent,
   canRoleViewOperationalLogs,
   type AgencyRole,
+  type ClientAccessContext,
+  type ClientPermission,
   type ClientRole,
   type EffectiveClientRole,
 } from "./roles";
@@ -28,6 +30,7 @@ export type ClientShellAccess =
       agencyId: string;
       agencyName: string | null;
       role: EffectiveClientRole;
+      permissions: ClientPermission[];
       accessibleClientCount: number;
     }
   | { ok: false };
@@ -40,6 +43,19 @@ type ClientShellRow = {
 };
 
 type RoleRow<T extends string> = { role: T };
+type ClientAccessRow = {
+  role: ClientRole;
+  permissions: unknown;
+};
+
+function toClientPermissions(value: unknown): ClientPermission[] {
+  if (!Array.isArray(value)) return [];
+  const allowed = new Set<string>(CLIENT_PERMISSIONS);
+  return value.filter(
+    (permission): permission is ClientPermission =>
+      typeof permission === "string" && allowed.has(permission),
+  );
+}
 
 export async function getUserAgencyRoleForClient(
   userId: string,
@@ -87,14 +103,83 @@ export async function getUserClientRole(
   return data.role;
 }
 
+export async function getUserClientAccess(
+  userId: string,
+  clientId: string,
+): Promise<ClientAccessRow | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("client_access")
+    .select("role, permissions")
+    .eq("client_id", clientId)
+    .eq("user_id", userId)
+    .eq("invitation_status", "accepted")
+    .maybeSingle<ClientAccessRow>();
+
+  if (error || !data) return null;
+  return data;
+}
+
+export async function getCurrentUserAccessForClient(
+  userId: string,
+  clientId: string,
+): Promise<ClientAccessContext | null> {
+  const agencyRole = await getUserAgencyRoleForClient(userId, clientId);
+  if (agencyRole) return { role: agencyRole, permissions: [] };
+
+  const access = await getUserClientAccess(userId, clientId);
+  if (!access) return null;
+
+  return {
+    role: access.role,
+    permissions: toClientPermissions(access.permissions),
+  };
+}
+
 export async function getCurrentUserRoleForClient(
   userId: string,
   clientId: string,
 ): Promise<EffectiveClientRole | null> {
+  return (await getCurrentUserAccessForClient(userId, clientId))?.role ?? null;
+}
+
+async function canUseClientPermission(
+  userId: string,
+  clientId: string,
+  permission: ClientPermission,
+): Promise<boolean> {
+  const access = await getCurrentUserAccessForClient(userId, clientId);
+  if (!access) return false;
   return (
-    (await getUserAgencyRoleForClient(userId, clientId)) ??
-    (await getUserClientRole(userId, clientId))
+    access.role === "agency_admin" ||
+    access.role === "client_admin" ||
+    access.permissions.includes(permission)
   );
+}
+
+export function canContributeResearch(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "research_contribute");
+}
+
+export function canManageFounderExperiences(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "founder_experience_manage");
+}
+
+export function canManageIdeas(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "ideas_manage");
+}
+
+export function canDraftPosts(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "posts_draft");
+}
+
+export function canReviewPosts(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "posts_review");
+}
+
+export function canPublishPosts(userId: string, clientId: string) {
+  return canUseClientPermission(userId, clientId, "posts_publish");
 }
 
 export async function canAccessClient(
@@ -102,14 +187,6 @@ export async function canAccessClient(
   clientId: string,
 ): Promise<boolean> {
   return Boolean(await getCurrentUserRoleForClient(userId, clientId));
-}
-
-export async function canMutateClientWorkflow(
-  userId: string,
-  clientId: string,
-): Promise<boolean> {
-  const role = await getCurrentUserRoleForClient(userId, clientId);
-  return role ? canRoleMutateClientWorkflow(role) : false;
 }
 
 export async function canManageClientUsers(
@@ -192,8 +269,11 @@ export async function getClientShellAccess(
   const { user } = await getServerUser();
   if (!user) return { ok: false };
 
-  const role = await getCurrentUserRoleForClient(user.id, clientIdResult.data);
-  if (!role) return { ok: false };
+  const currentAccess = await getCurrentUserAccessForClient(
+    user.id,
+    clientIdResult.data,
+  );
+  if (!currentAccess) return { ok: false };
 
   const supabase = await createClient();
 
@@ -207,7 +287,7 @@ export async function getClientShellAccess(
   if (error || !data) return { ok: false };
 
   const accessibleClientCount =
-    role === "agency_admin"
+    currentAccess.role === "agency_admin"
       ? 0
       : await getDirectClientAccessCount(user.id);
 
@@ -217,7 +297,8 @@ export async function getClientShellAccess(
     clientName: data.name,
     agencyId: data.agency_id,
     agencyName: data.agencies?.name ?? null,
-    role,
+    role: currentAccess.role,
+    permissions: currentAccess.permissions,
     accessibleClientCount,
   };
 }

@@ -189,6 +189,8 @@ export async function toggleRssSourceActiveAction(
   _prevState: ToggleRssSourceState,
   _formData: FormData,
 ): Promise<ToggleRssSourceState> {
+  void _prevState;
+  void _formData;
   const clientIdResult = uuidSchema.safeParse(clientId);
   const sourceIdResult = uuidSchema.safeParse(sourceId);
   if (!clientIdResult.success || !sourceIdResult.success) {
@@ -249,6 +251,8 @@ export async function archiveRssSourceAction(
   _prevState: ArchiveRssSourceState,
   _formData: FormData,
 ): Promise<ArchiveRssSourceState> {
+  void _prevState;
+  void _formData;
   const clientIdResult = uuidSchema.safeParse(clientId);
   const sourceIdResult = uuidSchema.safeParse(sourceId);
   if (!clientIdResult.success || !sourceIdResult.success) {

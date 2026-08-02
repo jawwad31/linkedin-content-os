@@ -1,20 +1,31 @@
+"use client";
+
 import { ChevronRight, Lightbulb, FileText } from "lucide-react";
 import Link from "next/link";
 
+import {
+  BulkDeleteControls,
+  useBulkSelection,
+} from "@/components/shared/bulk-delete-controls";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
 import {
+  canRoleDraftPosts,
+  canRoleManageIdeas,
   canRoleManageWorkflowReview,
-  canRoleMutateClientWorkflow,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 
 import { FounderDirectionControls, IdeaDeleteButton } from "./founder-direction-controls";
 import { GeneratePostButton } from "./generate-post-button";
+import { StrategyOverridesControls } from "./strategy-overrides-controls";
 import type { ContentIdea, ContentIdeaStatus } from "./queries";
+import type { ContentResource } from "@/features/resources/queries";
 
 const STATUS_LABELS: Record<ContentIdeaStatus, string> = {
   draft: "Draft",
@@ -80,17 +91,30 @@ function ReadOnlyDirection({ value }: { value: string | null }) {
   );
 }
 
+function titleCase(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function ContentIdeasPanel({
   clientId,
   role,
+  permissions,
   ideas,
+  resources,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   ideas: ContentIdea[];
+  resources: ContentResource[];
 }) {
-  const canManage = canRoleMutateClientWorkflow(role);
+  const canManage = canRoleManageIdeas(role, permissions);
+  const canDraft = canRoleDraftPosts(role, permissions);
   const canDelete = canRoleManageWorkflowReview(role);
+  const selection = useBulkSelection(ideas.map((idea) => idea.id));
 
   if (ideas.length === 0) {
     return (
@@ -104,9 +128,19 @@ export function ContentIdeasPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {canDelete ? (
+        <BulkDeleteControls
+          clientId={clientId}
+          entityType="content_idea"
+          recordLabel="Content Idea"
+          pluralLabel="Content Ideas"
+          visibleCount={ideas.length}
+          selection={selection}
+        />
+      ) : null}
       {ideas.map((idea) => {
         const canGeneratePost =
-          canManage && idea.status === "ready" && !idea.existingPostId;
+          canDraft && idea.status === "ready" && !idea.existingPostId;
         const hasAngleControl = Boolean(idea.beliefShift || idea.angleBoundary);
         const hasSourceDetail = Boolean(
           idea.sourceTitle || idea.sourceContext || idea.proofNotes,
@@ -115,9 +149,27 @@ export function ContentIdeasPanel({
         return (
           <article
             key={idea.id}
-            className="flex flex-col gap-3 rounded-card border border-border-grey bg-white p-4"
+            className={cn(
+              "flex flex-col gap-3 rounded-card border border-border-grey bg-white p-4 transition-colors",
+              selection.isSelected(idea.id) &&
+                "border-brand-purple/50 bg-brand-purple/5 ring-1 ring-brand-purple/20",
+            )}
           >
             <div className="flex flex-wrap items-center gap-2">
+              {canDelete && selection.isSelectionMode ? (
+                <input
+                  type="checkbox"
+                  checked={selection.isSelected(idea.id)}
+                  onChange={(event) =>
+                    selection.toggle(
+                      idea.id,
+                      (event.nativeEvent as MouseEvent).shiftKey,
+                    )
+                  }
+                  className="mr-1 h-4 w-4 shrink-0 rounded border-border-grey accent-brand-purple"
+                  aria-label={`Select Content Idea: ${idea.angle}`}
+                />
+              ) : null}
               <Badge variant="accent-purple">{idea.sourceLabel}</Badge>
               <Badge variant={STATUS_BADGE_VARIANT[idea.status]}>
                 {STATUS_LABELS[idea.status] ?? idea.status}
@@ -136,7 +188,7 @@ export function ContentIdeasPanel({
               </h2>
               {idea.contentPillar ? (
                 <p className="mt-1 text-small text-muted-foreground">
-                  Pillar: {idea.contentPillar}
+                  Theme: {idea.contentPillar}
                 </p>
               ) : null}
             </div>
@@ -149,6 +201,98 @@ export function ContentIdeasPanel({
                 labelClassName="text-brand-purple"
               />
             </div>
+
+            {idea.generationPlan ? (
+              <div className="rounded-control border border-brand-purple/20 bg-brand-purple/5 p-3">
+                <p className="text-caption font-medium uppercase tracking-wide text-brand-purple">
+                  Generated Strategy
+                </p>
+                <p className="mt-1 text-small font-medium text-near-black">
+                  {idea.generationPlan.strategy.coreArgument}
+                </p>
+                <div className="mt-2 grid grid-cols-1 gap-2 text-small sm:grid-cols-2">
+                  <p>
+                    <span className="text-muted-foreground">Target: </span>
+                    {idea.generationPlan.strategy.targetIcp}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Angle: </span>
+                    {titleCase(idea.generationPlan.strategy.angleType)}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Belief: </span>
+                    {idea.generationPlan.strategy.currentBelief} to{" "}
+                    {idea.generationPlan.strategy.desiredBelief}
+                  </p>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-3 rounded-control border border-brand-purple/15 bg-white/70 p-3 sm:grid-cols-2">
+                  <IdeaField
+                    label="Primary source anchor"
+                    value={idea.generationPlan.strategy.primarySourceAnchor}
+                  />
+                  <IdeaField
+                    label="Proof to use"
+                    value={idea.generationPlan.strategy.proofToUse.join("\n")}
+                  />
+                  <IdeaField
+                    label="Risk notes"
+                    value={idea.generationPlan.strategy.riskNotes.join("\n")}
+                  />
+                  <p className="text-small">
+                    <span className="text-muted-foreground">Readiness: </span>
+                    {titleCase(idea.generationPlan.strategy.readiness)}
+                  </p>
+                </div>
+                <details className="group mt-3 rounded-control border border-brand-purple/15 bg-white/70">
+                  <summary className="flex cursor-pointer select-none list-none items-center justify-between p-3 text-caption font-medium uppercase tracking-wide text-muted-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                    <span>Execution details</span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="h-4 w-4 transition-transform group-open:rotate-90"
+                    />
+                  </summary>
+                  <div className="grid grid-cols-1 gap-3 px-3 pb-3 text-small sm:grid-cols-2">
+                    <IdeaField
+                      label="Argument outline"
+                      value={idea.generationPlan.execution.argumentOutline.join("\n")}
+                    />
+                    <p>
+                      <span className="text-muted-foreground">Archetype: </span>
+                      {titleCase(
+                        idea.generationPlan.execution.contentArchetype,
+                      )}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Structure: </span>
+                      {titleCase(idea.generationPlan.execution.postStructure)}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Framework: </span>
+                      {titleCase(idea.generationPlan.execution.bodyFramework)}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Hook: </span>
+                      {titleCase(idea.generationPlan.execution.hookType)}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">CTA: </span>
+                      {titleCase(idea.generationPlan.execution.ctaType)}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Resource: </span>
+                      {idea.generationPlan.execution.resourceId
+                        ? "Selected"
+                        : "None"}
+                    </p>
+                  </div>
+                </details>
+              </div>
+            ) : (
+              <p className="rounded-control bg-soft-white p-3 text-small text-muted-foreground">
+                This older idea has no stored strategy yet. It will be planned
+                before its post is drafted.
+              </p>
+            )}
 
             {hasAngleControl ? (
               <details className="group rounded-control border border-border-grey open:bg-soft-white/60">
@@ -204,38 +348,55 @@ export function ContentIdeasPanel({
               </details>
             ) : null}
 
-            {canManage ? (
+            {canManage && !selection.isSelectionMode ? (
               <FounderDirectionControls
                 clientId={clientId}
                 ideaId={idea.id}
                 founderDirection={idea.founderDirection}
               />
-            ) : (
+            ) : !canManage ? (
               <ReadOnlyDirection value={idea.founderDirection} />
-            )}
+            ) : null}
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-border-grey pt-3">
-              {canDelete ? (
-                <IdeaDeleteButton
-                  clientId={clientId}
-                  ideaId={idea.id}
-                  ideaAngle={idea.angle}
-                />
-              ) : null}
-              <div className="ml-auto">
-                {canGeneratePost ? (
-                  <GeneratePostButton clientId={clientId} ideaId={idea.id} />
-                ) : idea.existingPostId ? (
-                  <Link
-                    href={`/client/${clientId}/posts/${idea.existingPostId}/review`}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                  >
-                    <FileText aria-hidden="true" className="h-4 w-4" />
-                    Open Post
-                  </Link>
+            {canManage &&
+            !selection.isSelectionMode &&
+            !idea.existingPostId &&
+            (idea.status === "draft" || idea.status === "ready") ? (
+              <StrategyOverridesControls
+                clientId={clientId}
+                ideaId={idea.id}
+                overrides={idea.strategyOverrides}
+                resources={resources}
+              />
+            ) : null}
+
+            {!selection.isSelectionMode ? (
+              <div className="flex flex-wrap items-center gap-2 border-t border-border-grey pt-3">
+                {canDelete ? (
+                  <IdeaDeleteButton
+                    clientId={clientId}
+                    ideaId={idea.id}
+                    ideaAngle={idea.angle}
+                  />
                 ) : null}
+                <div className="ml-auto">
+                  {canGeneratePost ? (
+                    <GeneratePostButton clientId={clientId} ideaId={idea.id} />
+                  ) : idea.existingPostId ? (
+                    <Link
+                      href={`/client/${clientId}/posts/${idea.existingPostId}/review`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      <FileText aria-hidden="true" className="h-4 w-4" />
+                      Open Post
+                    </Link>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            ) : null}
           </article>
         );
       })}

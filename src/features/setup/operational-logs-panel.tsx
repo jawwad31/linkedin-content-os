@@ -18,6 +18,10 @@ import type {
 
 const ACTION_LABELS: Record<string, string> = {
   access_revoked: "Access Revoked",
+  account_access_added: "Account Access Added",
+  account_access_updated: "Account Access Updated",
+  agency_access_added: "Agency Access Added",
+  agency_access_revoked: "Agency Access Revoked",
   article_marked_irrelevant: "Article Marked Irrelevant",
   article_marked_relevant: "Article Marked Relevant",
   client_settings_updated: "Business Context Updated",
@@ -30,7 +34,9 @@ const ACTION_LABELS: Record<string, string> = {
   founder_experience_updated: "Founder Experience Updated",
   founder_take_added: "Founder Take Added",
   founder_take_updated: "Founder Take Updated",
-  invitation_accepted: "Invitation Accepted",
+  invitation_accepted: "Legacy Invitation Accepted",
+  password_changed: "Password Changed",
+  password_reset: "Password Reset by Administrator",
   post_approved: "Post Approved",
   post_archived: "Post Archived",
   post_generated: "Post Generated",
@@ -53,7 +59,8 @@ const ACTION_LABELS: Record<string, string> = {
   trend_card_archived: "TrendCard Archived",
   trend_card_created: "TrendCard Created",
   trend_card_reaction_added: "Trend Reaction Added",
-  user_invited: "Invitation Created",
+  user_created: "User Created",
+  user_invited: "Legacy Invitation Created",
 };
 
 const FEATURE_LABELS: Record<string, string> = {

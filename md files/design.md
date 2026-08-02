@@ -439,6 +439,14 @@ This permanently deletes “{record title}”. This action cannot be undone.
 
 For Approved or Published Posts, require the user to type `DELETE` before enabling the destructive confirmation.
 
+Bulk selection and deletion:
+
+- enter an explicit selection mode instead of showing permanent checkboxes
+- show selected-card highlighting and a sticky action toolbar with a mixed-state Select All checkbox, selected count, Clear, Cancel, and Delete Selected
+- support Shift-click range selection and limit each batch to 100 records
+- require exact typed `DELETE` confirmation for every batch
+- after partial success, keep failed records selected and show safe grouped reasons
+
 While deletion is pending:
 
 - show `Deleting...`
@@ -497,8 +505,8 @@ Canonical statuses include:
 - Failed
 - Completed
 - Agency Admin
-- Client Admin
-- Client User
+- Account Admin
+- Account User
 
 Every status must include text; never communicate status using color alone.
 
@@ -551,7 +559,7 @@ Rules:
 
 Dialogs are used for:
 
-- invite user
+- add user and set temporary password
 - add client
 - add RSS source
 - add Founder Experience
@@ -745,6 +753,23 @@ Primary action:
 
 - Add Founder Experience
 
+## 10.5A Content Resources
+
+Purpose: manage real guides, templates, checklists, reports, worksheets, and
+tools that may support an occasional resource post.
+
+Each resource records:
+
+- title and type
+- description, problem solved, and target use case
+- one uppercase comment keyword
+- delivery URL or manual delivery instructions
+- active and comment-gate-approved state
+
+All workspace roles may view resources. Agency and Account Admins may create,
+edit, approve, deactivate, or archive them. Resources never become a fourth
+idea source and never prove a business result.
+
 ## 10.6 Ideas
 
 Purpose: generate and manage content ideas from approved source types.
@@ -773,6 +798,9 @@ Idea card fields:
 - source context
 - proof notes
 - Founder Direction
+- compact generated strategy summary
+- collapsed Advanced strategy overrides for angle, post structure, approved
+  Content Resource, and CTA
 
 Workflow rules:
 
@@ -781,6 +809,11 @@ Workflow rules:
 - one active Post per Idea workflow
 - deleting an Idea with a linked Post is blocked with a safe inline conflict message
 - no Content Ideas filter in the current UI unless a feature ticket explicitly adds it
+- format remains fixed to text; no graphic or visual-style controls
+- at most one generated idea per batch may use `resource_post` with
+  `comment_gate`
+- comment gating is unavailable when any of the five most recent active,
+  non-rejected posts already used it
 
 ## 10.7 Posts
 
@@ -815,6 +848,8 @@ Desktop composition:
 - approximately 65% width post preview on the left
 - approximately 35% width stacked metadata cards on the right
 - persistent action bar at the bottom of the review region
+- advisory next-format card for text, carousel, video, poll, or newsletter;
+  this does not create the asset
 
 Left panel:
 
@@ -883,12 +918,22 @@ Sections:
 
 1. Business Profile
 2. ICP & Offer
-3. POV & Content Pillars
-4. Founder Voice
-5. Proof / Success Stories
-6. Banned Topics
-7. Publishing Preferences
-8. Team Access for administrators
+3. Founder Voice, including up to three style-only inspiration posts
+4. Approved Evidence
+5. Guardrails, banned topics, and phrase preferences
+6. Team Access for administrators
+
+Team Access creates or assigns users immediately. Account User permission
+checkboxes are shown only for the Account User role. There is no pending invite,
+acceptance link, or email-delivery state.
+
+Agency-wide user administration lives at `/agency/settings`. It supports Agency
+Admin access and Account-scoped Account Admin/Account User access. The legacy
+`/agency/team` route redirects there.
+
+Research Keywords are edited on the Research page. Content Resources are
+managed on their own page. POV, Content Pillars, reference material, and
+publishing preferences are not active Settings sections.
 
 Founder Experiences:
 

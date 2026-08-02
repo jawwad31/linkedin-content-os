@@ -1,13 +1,21 @@
+"use client";
+
 import { TrendingUp } from "lucide-react";
 
+import {
+  BulkDeleteControls,
+  useBulkSelection,
+} from "@/components/shared/bulk-delete-controls";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   canRoleManageWorkflowReview,
-  canRoleMutateClientWorkflow,
+  canRoleContributeResearch,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatDateOnly, formatUtcDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 
 import { TrendCardReviewControls } from "./trend-card-review-controls";
 import type { TrendCard } from "./queries";
@@ -57,14 +65,17 @@ function CardSection({
 export function TrendCardsPanel({
   clientId,
   role,
+  permissions,
   cards,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   cards: TrendCard[];
 }) {
-  const canMutateWorkflow = canRoleMutateClientWorkflow(role);
+  const canMutateWorkflow = canRoleContributeResearch(role, permissions);
   const canManageReview = canRoleManageWorkflowReview(role);
+  const selection = useBulkSelection(cards.map((card) => card.id));
 
   if (cards.length === 0) {
     return (
@@ -78,6 +89,16 @@ export function TrendCardsPanel({
 
   return (
     <div className="flex flex-col gap-4">
+      {canManageReview ? (
+        <BulkDeleteControls
+          clientId={clientId}
+          entityType="trend_card"
+          recordLabel="TrendCard"
+          pluralLabel="TrendCards"
+          visibleCount={cards.length}
+          selection={selection}
+        />
+      ) : null}
       {groupByWeek(cards).map(([weekOf, weekCards]) => (
         <div key={weekOf} className="flex flex-col gap-3">
           <p className="font-mono text-caption font-medium uppercase tracking-wide text-muted-foreground">
@@ -87,9 +108,27 @@ export function TrendCardsPanel({
           {weekCards.map((card) => (
             <div
               key={card.id}
-              className="flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3"
+              className={cn(
+                "flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3 transition-colors",
+                selection.isSelected(card.id) &&
+                  "border-brand-purple/50 bg-brand-purple/5 ring-1 ring-brand-purple/20",
+              )}
             >
               <div className="flex flex-wrap items-center gap-1.5">
+                {canManageReview && selection.isSelectionMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selection.isSelected(card.id)}
+                    onChange={(event) =>
+                      selection.toggle(
+                        card.id,
+                        (event.nativeEvent as MouseEvent).shiftKey,
+                      )
+                    }
+                    className="mr-1 h-4 w-4 shrink-0 rounded border-border-grey accent-brand-purple"
+                    aria-label={`Select TrendCard: ${card.title}`}
+                  />
+                ) : null}
                 <Badge variant={card.approvedForIdeas ? "success" : "neutral"}>
                   {card.approvedForIdeas ? "Approved for Ideas" : "Pending Review"}
                 </Badge>
@@ -146,7 +185,7 @@ export function TrendCardsPanel({
                 </details>
               ) : null}
 
-              {canMutateWorkflow ? (
+              {canMutateWorkflow && !selection.isSelectionMode ? (
                 <TrendCardReviewControls
                   clientId={clientId}
                   cardId={card.id}

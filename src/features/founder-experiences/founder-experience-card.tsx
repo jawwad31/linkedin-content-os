@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import {
-  canRoleMutateClientWorkflow,
+  canRoleManageFounderExperiences,
+  type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
@@ -34,17 +35,19 @@ function Detail({ label, value }: { label: string; value: string | null }) {
 export function FounderExperienceCard({
   clientId,
   role,
+  permissions,
   experience,
 }: {
   clientId: string;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   experience: FounderExperience;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const canManage = canRoleMutateClientWorkflow(role);
+  const canManage = canRoleManageFounderExperiences(role, permissions);
   const isAdmin = role === "agency_admin" || role === "client_admin";
   const hasInsight = Boolean(experience.whatWasLearned || experience.whatChanged);
 

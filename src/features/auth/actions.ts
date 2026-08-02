@@ -42,6 +42,16 @@ export async function login(
     return { error: "The email or password is incorrect." };
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("must_change_password")
+    .eq("id", user.id)
+    .maybeSingle<{ must_change_password: boolean }>();
+
+  if (profile?.must_change_password) {
+    redirect("/change-password");
+  }
+
   redirect(await resolveAuthenticatedDestination(user.id));
 }
 

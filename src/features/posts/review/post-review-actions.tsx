@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, PenSquare, XCircle } from "lucide-react";
+import { CheckCircle2, PenSquare, RefreshCw, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -12,7 +12,7 @@ import { EDIT_NOTE_MAX_LENGTH } from "./schemas";
 
 const GENERIC_ERROR_COPY = "Could not update this post. Please try again.";
 
-type ActionName = "approve" | "needs-edit" | "reject";
+type ActionName = "approve" | "needs-edit" | "redraft" | "reject";
 
 type RequestState =
   | { status: "idle" }
@@ -25,6 +25,7 @@ const IDLE: RequestState = { status: "idle" };
 function statusMessage(action: ActionName): string {
   if (action === "approve") return "Post approved.";
   if (action === "needs-edit") return "Post marked needs edit.";
+  if (action === "redraft") return "Post redrafted and returned to review.";
   return "Post rejected.";
 }
 
@@ -32,18 +33,23 @@ export function PostReviewActions({
   clientId,
   postId,
   status,
+  canReview,
+  canRedraft: hasRedraftPermission,
 }: {
   clientId: string;
   postId: string;
   status: ReviewPostStatus;
+  canReview: boolean;
+  canRedraft: boolean;
 }) {
   const router = useRouter();
   const [editNote, setEditNote] = useState("");
   const [state, setState] = useState<RequestState>(IDLE);
   const isPending = state.status === "pending";
-  const canApprove = status === "review" || status === "needs_edit";
-  const canNeedsEdit = status === "review";
-  const canReject = status === "review" || status === "needs_edit";
+  const canApprove = canReview && (status === "review" || status === "needs_edit");
+  const canNeedsEdit = canReview && status === "review";
+  const canRedraft = hasRedraftPermission && status === "needs_edit";
+  const canReject = canReview && (status === "review" || status === "needs_edit");
 
   async function submitAction(action: ActionName) {
     const trimmedNote = editNote.trim();
@@ -92,7 +98,7 @@ export function PostReviewActions({
 
   return (
     <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
-      <div className="flex flex-col gap-2">
+      {canReview ? <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label
             htmlFor={`edit-note-${postId}`}
@@ -116,7 +122,7 @@ export function PostReviewActions({
           disabled={!canNeedsEdit || isPending}
           placeholder="Add the edit needed before this post can be approved."
         />
-      </div>
+      </div> : null}
 
       {state.status === "error" || state.status === "success" ? (
         <p
@@ -132,20 +138,37 @@ export function PostReviewActions({
       ) : null}
 
       <div className="flex flex-col gap-3 border-t border-border-grey pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={!canNeedsEdit || isPending}
-          onClick={() => submitAction("needs-edit")}
-          className="w-full rounded-full sm:w-auto"
-        >
-          <PenSquare aria-hidden="true" className="h-4 w-4" />
-          {state.status === "pending" && state.action === "needs-edit"
-            ? "Saving..."
-            : "Needs Edit"}
-        </Button>
-        <div className="flex items-center gap-2">
+        {canReview ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!canNeedsEdit || isPending}
+            onClick={() => submitAction("needs-edit")}
+            className="w-full rounded-full sm:w-auto"
+          >
+            <PenSquare aria-hidden="true" className="h-4 w-4" />
+            {state.status === "pending" && state.action === "needs-edit"
+              ? "Saving..."
+              : "Needs Edit"}
+          </Button>
+        ) : null}
+        {canRedraft ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isPending}
+            onClick={() => submitAction("redraft")}
+            className="w-full rounded-full sm:w-auto"
+          >
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            {state.status === "pending" && state.action === "redraft"
+              ? "Redrafting..."
+              : "Redraft"}
+          </Button>
+        ) : null}
+        {canReview ? <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="ghost"
@@ -172,7 +195,7 @@ export function PostReviewActions({
               ? "Approving..."
               : "Approve"}
           </Button>
-        </div>
+        </div> : null}
       </div>
     </div>
   );

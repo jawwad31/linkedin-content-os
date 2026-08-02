@@ -12,7 +12,11 @@ interface DestructiveConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   recordType: string;
   recordTitle: string;
+  dialogTitle?: string;
+  description?: string;
   requiresTypedConfirmation?: boolean;
+  confirmLabel?: string;
+  pendingLabel?: string;
   onConfirm: (confirmText?: string) => Promise<{ ok: boolean; error?: string }>;
   onSuccess?: () => void;
 }
@@ -22,13 +26,18 @@ export function DestructiveConfirmDialog({
   onOpenChange,
   recordType,
   recordTitle,
+  dialogTitle,
+  description,
   requiresTypedConfirmation = false,
+  confirmLabel = "Delete",
+  pendingLabel = "Deleting...",
   onConfirm,
   onSuccess,
 }: DestructiveConfirmDialogProps) {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [typedConfirmation, setTypedConfirmation] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const confirmationInputId = React.useId();
 
   const handleOpenChange = (nextOpen: boolean) => {
     // Prevent closing dialog while deletion is pending
@@ -82,7 +91,7 @@ export function DestructiveConfirmDialog({
         >
           <div className="flex items-start justify-between gap-4">
             <h2 className="text-body-lg font-heading font-semibold text-near-black">
-              Delete this {recordType}?
+              {dialogTitle ?? `Delete this ${recordType}?`}
             </h2>
             <Dialog.Close
               disabled={isDeleting}
@@ -95,19 +104,23 @@ export function DestructiveConfirmDialog({
 
           <form onSubmit={handleConfirm} className="mt-4 flex flex-col gap-4">
             <p className="text-small text-muted-foreground leading-relaxed">
-              This permanently deletes &quot;{recordTitle}&quot;. This action cannot be undone.
+              {description ?? (
+                <>
+                  This permanently deletes &quot;{recordTitle}&quot;. This action cannot be undone.
+                </>
+              )}
             </p>
 
             {requiresTypedConfirmation && (
               <div className="flex flex-col gap-2">
                 <label
-                  htmlFor="typed-confirmation-input"
+                  htmlFor={confirmationInputId}
                   className="text-xs font-semibold text-near-black"
                 >
                   Type <span className="text-danger-strong font-bold">DELETE</span> to confirm:
                 </label>
                 <Input
-                  id="typed-confirmation-input"
+                  id={confirmationInputId}
                   type="text"
                   placeholder="DELETE"
                   value={typedConfirmation}
@@ -139,7 +152,7 @@ export function DestructiveConfirmDialog({
                 variant="destructive"
                 disabled={isDeleteDisabled}
               >
-                {isDeleting ? "Deleting..." : "Delete"}
+                {isDeleting ? pendingLabel : confirmLabel}
               </Button>
             </div>
           </form>

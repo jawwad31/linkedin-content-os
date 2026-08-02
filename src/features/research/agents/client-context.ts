@@ -9,8 +9,6 @@ export type ClientBusinessContext = {
   businessDescription: string | null;
   primaryIcp: string | null;
   mainOffer: string | null;
-  corePov: string | null;
-  contentPillars: unknown;
   researchKeywords: unknown;
   bannedTopics: unknown;
 };
@@ -28,7 +26,7 @@ export async function getClientBusinessContext(
   const { data, error } = await admin
     .from("clients")
     .select(
-      "industry, business_description, primary_icp, main_offer, core_pov, content_pillars, research_keywords, banned_topics",
+      "industry, business_description, primary_icp, main_offer, research_keywords, banned_topics",
     )
     .eq("id", clientId)
     .is("deleted_at", null)
@@ -41,8 +39,6 @@ export async function getClientBusinessContext(
     businessDescription: data.business_description,
     primaryIcp: data.primary_icp,
     mainOffer: data.main_offer,
-    corePov: data.core_pov,
-    contentPillars: data.content_pillars,
     researchKeywords: data.research_keywords,
     bannedTopics: data.banned_topics,
   };

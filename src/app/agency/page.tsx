@@ -87,10 +87,10 @@ export default async function AgencyPage() {
               {result.teamMemberCount}
             </span>
             <Link
-              href="/agency/team"
+              href="/agency/settings"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
-              View team
+              Manage users
               <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
           </CardContent>

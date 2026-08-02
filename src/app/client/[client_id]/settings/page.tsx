@@ -9,12 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { AccessList } from "@/features/clients/invitations/access-list";
-import { InviteForm } from "@/features/clients/invitations/invite-form";
-import {
-  getClientAccessList,
-  getCurrentUserRoleForClient,
-} from "@/features/clients/invitations/queries";
+import { AccountTeamManagement } from "@/features/access-management/team-management";
+import { AccountUserProvisionForm } from "@/features/access-management/user-provision-form";
+import { getAccountTeam } from "@/features/access-management/queries";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { OperationalLogsPanel } from "@/features/setup/operational-logs-panel";
 import { getOperationalLogs } from "@/features/setup/operational-logs-queries";
@@ -22,6 +19,7 @@ import {
   canRoleManageClientUsers,
   canRoleViewOperationalLogs,
 } from "@/lib/access/roles";
+import { getCurrentUserRoleForClient } from "@/lib/access/client-access";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
@@ -42,7 +40,7 @@ export default async function SetupPage({
     <div>
       <PageHeader
         title="Settings"
-        description="The always-on context Research, Ideas, and Posts use for this Client Workspace, plus who has access to it."
+        description="Manage this Account's content context and user access."
       />
 
       {role ? (
@@ -57,12 +55,12 @@ export default async function SetupPage({
                   <CardTitle>Team Access</CardTitle>
                 </div>
                 <CardDescription>
-                  Invite collaborators and manage who has access to this
-                  Client Workspace.
+                  Create users with immediate access, choose Account User permissions,
+                  and manage passwords. No email is sent.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
-                <InviteForm clientId={clientId} />
+                <AccountUserProvisionForm clientId={clientId} />
                 <TeamAccessList clientId={clientId} />
               </CardContent>
             </Card>
@@ -78,7 +76,7 @@ export default async function SetupPage({
 }
 
 async function TeamAccessList({ clientId }: { clientId: string }) {
-  const result = await getClientAccessList(clientId);
+  const result = await getAccountTeam(clientId);
 
   if (!result.ok) {
     return (
@@ -88,7 +86,7 @@ async function TeamAccessList({ clientId }: { clientId: string }) {
     );
   }
 
-  return <AccessList clientId={clientId} members={result.members} />;
+  return <AccountTeamManagement clientId={clientId} members={result.members} />;
 }
 
 async function OperationalLogsSection({ clientId }: { clientId: string }) {

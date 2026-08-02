@@ -3,8 +3,13 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
+import { canAccessClient, canContributeResearch, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
+import type {
+  ArticleBatchStatus,
+  BatchArticleStatusResult,
+  BatchEditFailure,
+} from "@/lib/bulk-edit/contracts";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
@@ -48,13 +53,20 @@ const NOT_FOUND = {
   message: ARTICLE_ERROR_COPY,
 };
 
+const USED_ARTICLE_LOCKED = {
+  ok: false as const,
+  code: "DEPENDENCY_CONFLICT",
+  message:
+    "This article is used by a TrendCard. Remove that dependency before changing its status.",
+};
+
 const GENERIC_FAILURE = {
   ok: false as const,
   code: "UNKNOWN_ERROR",
   message: ARTICLE_ERROR_COPY,
 };
 
-type MarkTargetStatus = "relevant" | "irrelevant";
+type MarkTargetStatus = ArticleBatchStatus;
 
 type MarkResult = { id: string; status: CollectedArticleStatus };
 
@@ -83,7 +95,7 @@ async function markCollectedArticleStatus(
   const hasAccess = await canAccessClient(user.id, clientIdResult.data);
   if (!hasAccess) return NO_ACCESS;
 
-  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  const canMutate = await canContributeResearch(user.id, clientIdResult.data);
   if (!canMutate) return WORKFLOW_FORBIDDEN;
 
   const supabase = await createClient();
@@ -101,7 +113,7 @@ async function markCollectedArticleStatus(
     }>();
 
   if (fetchError || !before) return NOT_FOUND;
-  if (before.status === "used") return NOT_FOUND;
+  if (before.status === "used") return USED_ARTICLE_LOCKED;
 
   const reviewerNote =
     targetStatus === "relevant"
@@ -123,7 +135,12 @@ async function markCollectedArticleStatus(
     .select("id, status")
     .maybeSingle<MarkResult>();
 
-  if (updateError || !after) return GENERIC_FAILURE;
+  if (updateError || !after) {
+    console.error("[collected-articles] Could not update article status.", {
+      code: updateError?.code ?? "NO_UPDATED_ROW",
+    });
+    return GENERIC_FAILURE;
+  }
 
   await writeAuditLog({
     clientId: clientIdResult.data,
@@ -154,6 +171,132 @@ export async function markCollectedArticleIrrelevant(
   itemId: string,
 ): Promise<ServiceResult<MarkResult>> {
   return markCollectedArticleStatus(clientId, itemId, "irrelevant");
+}
+
+export async function markCollectedArticlesStatus(
+  clientId: string,
+  itemIds: string[],
+  targetStatus: MarkTargetStatus,
+): Promise<ServiceResult<BatchArticleStatusResult>> {
+  const { user } = await getServerUser();
+  if (!user) return AUTH_REQUIRED;
+
+  const clientIdResult = uuidSchema.safeParse(clientId);
+  const parsedIds = z.array(uuidSchema).min(1).max(100).safeParse(itemIds);
+  if (!clientIdResult.success || !parsedIds.success) return INVALID_INPUT;
+
+  const ids = Array.from(new Set(parsedIds.data));
+  const hasAccess = await canAccessClient(user.id, clientIdResult.data);
+  if (!hasAccess) return NO_ACCESS;
+
+  const canMutate = await canContributeResearch(user.id, clientIdResult.data);
+  if (!canMutate) return WORKFLOW_FORBIDDEN;
+
+  const supabase = await createClient();
+  const { data: rows, error: fetchError } = await supabase
+    .from("market_signal_items")
+    .select("id, status")
+    .eq("client_id", clientIdResult.data)
+    .in("id", ids)
+    .is("deleted_at", null)
+    .returns<Array<{ id: string; status: CollectedArticleStatus }>>();
+
+  if (fetchError) return GENERIC_FAILURE;
+
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  const failures: BatchEditFailure[] = [];
+  const alreadyUpdatedIds: string[] = [];
+  const idsToUpdate: string[] = [];
+
+  for (const id of ids) {
+    const row = rowById.get(id);
+    if (!row) {
+      failures.push({
+        id,
+        code: "NOT_FOUND",
+        message: "This article could not be found.",
+      });
+    } else if (row.status === "used") {
+      failures.push({
+        id,
+        code: USED_ARTICLE_LOCKED.code,
+        message: USED_ARTICLE_LOCKED.message,
+      });
+    } else if (row.status === targetStatus) {
+      alreadyUpdatedIds.push(id);
+    } else {
+      idsToUpdate.push(id);
+    }
+  }
+
+  let changedIds: string[] = [];
+  if (idsToUpdate.length > 0) {
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("market_signal_items")
+      .update({ status: targetStatus })
+      .eq("client_id", clientIdResult.data)
+      .in("id", idsToUpdate)
+      .neq("status", "used")
+      .is("deleted_at", null)
+      .select("id")
+      .returns<Array<{ id: string }>>();
+
+    if (updateError) {
+      console.error("[collected-articles] Could not batch-update statuses.", {
+        code: updateError.code,
+      });
+      for (const id of idsToUpdate) {
+        failures.push({
+          id,
+          code: "UNKNOWN_ERROR",
+          message: ARTICLE_ERROR_COPY,
+        });
+      }
+    } else {
+      changedIds = updatedRows.map((row) => row.id);
+      const changedSet = new Set(changedIds);
+      for (const id of idsToUpdate) {
+        if (!changedSet.has(id)) {
+          failures.push({
+            id,
+            code: "UNKNOWN_ERROR",
+            message: ARTICLE_ERROR_COPY,
+          });
+        }
+      }
+    }
+  }
+
+  const successfulIds = new Set([...alreadyUpdatedIds, ...changedIds]);
+  const updatedIds = ids.filter((id) => successfulIds.has(id));
+
+  if (changedIds.length > 0) {
+    await writeAuditLog({
+      clientId: clientIdResult.data,
+      userId: user.id,
+      action:
+        targetStatus === "relevant"
+          ? "articles_bulk_marked_relevant"
+          : "articles_bulk_marked_irrelevant",
+      entityType: "market_signal_item",
+      metadata: {
+        requested_count: ids.length,
+        changed_count: changedIds.length,
+        target_status: targetStatus,
+      },
+    });
+  }
+
+  revalidatePath(`/client/${clientIdResult.data}/research`);
+
+  return {
+    ok: true,
+    data: {
+      requestedCount: ids.length,
+      updatedIds,
+      failures,
+    },
+  };
 }
 
 export async function deleteCollectedArticle(
@@ -215,6 +358,9 @@ export async function deleteCollectedArticle(
     .maybeSingle<{ id: string }>();
 
   if (deleteError || !deleted) {
+    console.error("[collected-articles] Could not delete article.", {
+      code: deleteError?.code ?? "NO_DELETED_ROW",
+    });
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this article. Please try again." };
   }
 

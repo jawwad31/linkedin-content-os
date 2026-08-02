@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/ui/page-header";
-import { getCurrentUserRoleForClient } from "@/features/clients/invitations/queries";
+import { getCurrentUserRoleForClient } from "@/lib/access/client-access";
 import { getReviewPosts } from "@/features/posts/review/queries";
 import { PostsView } from "@/features/posts/posts-view";
 import { getServerUser } from "@/lib/supabase/session";

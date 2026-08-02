@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   LayoutDashboard,
-  Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,7 +20,7 @@ type AgencyNavItem = {
 export const AGENCY_NAV_ITEMS: AgencyNavItem[] = [
   { label: "Overview", href: "/agency", icon: LayoutDashboard },
   { label: "Client Workspaces", href: "/agency/workspaces", icon: Building2 },
-  { label: "Agency Team", href: "/agency/team", icon: Users },
+  { label: "Agency Settings", href: "/agency/settings", icon: Settings },
 ];
 
 export function AgencyNav() {

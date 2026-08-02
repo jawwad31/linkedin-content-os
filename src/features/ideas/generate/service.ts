@@ -3,18 +3,28 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow } from "@/lib/access/client-access";
+import { canAccessClient, canManageIdeas } from "@/lib/access/client-access";
 import {
   runPlanningAgent,
   type GeneratedPlanningIdea,
   type PlanningBusinessContext,
   type PlanningMode,
+  type PlanningResource,
   type PlanningSourceContext,
 } from "@/features/ideas/agents/planning-agent";
 import { writeAuditLog } from "@/lib/audit/log";
+import { GENERATION_PLAN_VERSION } from "@/lib/ai/playbooks/contracts";
+import {
+  buildSelectedSourceHashValue,
+  computeGenerationPlanInputHash,
+} from "@/lib/ai/playbooks/plan-hash";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
+import {
+  buildStrategyCompatibility,
+  type StrategyCompatibility,
+} from "@/lib/ai/playbooks/strategy-compatibility";
 
 import { generateIdeasRequestSchema } from "./schemas";
 
@@ -41,13 +51,18 @@ type ClientContextRow = {
   business_description: string | null;
   primary_icp: string | null;
   main_offer: string | null;
-  core_pov: string | null;
-  content_pillars: unknown;
   approved_proof: unknown;
   banned_topics: unknown;
-  founder_voice_sample: string | null;
-  reference_material: unknown;
-  publishing_preferences: unknown;
+};
+
+type PlanningResourceRow = {
+  id: string;
+  title: string;
+  resource_type: string;
+  description: string | null;
+  problem_solved: string | null;
+  target_use_case: string | null;
+  keyword: string;
 };
 
 type FounderExperienceRow = {
@@ -73,6 +88,7 @@ type TrendCardRow = {
   confidence_score: number | null;
   founder_take: string | null;
   approved_for_ideas: boolean;
+  week_of: string | null;
 };
 
 type SourceArticleRow = {
@@ -161,7 +177,7 @@ async function getBusinessContext(
   const { data, error } = await admin
     .from("clients")
     .select(
-      "industry, business_description, primary_icp, main_offer, core_pov, content_pillars, approved_proof, banned_topics, founder_voice_sample, reference_material, publishing_preferences",
+      "industry, business_description, primary_icp, main_offer, approved_proof, banned_topics",
     )
     .eq("id", clientId)
     .is("deleted_at", null)
@@ -174,14 +190,130 @@ async function getBusinessContext(
     businessDescription: data.business_description,
     primaryIcp: data.primary_icp,
     mainOffer: data.main_offer,
-    corePov: data.core_pov,
-    contentPillars: data.content_pillars,
     approvedProof: data.approved_proof,
     bannedTopics: data.banned_topics,
-    founderVoiceSample: data.founder_voice_sample,
-    referenceMaterial: data.reference_material,
-    publishingPreferences: data.publishing_preferences,
   };
+}
+
+async function getApprovedPlanningResources(
+  admin: AdminClient,
+  clientId: string,
+): Promise<PlanningResource[]> {
+  const { data, error } = await admin
+    .from("content_resources")
+    .select(
+      "id, title, resource_type, description, problem_solved, target_use_case, keyword",
+    )
+    .eq("client_id", clientId)
+    .eq("active", true)
+    .eq("comment_gate_approved", true)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .returns<PlanningResourceRow[]>();
+
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    type: row.resource_type,
+    description: row.description,
+    problemSolved: row.problem_solved,
+    targetUseCase: row.target_use_case,
+    keyword: row.keyword,
+  }));
+}
+
+async function isCommentGateEligible(
+  admin: AdminClient,
+  clientId: string,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("posts")
+    .select("source_context_used")
+    .eq("client_id", clientId)
+    .is("deleted_at", null)
+    .neq("status", "rejected")
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<Array<{ source_context_used: unknown }>>();
+
+  if (error || !data) return false;
+  return !data.some((row) => {
+    const value = row.source_context_used;
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value) &&
+      (value as Record<string, unknown>).cta_type === "comment_gate"
+    );
+  });
+}
+
+function containsMeaningfulValue(value: unknown): boolean {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some(containsMeaningfulValue);
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(
+      containsMeaningfulValue,
+    );
+  }
+  return false;
+}
+
+function textFromUnknown(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(textFromUnknown).join(" ");
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>)
+      .map(textFromUnknown)
+      .join(" ");
+  }
+  return "";
+}
+
+function sourceField(
+  context: PlanningSourceContext,
+  field: string,
+): unknown {
+  return context.source[field];
+}
+
+function buildCompatibilityForSource(input: {
+  businessContext: PlanningBusinessContext;
+  sourceContext: PlanningSourceContext;
+  resources: PlanningResource[];
+  commentGateEligible: boolean;
+}): StrategyCompatibility {
+  const sourceText = textFromUnknown(input.sourceContext.source).toLowerCase();
+  const approvedEvidenceText = textFromUnknown(
+    input.businessContext.approvedProof,
+  ).toLowerCase();
+  const hasChangedState = containsMeaningfulValue(
+    sourceField(input.sourceContext, "what_changed"),
+  );
+  const hasStartingState = containsMeaningfulValue(
+    sourceField(input.sourceContext, "what_happened"),
+  );
+
+  return buildStrategyCompatibility({
+    sourceMode: input.sourceContext.mode,
+    hasDocumentedBeforeAfter:
+      (hasStartingState && hasChangedState) ||
+      (/\bbefore\b/.test(approvedEvidenceText) &&
+        /\bafter\b/.test(approvedEvidenceText)),
+    hasDocumentedResult:
+      hasChangedState ||
+      /(?:\d|%|\b(?:result|reduced|increased|improved|grew|saved|won|generated|cut|doubled)\b)/.test(
+        approvedEvidenceText,
+      ),
+    hasDocumentedMistake:
+      input.sourceContext.mode !== "trend_card" &&
+      /\b(mistake|failed|failure|wrong|learned|lesson|broke|broken)\b/.test(
+        sourceText,
+      ),
+    approvedResourceIds: input.resources.map((resource) => resource.id),
+    commentGateEligible: input.commentGateEligible,
+  });
 }
 
 async function getRecentIdeaAngles(
@@ -237,7 +369,7 @@ async function getTrendCard(
   const { data, error } = await admin
     .from("trend_cards")
     .select(
-      "id, title, shift, why_it_matters, relevance_to_icp, content_angle, source_item_ids_json, confidence_score, founder_take, approved_for_ideas",
+      "id, title, shift, why_it_matters, relevance_to_icp, content_angle, source_item_ids_json, confidence_score, founder_take, approved_for_ideas, week_of",
     )
     .eq("id", trendCardId)
     .eq("client_id", clientId)
@@ -276,6 +408,7 @@ async function loadFounderExperienceSource(
       sourceId: data.id,
       sourceTitle: data.title,
       source: {
+        id: data.id,
         title: data.title,
         what_happened: data.what_happened,
         what_was_learned: data.what_was_learned,
@@ -310,6 +443,7 @@ async function loadTrendCardSource(
       sourceId: card.id,
       sourceTitle: card.title,
       source: {
+        id: card.id,
         title: card.title,
         shift: card.shift,
         why_it_matters: card.why_it_matters,
@@ -317,6 +451,8 @@ async function loadTrendCardSource(
         content_angle: card.content_angle,
         confidence_score: card.confidence_score,
         founder_take: card.founder_take,
+        approved_for_ideas: card.approved_for_ideas,
+        week_of: card.week_of,
       },
       sourceArticles,
     },
@@ -363,20 +499,25 @@ async function loadTrendReactionSource(
       linkedTrendCardId: card.id,
       linkedTrendCardTitle: card.title,
       source: {
+        id: reaction.id,
+        title: reaction.title,
         reaction_type: reaction.reaction_type,
-        take: reaction.what_was_learned,
+        founder_take: reaction.what_was_learned,
         proof_or_example: reaction.what_happened,
         what_changed: reaction.what_changed,
         why_it_matters: reaction.why_it_matters,
-        trend_card: {
-          title: card.title,
-          shift: card.shift,
-          why_it_matters: card.why_it_matters,
-          relevance_to_icp: card.relevance_to_icp,
-          content_angle: card.content_angle,
-          confidence_score: card.confidence_score,
-          founder_take: card.founder_take,
-        },
+      },
+      linkedTrendCard: {
+        id: card.id,
+        title: card.title,
+        shift: card.shift,
+        why_it_matters: card.why_it_matters,
+        relevance_to_icp: card.relevance_to_icp,
+        content_angle: card.content_angle,
+        confidence_score: card.confidence_score,
+        founder_take: card.founder_take,
+        approved_for_ideas: card.approved_for_ideas,
+        week_of: card.week_of,
       },
       sourceArticles,
     },
@@ -403,10 +544,14 @@ async function loadSource(
 function toInsertRows(input: {
   clientId: string;
   mode: PlanningMode;
+  businessContext: PlanningBusinessContext;
+  sourceContext: PlanningSourceContext;
   sourceIdsForIdea: string[];
   sourceTitle: string;
   ideas: GeneratedPlanningIdea[];
   existingAngles: string[];
+  resources: PlanningResource[];
+  commentGateEligible: boolean;
 }) {
   const seenAngles = new Set(input.existingAngles.map(normalizeAngle));
 
@@ -415,6 +560,25 @@ function toInsertRows(input: {
     if (seenAngles.has(normalizedAngle)) return [];
 
     seenAngles.add(normalizedAngle);
+
+    const storedSourceContext = {
+      mode: input.mode,
+      source_ids: input.sourceIdsForIdea,
+      source_title: input.sourceTitle,
+      generated_context: idea.sourceContext,
+    };
+    const ideaMetadata = {
+      angle: idea.angle,
+      buyerPain: idea.buyerPain,
+      commercialRelevance: idea.commercialRelevance,
+      beliefShift: idea.beliefShift,
+      contentPillar: idea.contentPillar,
+      angleBoundary: idea.angleBoundary,
+      sourceContext: storedSourceContext,
+      proofNotes: idea.proofNotes,
+    };
+    const strategyOverrides = {};
+    const resourceId = idea.generationPlan.execution.resourceId;
 
     return [
       {
@@ -427,14 +591,29 @@ function toInsertRows(input: {
         belief_shift: idea.beliefShift,
         content_pillar: idea.contentPillar,
         angle_boundary: idea.angleBoundary,
-        source_context: {
-          mode: input.mode,
-          source_ids: input.sourceIdsForIdea,
-          source_title: input.sourceTitle,
-          generated_context: idea.sourceContext,
-        },
+        source_context: storedSourceContext,
         proof_notes: idea.proofNotes,
         founder_direction: null,
+        generation_plan: idea.generationPlan,
+        generation_plan_version: GENERATION_PLAN_VERSION,
+        generation_plan_input_hash: computeGenerationPlanInputHash({
+          businessContext: input.businessContext,
+          selectedSource: buildSelectedSourceHashValue({
+            sourceMode: input.mode,
+            sourceIds: input.sourceIdsForIdea,
+            sourceTitle: input.sourceTitle,
+            source: input.sourceContext.source,
+            linkedTrendCard: input.sourceContext.linkedTrendCard ?? null,
+            sourceArticles: input.sourceContext.sourceArticles,
+          }),
+          idea: ideaMetadata,
+          founderDirection: null,
+          strategyOverrides,
+          resourceState: input.resources,
+          commentGateEligible: input.commentGateEligible,
+        }),
+        strategy_overrides: strategyOverrides,
+        selected_resource_id: resourceId,
         status: "ready",
       },
     ];
@@ -457,7 +636,7 @@ export async function generateContentIdeas(
   const hasAccess = await canAccessClient(user.id, clientIdResult.data);
   if (!hasAccess) return NO_ACCESS;
 
-  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  const canMutate = await canManageIdeas(user.id, clientIdResult.data);
   if (!canMutate) return WORKFLOW_FORBIDDEN;
 
   const admin = createAdminClient();
@@ -472,13 +651,25 @@ export async function generateContentIdeas(
   );
   if (!source.ok) return source.failure;
 
-  const recentAngles = await getRecentIdeaAngles(admin, clientIdResult.data);
+  const [recentAngles, resources, commentGateEligible] = await Promise.all([
+    getRecentIdeaAngles(admin, clientIdResult.data),
+    getApprovedPlanningResources(admin, clientIdResult.data),
+    isCommentGateEligible(admin, clientIdResult.data),
+  ]);
+  const compatibility = buildCompatibilityForSource({
+    businessContext,
+    sourceContext: source.sourceContext,
+    resources,
+    commentGateEligible,
+  });
   const planningResult = await runPlanningAgent({
     clientId: clientIdResult.data,
     userId: user.id,
     businessContext,
     sourceContext: source.sourceContext,
     recentAngles,
+    compatibility,
+    resources,
   });
 
   if (!planningResult.ok) {
@@ -490,10 +681,14 @@ export async function generateContentIdeas(
   const rows = toInsertRows({
     clientId: clientIdResult.data,
     mode: parsed.data.mode,
+    businessContext,
+    sourceContext: source.sourceContext,
     sourceIdsForIdea: source.sourceIdsForIdea,
     sourceTitle: source.sourceTitle,
     ideas: planningResult.ideas,
     existingAngles: recentAngles,
+    resources,
+    commentGateEligible,
   });
 
   if (rows.length === 0) {

@@ -5,12 +5,28 @@ import { createServerClient } from "@supabase/ssr";
 
 import { getSupabasePublicEnv } from "./env";
 
-const PROTECTED_PREFIXES = ["/agency", "/clients", "/client/", "/no-access"];
+const PROTECTED_PREFIXES = [
+  "/agency",
+  "/clients",
+  "/client/",
+  "/change-password",
+  "/no-access",
+];
 
 function isProtectedPath(pathname: string) {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix),
   );
+}
+
+function withSessionCookies(
+  response: NextResponse,
+  sessionResponse: NextResponse,
+) {
+  for (const cookie of sessionResponse.cookies.getAll()) {
+    response.cookies.set(cookie);
+  }
+  return response;
 }
 
 /**
@@ -54,7 +70,39 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && isProtectedPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    return withSessionCookies(NextResponse.redirect(loginUrl), supabaseResponse);
+  }
+
+  const requiresAppSession =
+    isProtectedPath(pathname) || pathname.startsWith("/api/");
+
+  if (user && requiresAppSession && pathname !== "/change-password") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("must_change_password")
+      .eq("id", user.id)
+      .maybeSingle<{ must_change_password: boolean }>();
+
+    if (profile?.must_change_password) {
+      if (pathname.startsWith("/api/")) {
+        return withSessionCookies(
+          NextResponse.json(
+            {
+              error: {
+                code: "PASSWORD_CHANGE_REQUIRED",
+                message: "Change your temporary password before continuing.",
+              },
+            },
+            { status: 403 },
+          ),
+          supabaseResponse,
+        );
+      }
+      return withSessionCookies(
+        NextResponse.redirect(new URL("/change-password", request.url)),
+        supabaseResponse,
+      );
+    }
   }
 
   return supabaseResponse;

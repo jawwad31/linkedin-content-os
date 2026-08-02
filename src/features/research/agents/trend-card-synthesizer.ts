@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { writeAuditLog } from "@/lib/audit/log";
+import { loadStagePlaybook } from "@/lib/ai/playbooks/loader";
 import { writeLlmLog } from "@/lib/llm/log";
 import {
   getOpenRouterConfig,
@@ -170,13 +171,16 @@ async function getRecentCardTitles(
   }));
 }
 
-function buildPrompt(
+export async function buildTrendCardSynthesisPrompt(
   context: ClientBusinessContext,
   items: SynthesizableItem[],
   existingCards: ExistingCard[],
-): { system: string; user: string } {
+): Promise<{ system: string; user: string }> {
+  const playbook = await loadStagePlaybook("research-synthesis");
   const system = [
     "You are a market intelligence synthesiser for a B2B founder's content system.",
+    "Follow the production playbook below as binding methodology.",
+    playbook,
     "Given a set of relevant articles and a research brief, identify distinct market shifts and synthesise one TrendCard per shift.",
     "A TrendCard must have:",
     "title: Short name for the market shift (10 words or fewer).",
@@ -202,8 +206,6 @@ function buildPrompt(
       business_description: context.businessDescription,
       primary_icp: context.primaryIcp,
       main_offer: context.mainOffer,
-      core_pov: context.corePov,
-      content_pillars: context.contentPillars,
       research_keywords: context.researchKeywords,
       banned_topics: context.bannedTopics,
     },
@@ -305,7 +307,11 @@ export async function synthesizeTrendCardsForClient(
   }
 
   const existingCards = await getRecentCardTitles(admin, clientId);
-  const { system, user } = buildPrompt(context, items, existingCards);
+  const { system, user } = await buildTrendCardSynthesisPrompt(
+    context,
+    items,
+    existingCards,
+  );
 
   const result = await requestStructuredCompletion(
     config,

@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  formatRecommendationSchema,
+  type FormatRecommendation,
+} from "@/lib/ai/playbooks/contracts";
 import { createClient } from "@/lib/supabase/server";
 
 export type ReviewPostStatus =
@@ -25,6 +29,7 @@ export type ReviewPost = {
   proofNotes: string | null;
   riskNotes: string | null;
   ctaIntent: string | null;
+  formatRecommendation: FormatRecommendation | null;
   sourceContextUsed: unknown;
   status: ReviewPostStatus;
   editNote: string | null;
@@ -42,6 +47,7 @@ type ReviewPostRow = {
   proof_notes: string | null;
   risk_notes: string | null;
   cta_intent: string | null;
+  format_recommendation: unknown;
   source_context_used: unknown;
   status: ReviewPostStatus;
   edit_note: string | null;
@@ -59,6 +65,11 @@ type ContentIdeaRow = {
 export type ReviewPostsResult =
   | { ok: true; posts: ReviewPost[] }
   | { ok: false };
+
+function parseFormatRecommendation(value: unknown): FormatRecommendation | null {
+  const parsed = formatRecommendationSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
 
 function splitPost(value: string): { hook: string | null; body: string | null } {
   const parts = value
@@ -86,7 +97,7 @@ export async function getReviewPosts(
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
+      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, source_context_used, status, edit_note, approved_at, published_at, created_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -138,6 +149,9 @@ export async function getReviewPosts(
         proofNotes: row.proof_notes,
         riskNotes: row.risk_notes,
         ctaIntent: row.cta_intent,
+        formatRecommendation: parseFormatRecommendation(
+          row.format_recommendation,
+        ),
         sourceContextUsed: row.source_context_used,
         status: row.status,
         editNote: row.edit_note,
@@ -180,7 +194,7 @@ export async function getReviewPost(
     supabase
       .from("posts")
       .select(
-        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, source_context_used, status, edit_note, approved_at, published_at, created_at",
+        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, source_context_used, status, edit_note, approved_at, published_at, created_at",
       )
       .eq("client_id", clientId)
       .eq("id", postId)
@@ -239,6 +253,9 @@ export async function getReviewPost(
       proofNotes: row.proof_notes,
       riskNotes: row.risk_notes,
       ctaIntent: row.cta_intent,
+      formatRecommendation: parseFormatRecommendation(
+        row.format_recommendation,
+      ),
       sourceContextUsed: row.source_context_used,
       status: row.status,
       editNote: row.edit_note,

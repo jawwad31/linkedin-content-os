@@ -29,7 +29,7 @@ export function RssSourcesPanel({
     <div className="flex flex-col gap-3">
       {!canManage ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Client Users cannot manage RSS sources.
+          Account Users cannot manage RSS sources.
         </p>
       ) : null}
 

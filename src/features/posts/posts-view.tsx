@@ -2,16 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BookOpen, Clock, AlertCircle, CheckCircle2, Maximize2 } from "lucide-react";
+import {
+  BulkDeleteControls,
+  useBulkSelection,
+} from "@/components/shared/bulk-delete-controls";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { formatUtcDate } from "@/lib/format/date";
+import { cn } from "@/lib/utils";
 import type { ReviewPost, ReviewPostStatus } from "@/features/posts/review/queries";
 import { SegmentedNavigation } from "@/components/ui/segmented-navigation";
 import type { EffectiveClientRole } from "@/lib/access/roles";
+import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
 
 type TabId = "needs_review" | "approved" | "rejected" | "published";
 
@@ -76,6 +80,7 @@ export function PostsView({
   };
 
   const currentPosts = getFilteredPosts();
+  const selection = useBulkSelection(currentPosts.map((post) => post.id));
 
   const getEmptyState = () => {
     switch (activeTab) {
@@ -114,9 +119,23 @@ export function PostsView({
       <SegmentedNavigation
         items={segmentedItems}
         activeId={activeTab}
-        onChange={setActiveTab}
+        onChange={(nextTab) => {
+          selection.cancel();
+          setActiveTab(nextTab);
+        }}
         className="self-start"
       />
+
+      {isAdmin && currentPosts.length > 0 ? (
+        <BulkDeleteControls
+          clientId={clientId}
+          entityType="post"
+          recordLabel="Post"
+          pluralLabel="Posts"
+          visibleCount={currentPosts.length}
+          selection={selection}
+        />
+      ) : null}
 
       {currentPosts.length === 0 ? (
         <EmptyState
@@ -135,10 +154,28 @@ export function PostsView({
             return (
               <div
                 key={post.id}
-                className="group relative flex flex-col gap-4 rounded-card border border-border-grey bg-white p-5 shadow-xs transition-shadow hover:shadow-sm"
+                className={cn(
+                  "group relative flex flex-col gap-4 rounded-card border border-border-grey bg-white p-5 shadow-xs transition-all hover:shadow-sm",
+                  selection.isSelected(post.id) &&
+                    "border-brand-purple/50 bg-brand-purple/5 ring-1 ring-brand-purple/20",
+                )}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
+                    {isAdmin && selection.isSelectionMode ? (
+                      <input
+                        type="checkbox"
+                        checked={selection.isSelected(post.id)}
+                        onChange={(event) =>
+                          selection.toggle(
+                            post.id,
+                            (event.nativeEvent as MouseEvent).shiftKey,
+                          )
+                        }
+                        className="mr-1 h-4 w-4 shrink-0 rounded border-border-grey accent-brand-purple"
+                        aria-label={`Select Post created ${formatUtcDate(post.createdAt)}`}
+                      />
+                    ) : null}
                     <Badge variant={STATUS_BADGE_VARIANT[post.status]}>
                       {STATUS_LABELS[post.status] ?? post.status}
                     </Badge>
@@ -152,21 +189,23 @@ export function PostsView({
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/client/${clientId}/posts/${post.id}/review`}
-                      className={buttonVariants({ variant: "outline", size: "sm" })}
-                    >
-                      <Maximize2 aria-hidden="true" className="h-4 w-4" />
-                      Review Post
-                    </Link>
-                    {isAdmin && (
-                      <PostDeleteButton
-                        clientId={clientId}
-                        post={post}
-                      />
-                    )}
-                  </div>
+                  {!selection.isSelectionMode ? (
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/client/${clientId}/posts/${post.id}/review`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        <Maximize2 aria-hidden="true" className="h-4 w-4" />
+                        Review Post
+                      </Link>
+                      {isAdmin && (
+                        <PostDeleteButton clientId={clientId} post={post} />
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="text-body leading-relaxed text-near-black whitespace-pre-line">
@@ -200,59 +239,5 @@ export function PostsView({
         </div>
       )}
     </div>
-  );
-}
-
-function PostDeleteButton({
-  clientId,
-  post,
-}: {
-  clientId: string;
-  post: ReviewPost;
-}) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-
-  const requiresTypedConfirmation =
-    post.status === "approved" || post.status === "published";
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong h-7 px-2"
-        onClick={() => setOpen(true)}
-      >
-        Delete
-      </Button>
-
-      <DestructiveConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        recordType="Post"
-        recordTitle={post.finalPost.substring(0, 40) + (post.finalPost.length > 40 ? "..." : "")}
-        requiresTypedConfirmation={requiresTypedConfirmation}
-        onConfirm={async (confirmText) => {
-          const res = await fetch(`/api/client/${clientId}/posts/${post.id}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ confirmDelete: confirmText }),
-          });
-          if (!res.ok) {
-            const data = await res.json();
-            return {
-              ok: false,
-              error: data.error?.message || "Failed to delete post.",
-            };
-          }
-          return { ok: true };
-        }}
-        onSuccess={() => {
-          router.refresh();
-        }}
-      />
-    </>
   );
 }

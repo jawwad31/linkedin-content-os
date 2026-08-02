@@ -3,12 +3,16 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canMutateClientWorkflow, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
+import { canAccessClient, canManageIdeas, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
+import type { StrategyOverrides } from "@/lib/ai/playbooks/contracts";
 
-import { founderDirectionRequestSchema } from "./schemas";
+import {
+  founderDirectionRequestSchema,
+  strategyOverridesRequestSchema,
+} from "./schemas";
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
@@ -61,6 +65,13 @@ type IdeaDirectionRow = {
   founder_direction: string | null;
 };
 
+type IdeaOverridesRow = {
+  id: string;
+  strategy_overrides: unknown;
+  selected_resource_id: string | null;
+  status: string;
+};
+
 async function authorizeMutation(
   clientId: string,
   ideaId: string,
@@ -78,7 +89,7 @@ async function authorizeMutation(
   const hasAccess = await canAccessClient(user.id, clientIdResult.data);
   if (!hasAccess) return { ok: false, failure: NO_ACCESS };
 
-  const canMutate = await canMutateClientWorkflow(user.id, clientIdResult.data);
+  const canMutate = await canManageIdeas(user.id, clientIdResult.data);
   if (!canMutate) {
     return { ok: false, failure: WORKFLOW_FORBIDDEN };
   }
@@ -146,6 +157,88 @@ export async function updateFounderDirection(
   revalidatePath(`/client/${auth.clientId}/ideas`);
 
   return { ok: true, data: {} };
+}
+
+export async function updateStrategyOverrides(
+  clientId: string,
+  ideaId: string,
+  input: unknown,
+): Promise<ServiceResult<{ strategyOverrides: StrategyOverrides }>> {
+  const parsed = strategyOverridesRequestSchema.safeParse(input);
+  if (!parsed.success) return INVALID_INPUT;
+
+  const auth = await authorizeMutation(clientId, ideaId);
+  if (!auth.ok) return auth.failure;
+
+  const supabase = await createClient();
+  const { data: before, error: fetchError } = await supabase
+    .from("content_ideas")
+    .select("id, strategy_overrides, selected_resource_id, status")
+    .eq("id", auth.ideaId)
+    .eq("client_id", auth.clientId)
+    .is("deleted_at", null)
+    .maybeSingle<IdeaOverridesRow>();
+
+  if (fetchError || !before || !["draft", "ready"].includes(before.status)) {
+    return IDEA_NOT_AVAILABLE;
+  }
+
+  const strategyOverrides: StrategyOverrides = {};
+  if (parsed.data.angleType) {
+    strategyOverrides.angleType = parsed.data.angleType;
+  }
+  if (parsed.data.postStructure) {
+    strategyOverrides.postStructure = parsed.data.postStructure;
+  }
+  if (parsed.data.ctaType) {
+    strategyOverrides.ctaType = parsed.data.ctaType;
+  }
+  if (parsed.data.resourceId) {
+    const { data: resource, error: resourceError } = await supabase
+      .from("content_resources")
+      .select("id")
+      .eq("id", parsed.data.resourceId)
+      .eq("client_id", auth.clientId)
+      .eq("active", true)
+      .eq("comment_gate_approved", true)
+      .is("deleted_at", null)
+      .maybeSingle<{ id: string }>();
+    if (resourceError || !resource) return INVALID_INPUT;
+    strategyOverrides.resourceId = resource.id;
+    strategyOverrides.ctaType = "comment_gate";
+  } else if (strategyOverrides.ctaType === "comment_gate") {
+    return INVALID_INPUT;
+  }
+
+  const { data: after, error: updateError } = await supabase
+    .from("content_ideas")
+    .update({
+      strategy_overrides: strategyOverrides,
+      selected_resource_id: strategyOverrides.resourceId ?? null,
+    })
+    .eq("id", auth.ideaId)
+    .eq("client_id", auth.clientId)
+    .is("deleted_at", null)
+    .in("status", ["draft", "ready"])
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (updateError || !after) return GENERIC_FAILURE;
+
+  await writeAuditLog({
+    clientId: auth.clientId,
+    userId: auth.userId,
+    action: "content_idea_strategy_overrides_updated",
+    entityType: "content_idea",
+    entityId: auth.ideaId,
+    metadata: {
+      idea_id: auth.ideaId,
+      override_fields: Object.keys(strategyOverrides),
+    },
+  });
+
+  revalidatePath(`/client/${auth.clientId}/ideas`);
+  return { ok: true, data: { strategyOverrides } };
 }
 
 export async function archiveContentIdea(
