@@ -49,7 +49,7 @@ export async function saveResearchKeywordsAction(
     .maybeSingle<{ id: string }>();
 
   if (error || !data) {
-    return { error: "Could not save Research keywords.", success: null };
+    return { error: "Could not save Research Focus.", success: null };
   }
 
   await writeAuditLog({
@@ -61,5 +61,5 @@ export async function saveResearchKeywordsAction(
     metadata: { keyword_count: values.length },
   });
   revalidatePath(`/client/${client.data}/research`);
-  return { error: null, success: "Research keywords saved." };
+  return { error: null, success: "Research Focus saved." };
 }

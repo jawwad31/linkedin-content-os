@@ -35,10 +35,16 @@ export function ResearchKeywordsForm({
     <form action={action} className="flex flex-col gap-3">
       <div>
         <label htmlFor="researchKeywords" className="text-small font-medium text-near-black">
-          Research keywords
+          Research Focus
         </label>
         <p className="mt-1 text-caption text-muted-foreground">
-          Used only to classify RSS articles and synthesize relevant TrendCards. One per line.
+          This does not change which articles are collected — your RSS Sources
+          control that. It tells the AI what matters to your buyers when it
+          decides which collected articles are relevant and which become
+          TrendCards. Write themes in plain language, one per line, for example
+          &quot;outbound reply rates declining&quot;. Broaden these if useful
+          articles are being filtered out; sharpen them if too much noise gets
+          through.
         </p>
       </div>
       {canManage ? (
@@ -51,7 +57,7 @@ export function ResearchKeywordsForm({
         />
       ) : (
         <p className="min-h-24 whitespace-pre-line rounded-control border border-border-grey bg-soft-white p-3 text-small">
-          {keywords.length > 0 ? keywords.join("\n") : "No Research keywords configured."}
+          {keywords.length > 0 ? keywords.join("\n") : "No Research Focus configured."}
         </p>
       )}
       {state.error ? <p role="alert" className="text-small text-danger-strong">{state.error}</p> : null}

@@ -222,7 +222,7 @@ export function BusinessContextForm({
       <SegmentedNavigation items={TABS} activeId={activeTab} onChange={setActiveTab} />
 
       <p className="text-caption text-muted-foreground">
-        Founder Experiences and Content Resources are managed on their dedicated pages. Research keywords are managed in Research.
+        Founder Experiences and Content Resources are managed on their dedicated pages. Research Focus is managed in Research.
       </p>
 
       <div hidden={activeTab !== "profile"} className="flex flex-col gap-4">
