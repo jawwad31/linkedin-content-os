@@ -62,20 +62,23 @@ function callReplan() {
 }
 
 describe("replanContentIdea overreach guardrail", () => {
-  it("returns a blocked reason instead of a generic error when the model marks the strategy blocked", async () => {
+  it("returns a blocked-readiness plan so the caller can warn instead of failing", async () => {
     vi.mocked(requestStructuredCompletion).mockResolvedValueOnce({
       ok: true,
       data: {
         generation_plan: {
           ...planFixture,
           sourceMode: "trend_card",
+          execution: { ...planFixture.execution, contentArchetype: "framework_post" },
           strategy: { ...planFixture.strategy, readiness: "blocked" },
         },
       },
     } as never);
 
     const result = await callReplan();
-    expect(result).toEqual({ ok: false, reason: "blocked" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.generationPlan.strategy.readiness).toBe("blocked");
   });
 
   it("returns the plan when readiness is ready and the plan is compatible", async () => {

@@ -28,6 +28,10 @@ import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/date";
 import { getServerUser } from "@/lib/supabase/session";
 import type { FormatRecommendation } from "@/lib/ai/playbooks/contracts";
+import {
+  QA_WARNING_LABELS,
+  type QaWarningCode,
+} from "@/lib/ai/playbooks/qa-warnings";
 
 const STATUS_LABELS: Record<ReviewPostStatus, string> = {
   review: "Review",
@@ -80,6 +84,38 @@ function getInitials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0] + parts[parts.length - 1]![0]).toUpperCase();
+}
+
+/**
+ * AI review is advisory — it never prevents a draft from being created. These
+ * flags sit above the post body, never inside a disclosure, because they are
+ * the only signal the reviewer gets before approving.
+ */
+function QaWarningsBanner({ codes }: { codes: QaWarningCode[] }) {
+  if (codes.length === 0) return null;
+
+  return (
+    <div className="rounded-card border border-warning/40 bg-warning/10 p-4">
+      <div className="flex items-center gap-2">
+        <AlertTriangle
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-warning-strong"
+        />
+        <h2 className="text-small font-semibold text-warning-strong">
+          AI review flagged {codes.length}{" "}
+          {codes.length === 1 ? "thing" : "things"} to check
+        </h2>
+      </div>
+      <ul className="mt-2 flex list-disc flex-col gap-1 pl-9 text-small text-near-black">
+        {codes.map((code) => (
+          <li key={code}>{QA_WARNING_LABELS[code]}</li>
+        ))}
+      </ul>
+      <p className="mt-2 pl-9 text-caption text-muted-foreground">
+        These are advisory. Read the draft and decide before approving.
+      </p>
+    </div>
+  );
 }
 
 function BuyerBeliefShiftCard({ value }: { value: string | null }) {
@@ -338,6 +374,8 @@ export default async function PostReviewPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[13fr_7fr] lg:items-start">
         {/* Left column: Post Preview (~65% on desktop) */}
         <div className="flex min-w-0 flex-col gap-4">
+          <QaWarningsBanner codes={post.qaWarnings} />
+
           <div className="rounded-card border border-border-grey bg-white p-6 shadow-xs">
             <div className="flex items-center gap-3">
               <span

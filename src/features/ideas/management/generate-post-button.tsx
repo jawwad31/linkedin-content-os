@@ -6,19 +6,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  parseQaBlockDetails,
-  QA_RECOMMENDED_ACTION_LABELS,
-  QA_REASON_CODE_LABELS,
-  type QaBlockDetails,
-} from "@/lib/ai/playbooks/qa-block-reasons";
 
 const GENERIC_ERROR_COPY = "Could not generate this post. Please try again.";
 
 type RequestState =
   | { status: "idle" }
   | { status: "pending" }
-  | { status: "error"; message: string; details?: QaBlockDetails }
+  | { status: "error"; message: string }
   | { status: "success"; postId: string; alreadyGenerated: boolean };
 
 const IDLE: RequestState = { status: "idle" };
@@ -55,7 +49,6 @@ export function GeneratePostButton({
             typeof payload?.error?.message === "string"
               ? payload.error.message
               : GENERIC_ERROR_COPY,
-          details: parseQaBlockDetails(payload?.error?.details),
         });
         return;
       }
@@ -113,28 +106,9 @@ export function GeneratePostButton({
       </Button>
 
       {state.status === "error" ? (
-        <div className="flex flex-col gap-1">
-          <p role="alert" className="text-small text-danger-strong">
-            {state.message}
-          </p>
-          {state.details ? (
-            <div className="flex flex-col gap-1 text-small text-muted-foreground">
-              <ul className="list-disc pl-4">
-                {state.details.reasonCodes.map((code) => (
-                  <li key={code}>{QA_REASON_CODE_LABELS[code]}</li>
-                ))}
-              </ul>
-              {state.details.recommendedActions.length > 0 ? (
-                <p>
-                  Try:{" "}
-                  {state.details.recommendedActions
-                    .map((action) => QA_RECOMMENDED_ACTION_LABELS[action])
-                    .join(", ")}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        <p role="alert" className="text-small text-danger-strong">
+          {state.message}
+        </p>
       ) : null}
     </div>
   );

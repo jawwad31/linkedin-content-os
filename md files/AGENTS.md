@@ -585,7 +585,7 @@ Current Agent Behavior:
 - **Model Routing**: Router targets `OPENROUTER_CONTENT_MODEL` if configured, falling back to `OPENROUTER_MODEL` otherwise. (Do not hardcode specific model names).
 - **One Post per Idea Workflow**: One approved/ready Content Idea generates exactly one active Post. A partial unique index enforces this constraint (`deleted_at IS NULL` context). Repeated generation requests return the existing active Post instead of duplicating it, and race conditions are handled safely. The Idea status becomes `used` once its Post is successfully generated. The Ideas list shows `Post Drafted` and `Open Post`, and disabling the generation action. Alternative drafts must be requested using the Needs Edit → Edit Note → Redraft workflow.
 - **Scaffolding Hygiene**: Planning metadata is private and must not appear as internal labels in public Post copy. Deterministic checks scan scaffolding, banned language, unsupported numbers and quotes, multiple CTAs, taxonomy values, and source-mode drift.
-- **Independent Review**: A separate QA/finalization agent checks source fidelity, credibility, ICP fit, belief-shift clarity, voice, structure, CTA fit, and readability. It returns `pass`, `revised`, or `blocked`. Pass/revised posts enter human review; blocked drafts are not stored. One bounded corrective QA retry is allowed.
+- **Independent Review (advisory)**: A separate QA/finalization agent checks source fidelity, credibility, ICP fit, belief-shift clarity, voice, structure, CTA fit, and readability. It returns `pass`, `revised`, or `blocked`. QA never prevents a draft from being created. A `blocked` verdict means the reviewer declined to finalize the draft, so the Content Agent draft is stored instead and flagged. Every remaining concern — including deterministic findings and a `blocked` plan readiness — is recorded as a safe warning code on the post. One bounded corrective QA retry is still attempted to improve the draft, but it no longer gatekeeps.
 - **Safe Logging**: Raw prompts, sensitive context, drafts, and final posts are not written to LLM or audit logs.
 
 ### Review Agent
@@ -596,10 +596,17 @@ Independently validate and safely finalize one generated draft.
 
 Persistence:
 
-- structured `qa_result` is stored only with pass/revised posts
-- structured `format_recommendation` is advisory and is stored only with a
-  pass/revised text draft
-- blocked drafts are not inserted
+- QA is advisory and never blocks generation; a draft is always stored
+- structured `qa_result` is stored with every post, including a `warnings`
+  array of safe reason codes
+- when QA returns `blocked`, the Content Agent draft is stored with a
+  `qa_fallback_to_draft` warning instead of being discarded
+- structured `format_recommendation` is advisory; a default text
+  recommendation is stored when QA does not supply one
+- warning labels are appended to the post's `risk_notes` and shown in a banner
+  above the draft on the review screen
+- only closed-enum warning codes leave the server; deterministic finding
+  `detail` strings and raw QA `issues` text stay internal
 - human Needs Edit, Redraft, Approve, Reject, and manual Publish remain authoritative
 
 ---

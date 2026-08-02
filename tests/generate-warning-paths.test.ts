@@ -243,11 +243,27 @@ function ideaWasMarkedUsed() {
   );
 }
 
-function blockAudits() {
+function warningAudits() {
   return vi
     .mocked(writeAuditLog)
     .mock.calls.map((call) => call[0])
-    .filter((entry) => entry.action === "post_generation_blocked_by_qa");
+    .filter((entry) => entry.action === "post_generated_with_warnings");
+}
+
+/** The row the service passed to posts.insert(), parsed back out. */
+function insertedPost(): Record<string, unknown> | null {
+  for (const record of dbOps) {
+    if (record.table !== "posts") continue;
+    const op = record.ops.find((entry) => entry.startsWith("insert:"));
+    if (op) return JSON.parse(op.slice("insert:".length));
+  }
+  return null;
+}
+
+function storedWarnings(): string[] {
+  const post = insertedPost();
+  const qaResult = post?.qa_result as Record<string, unknown> | undefined;
+  return (qaResult?.warnings as string[]) ?? [];
 }
 
 function queueDeterministic(results: DeterministicCheckIssue[][]) {
@@ -287,9 +303,9 @@ async function generate() {
   return generatePostFromIdea(CLIENT_ID, IDEA_ID, {});
 }
 
-describe("post generation blocked paths", () => {
-  it("blocks at initial_review without storing a post or consuming the idea", async () => {
-    queueDeterministic([[]]);
+describe("post generation warning paths", () => {
+  it("stores the Content Agent draft when QA declines to finalise it", async () => {
+    queueDeterministic([[], []]);
     vi.mocked(runReviewAgent).mockResolvedValueOnce({
       ok: true,
       qa: qa({
@@ -304,22 +320,34 @@ describe("post generation blocked paths", () => {
 
     const result = await generate();
 
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.code).toBe("QA_BLOCKED");
-    expect(result.details?.blockedStage).toBe("initial_review");
-    expect(result.details?.reasonCodes).toContain("strategy_exceeds_source");
-    expect(result.details?.recommendedActions).toContain("change_strategy");
-    expect(postWasInserted()).toBe(false);
-    expect(ideaWasMarkedUsed()).toBe(false);
+    expect(result.ok).toBe(true);
+    expect(postWasInserted()).toBe(true);
+    expect(ideaWasMarkedUsed()).toBe(true);
 
-    const audits = blockAudits();
-    expect(audits).toHaveLength(1);
-    expect(audits[0].metadata).toMatchObject({
-      idea_id: IDEA_ID,
-      source_type: "trend_card",
-      blocked_stage: "initial_review",
-    });
+    const post = insertedPost();
+    expect(post?.final_post).toContain("Original drafted body");
+    expect(post?.status).toBe("review");
+    expect(storedWarnings()).toEqual(
+      expect.arrayContaining(["qa_fallback_to_draft", "strategy_exceeds_source"]),
+    );
+    // A format recommendation is still required by the posts schema.
+    expect(
+      (post?.format_recommendation as Record<string, unknown>)?.primaryFormat,
+    ).toBe("text");
+  });
+
+  it("surfaces warnings in the post's risk notes", async () => {
+    queueDeterministic([[], [UNSUPPORTED_NUMBER], [UNSUPPORTED_NUMBER]]);
+    vi.mocked(runReviewAgent)
+      .mockResolvedValueOnce({ ok: true, qa: qa() } as never)
+      .mockResolvedValueOnce({ ok: true, qa: qa() } as never);
+
+    await generate();
+
+    const riskNotes = String(insertedPost()?.risk_notes ?? "");
+    expect(riskNotes).toContain("No causal claim.");
+    expect(riskNotes).toContain("AI review flag:");
+    expect(riskNotes).toContain("not present in approved evidence");
   });
 
   it("gives the corrective retry the reviewed post and the exact findings", async () => {
@@ -344,10 +372,11 @@ describe("post generation blocked paths", () => {
     expect(corrective.draft.body).not.toBe(original.draft.body);
   });
 
-  it("blocks at corrective_review without storing a post", async () => {
+  it("keeps the first reviewed post when the corrective pass declines to finalise", async () => {
+    const firstReview = qa({ finalPost: "First reviewed body." });
     queueDeterministic([[], [UNSUPPORTED_NUMBER]]);
     vi.mocked(runReviewAgent)
-      .mockResolvedValueOnce({ ok: true, qa: qa() } as never)
+      .mockResolvedValueOnce({ ok: true, qa: firstReview } as never)
       .mockResolvedValueOnce({
         ok: true,
         qa: qa({
@@ -360,19 +389,12 @@ describe("post generation blocked paths", () => {
 
     const result = await generate();
 
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.details?.blockedStage).toBe("corrective_review");
-    expect(result.details?.reasonCodes).toContain("unsupported_numeric_claim");
-    expect(result.details?.recommendedActions).toContain("add_approved_proof");
-    expect(postWasInserted()).toBe(false);
-    expect(ideaWasMarkedUsed()).toBe(false);
-    expect(blockAudits()[0]?.metadata).toMatchObject({
-      blocked_stage: "corrective_review",
-    });
+    expect(result.ok).toBe(true);
+    expect(insertedPost()?.final_post).toBe("First reviewed body.");
+    expect(storedWarnings()).toContain("unsupported_numeric_claim");
   });
 
-  it("blocks at final_validation when findings survive the retry", async () => {
+  it("stores the post with warnings when findings survive the retry", async () => {
     queueDeterministic([[], [UNSUPPORTED_NUMBER], [UNSUPPORTED_NUMBER]]);
     vi.mocked(runReviewAgent)
       .mockResolvedValueOnce({ ok: true, qa: qa() } as never)
@@ -380,18 +402,34 @@ describe("post generation blocked paths", () => {
 
     const result = await generate();
 
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.details?.blockedStage).toBe("final_validation");
-    expect(result.details?.reasonCodes).toEqual(["unsupported_numeric_claim"]);
-    expect(postWasInserted()).toBe(false);
-    expect(ideaWasMarkedUsed()).toBe(false);
-    expect(blockAudits()[0]?.metadata).toMatchObject({
-      blocked_stage: "final_validation",
+    expect(result.ok).toBe(true);
+    expect(postWasInserted()).toBe(true);
+    expect(ideaWasMarkedUsed()).toBe(true);
+    expect(storedWarnings()).toContain("unsupported_numeric_claim");
+    expect(warningAudits()[0]?.metadata).toMatchObject({
+      idea_id: IDEA_ID,
+      source_type: "trend_card",
+      warning_codes: ["unsupported_numeric_claim"],
     });
   });
 
-  it("never leaks draft text, findings detail, or source content into the error or audit", async () => {
+  it("writes no warnings and no warning audit for a clean generation", async () => {
+    queueDeterministic([[], []]);
+    vi.mocked(runReviewAgent).mockResolvedValueOnce({
+      ok: true,
+      qa: qa({ verdict: "pass" }),
+    } as never);
+
+    const result = await generate();
+
+    expect(result.ok).toBe(true);
+    expect(storedWarnings()).toEqual([]);
+    expect(warningAudits()).toHaveLength(0);
+    const riskNotes = String(insertedPost()?.risk_notes ?? "");
+    expect(riskNotes).not.toContain("AI review flag:");
+  });
+
+  it("never leaks draft text, findings detail, or source content into the audit", async () => {
     queueDeterministic([[], [UNSUPPORTED_NUMBER], [UNSUPPORTED_NUMBER]]);
     vi.mocked(runReviewAgent)
       .mockResolvedValueOnce({
@@ -400,12 +438,9 @@ describe("post generation blocked paths", () => {
       } as never)
       .mockResolvedValueOnce({ ok: true, qa: qa() } as never);
 
-    const result = await generate();
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
+    await generate();
 
-    const errorPayload = JSON.stringify(result);
-    const auditPayload = JSON.stringify(blockAudits());
+    const auditPayload = JSON.stringify(warningAudits());
 
     for (const secret of [
       "340%",
@@ -415,7 +450,6 @@ describe("post generation blocked paths", () => {
       clientRow.business_description,
       UNSUPPORTED_NUMBER.detail,
     ]) {
-      expect(errorPayload).not.toContain(secret);
       expect(auditPayload).not.toContain(secret);
     }
   });

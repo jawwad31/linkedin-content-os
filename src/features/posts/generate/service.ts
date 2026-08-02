@@ -33,9 +33,12 @@ import {
 } from "@/lib/ai/playbooks/plan-hash";
 import { writeAuditLog } from "@/lib/audit/log";
 import {
-  buildQaBlockDetails,
-  type QaBlockDetails,
-} from "@/lib/ai/playbooks/qa-block-reasons";
+  composeRiskNotes,
+  dedupeWarnings,
+  warningsFromDeterministicIssues,
+  warningsFromFailedChecks,
+  type QaWarningCode,
+} from "@/lib/ai/playbooks/qa-warnings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
@@ -50,7 +53,7 @@ import type { PlanningResource } from "@/features/ideas/agents/planning-agent";
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
-  | { ok: false; code: string; message: string; details?: QaBlockDetails };
+  | { ok: false; code: string; message: string };
 
 export type GeneratePostData = {
   postId: string;
@@ -193,22 +196,17 @@ const REVIEW_AGENT_NOT_CONFIGURED = {
   message: "AI post review is not configured.",
 };
 
-const QA_BLOCKED_MESSAGE =
-  "AI review blocked this draft because it needs stronger proof or a strategy change. The idea remains ready for editing.";
-
-function qaBlockedFailure(details: QaBlockDetails): {
-  ok: false;
-  code: string;
-  message: string;
-  details: QaBlockDetails;
-} {
-  return {
-    ok: false,
-    code: "QA_BLOCKED",
-    message: QA_BLOCKED_MESSAGE,
-    details,
-  };
-}
+/**
+ * Used when QA declines to finalise a draft. The post is still stored, so a
+ * recommendation is still required by the posts schema.
+ */
+const FALLBACK_FORMAT_RECOMMENDATION = {
+  primaryFormat: "text" as const,
+  alternativeFormats: [] as const,
+  rationale:
+    "Kept as a text post. The AI reviewer did not return a format recommendation for this draft.",
+  adaptationNotes: [] as const,
+};
 
 const GENERIC_FAILURE = {
   ok: false as const,
@@ -867,23 +865,6 @@ async function produceReviewedPost(input: {
     });
 
     if (!replanResult.ok) {
-      if (replanResult.reason === "blocked") {
-        const details = buildQaBlockDetails({ stage: "initial_review" });
-        await writeAuditLog({
-          clientId: input.clientId,
-          userId: input.userId,
-          action: "post_generation_blocked_by_qa",
-          entityType: "content_idea",
-          entityId: input.idea.id,
-          metadata: {
-            idea_id: input.idea.id,
-            source_type: input.idea.source_type,
-            blocked_stage: details.blockedStage,
-            reason_codes: details.reasonCodes,
-          },
-        });
-        return { ok: false, failure: qaBlockedFailure(details) };
-      }
       return {
         ok: false,
         failure:
@@ -926,6 +907,13 @@ async function produceReviewedPost(input: {
     if (planUpdateError || !updatedIdea) {
       return { ok: false, failure: GENERIC_FAILURE };
     }
+  }
+
+  // QA is advisory: every concern below becomes a warning stored with the post
+  // for the human reviewer. Nothing here prevents the draft from being created.
+  const warnings: QaWarningCode[] = [];
+  if (generationPlan.strategy.readiness !== "ready") {
+    warnings.push("strategy_exceeds_source");
   }
 
   const contentIdeaContext = toIdeaContext(
@@ -971,7 +959,7 @@ async function produceReviewedPost(input: {
     primaryIcp: input.businessContext.primaryIcp,
   });
 
-  let reviewResult = await runReviewAgent({
+  const reviewResult = await runReviewAgent({
     clientId: input.clientId,
     userId: input.userId,
     businessContext: input.businessContext,
@@ -992,32 +980,22 @@ async function produceReviewedPost(input: {
     };
   }
 
-  if (reviewResult.qa.verdict === "blocked" || !reviewResult.qa.finalPost) {
-    const details = buildQaBlockDetails({
-      stage: "initial_review",
-      deterministicIssues: initialDeterministicIssues,
-      qaChecks: reviewResult.qa.checks,
-    });
-    await writeAuditLog({
-      clientId: input.clientId,
-      userId: input.userId,
-      action: "post_generation_blocked_by_qa",
-      entityType: "content_idea",
-      entityId: input.idea.id,
-      metadata: {
-        idea_id: input.idea.id,
-        source_type: input.idea.source_type,
-        blocked_stage: details.blockedStage,
-        reason_codes: details.reasonCodes,
-        issue_count: reviewResult.qa.issues.length,
-      },
-    });
-    return { ok: false, failure: qaBlockedFailure(details) };
+  let qa = reviewResult.qa;
+  let finalPost = qa.finalPost;
+  let finalCta = qa.finalCta;
+
+  // The reviewer declined to finalise the draft. Keep the Content Agent's
+  // original draft rather than discarding the work, and flag it.
+  if (!finalPost) {
+    warnings.push("qa_fallback_to_draft");
+    warnings.push(...warningsFromDeterministicIssues(initialDeterministicIssues));
+    finalPost = buildFinalPost(agentResult.draft);
+    finalCta = agentResult.draft.cta;
   }
 
   let finalDeterministicIssues = runDeterministicPostChecks({
-    finalPost: reviewResult.qa.finalPost,
-    cta: reviewResult.qa.finalCta,
+    finalPost,
+    cta: finalCta,
     plan: generationPlan,
     approvedProof: input.businessContext.approvedProof,
     selectedSource: sourceContext,
@@ -1027,17 +1005,19 @@ async function produceReviewedPost(input: {
     primaryIcp: input.businessContext.primaryIcp,
   });
 
-  if (finalDeterministicIssues.length > 0) {
-    const priorQa = reviewResult.qa;
+  // One bounded corrective pass. It no longer gatekeeps — it is only an
+  // attempt to improve the draft before it reaches the human reviewer.
+  if (finalDeterministicIssues.length > 0 && qa.finalPost) {
+    const priorQa = qa;
     const reviewedDraft: GeneratedPostDraft = {
       hook: "",
-      body: priorQa.finalPost!,
-      cta: priorQa.finalCta,
+      body: finalPost,
+      cta: finalCta,
       format: "text",
       proofUsed: priorQa.proofNotes,
       riskNotes: priorQa.riskNotes,
     };
-    reviewResult = await runReviewAgent({
+    const corrective = await runReviewAgent({
       clientId: input.clientId,
       userId: input.userId,
       businessContext: input.businessContext,
@@ -1049,87 +1029,63 @@ async function produceReviewedPost(input: {
       priorQa,
     });
 
-    if (
-      !reviewResult.ok ||
-      reviewResult.qa.verdict === "blocked" ||
-      !reviewResult.qa.finalPost
-    ) {
-      if (!reviewResult.ok) {
-        return { ok: false, failure: GENERIC_FAILURE };
-      }
-      const details = buildQaBlockDetails({
-        stage: "corrective_review",
-        deterministicIssues: finalDeterministicIssues,
-        qaChecks: reviewResult.qa.checks,
+    if (corrective.ok && corrective.qa.finalPost) {
+      qa = corrective.qa;
+      finalPost = corrective.qa.finalPost;
+      finalCta = corrective.qa.finalCta;
+      finalDeterministicIssues = runDeterministicPostChecks({
+        finalPost,
+        cta: finalCta,
+        plan: generationPlan,
+        approvedProof: input.businessContext.approvedProof,
+        selectedSource: sourceContext,
+        phrasesToAvoid: input.businessContext.phrasesToAvoid,
+        bannedTopics: input.businessContext.bannedTopics,
+        selectedResource,
+        primaryIcp: input.businessContext.primaryIcp,
       });
-      await writeAuditLog({
-        clientId: input.clientId,
-        userId: input.userId,
-        action: "post_generation_blocked_by_qa",
-        entityType: "content_idea",
-        entityId: input.idea.id,
-        metadata: {
-          idea_id: input.idea.id,
-          source_type: input.idea.source_type,
-          blocked_stage: details.blockedStage,
-          reason_codes: details.reasonCodes,
-          issue_count: reviewResult.qa.issues.length,
-        },
-      });
-      return { ok: false, failure: qaBlockedFailure(details) };
     }
+  }
 
-    finalDeterministicIssues = runDeterministicPostChecks({
-      finalPost: reviewResult.qa.finalPost,
-      cta: reviewResult.qa.finalCta,
-      plan: generationPlan,
-      approvedProof: input.businessContext.approvedProof,
-      selectedSource: sourceContext,
-      phrasesToAvoid: input.businessContext.phrasesToAvoid,
-      bannedTopics: input.businessContext.bannedTopics,
-      selectedResource,
-      primaryIcp: input.businessContext.primaryIcp,
+  warnings.push(...warningsFromDeterministicIssues(finalDeterministicIssues));
+  warnings.push(...warningsFromFailedChecks(qa.checks));
+
+  const warningCodes = dedupeWarnings(warnings);
+
+  if (warningCodes.length > 0) {
+    await writeAuditLog({
+      clientId: input.clientId,
+      userId: input.userId,
+      action: "post_generated_with_warnings",
+      entityType: "content_idea",
+      entityId: input.idea.id,
+      metadata: {
+        idea_id: input.idea.id,
+        source_type: input.idea.source_type,
+        warning_codes: warningCodes,
+        warning_count: warningCodes.length,
+      },
     });
-
-    if (finalDeterministicIssues.length > 0) {
-      const details = buildQaBlockDetails({
-        stage: "final_validation",
-        deterministicIssues: finalDeterministicIssues,
-      });
-      await writeAuditLog({
-        clientId: input.clientId,
-        userId: input.userId,
-        action: "post_generation_blocked_by_qa",
-        entityType: "content_idea",
-        entityId: input.idea.id,
-        metadata: {
-          idea_id: input.idea.id,
-          source_type: input.idea.source_type,
-          blocked_stage: details.blockedStage,
-          reason_codes: details.reasonCodes,
-          issue_count: finalDeterministicIssues.length,
-        },
-      });
-      return { ok: false, failure: qaBlockedFailure(details) };
-    }
   }
 
   return {
     ok: true,
     values: {
-      finalPost: reviewResult.qa.finalPost,
+      finalPost,
       buyerBeliefShift: `${generationPlan.strategy.currentBelief} -> ${generationPlan.strategy.desiredBelief}`,
-      proofNotes: reviewResult.qa.proofNotes,
-      riskNotes: reviewResult.qa.riskNotes,
-      ctaIntent: reviewResult.qa.finalCta,
+      proofNotes: qa.proofNotes,
+      riskNotes: composeRiskNotes(qa.riskNotes, warningCodes),
+      ctaIntent: finalCta,
       qaResult: {
-        ...reviewResult.qa,
+        ...qa,
+        warnings: warningCodes,
         deterministicChecks: {
           initialIssues: initialDeterministicIssues,
           finalIssues: finalDeterministicIssues,
         },
       },
-      formatRecommendation: reviewResult.qa.formatRecommendation!,
+      formatRecommendation:
+        qa.formatRecommendation ?? FALLBACK_FORMAT_RECOMMENDATION,
       sourceContextUsed: {
         idea_id: input.idea.id,
         source_type: input.idea.source_type,

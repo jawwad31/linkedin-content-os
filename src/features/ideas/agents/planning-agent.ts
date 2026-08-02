@@ -87,7 +87,7 @@ export type PlanningAgentResult =
 
 export type ReplanningAgentResult =
   | { ok: true; generationPlan: GenerationPlanV2 }
-  | { ok: false; reason: "not_configured" | "error" | "blocked" };
+  | { ok: false; reason: "not_configured" | "error" };
 
 const ideaSchema = z.object({
   angle: z.string().trim().min(1).max(240),
@@ -298,8 +298,11 @@ export async function runPlanningAgent(input: {
   let resourcePostSeen = false;
   const compatibleIdeas = result.data.ideas.filter((idea) => {
     const plan = idea.generation_plan;
+    // New ideas must still be ready to be stored. Readiness is only tolerated
+    // (as a warning) later, when an already-selected idea is replanned.
     if (
       plan.sourceMode !== input.sourceContext.mode ||
+      plan.strategy.readiness !== "ready" ||
       validatePlanAgainstCompatibility(plan, input.compatibility).length > 0
     ) {
       return false;
@@ -378,10 +381,8 @@ export async function replanContentIdea(input: {
     return { ok: false, reason: "error" };
   }
 
-  if (result.data.generation_plan.strategy.readiness !== "ready") {
-    return { ok: false, reason: "blocked" };
-  }
-
+  // A blocked readiness is returned as-is. Generation proceeds and the caller
+  // raises it as a warning for the human reviewer.
   if (
     result.data.generation_plan.sourceMode !== input.sourceContext.mode ||
     validatePlanAgainstCompatibility(

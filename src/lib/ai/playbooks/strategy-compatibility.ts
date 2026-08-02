@@ -101,7 +101,9 @@ export function validatePlanAgainstCompatibility(
   const issues: string[] = [];
   const { strategy, execution } = plan;
 
-  if (strategy.readiness !== "ready") issues.push("plan_not_ready");
+  // Readiness is deliberately not checked here. It is a strategy-strength
+  // judgement, not a taxonomy-compatibility fact, and it is surfaced to the
+  // human reviewer as a warning rather than blocking generation.
   if (!compatibility.angleTypes.includes(strategy.angleType)) {
     issues.push("incompatible_angle_type");
   }
