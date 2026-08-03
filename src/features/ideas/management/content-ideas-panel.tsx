@@ -107,7 +107,7 @@ function BeliefShiftOneLiner({ value }: { value: string }) {
   const text = shift ? `${shift.from} → ${shift.to}` : value;
 
   return (
-    <p className="mt-1 truncate text-small italic text-muted-foreground">
+    <p className="mt-1 w-full truncate text-small italic text-muted-foreground">
       {text}
     </p>
   );
@@ -201,7 +201,7 @@ export function ContentIdeasPanel({
           <article
             key={idea.id}
             className={cn(
-              "flex flex-col gap-3 rounded-card border border-border-grey bg-white p-4 transition-colors",
+              "flex min-w-0 flex-col gap-3 rounded-card border border-border-grey bg-white p-4 transition-colors",
               isSelected &&
                 "border-brand-purple/50 bg-brand-purple/5 ring-1 ring-brand-purple/20",
             )}
@@ -217,9 +217,9 @@ export function ContentIdeasPanel({
                   activateHeader();
                 }
               }}
-              className="-m-1 flex cursor-pointer flex-col gap-2 rounded-control p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple/50"
+              className="-m-1 flex min-w-0 cursor-pointer flex-col gap-2 rounded-control p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple/50"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {canDelete && selection.isSelectionMode ? (
                   <input
                     type="checkbox"
@@ -256,7 +256,7 @@ export function ContentIdeasPanel({
                 ) : null}
               </div>
 
-              <div className="min-w-0">
+              <div className="w-full min-w-0">
                 <h2 className="break-words font-heading text-card-title font-semibold text-near-black">
                   {idea.angle}
                 </h2>

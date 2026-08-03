@@ -145,7 +145,7 @@ export function TrendCardsPanel({
               <div
                 key={card.id}
                 className={cn(
-                  "flex flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3 transition-colors",
+                  "flex min-w-0 flex-col gap-3 rounded-control border border-border-grey bg-soft-white p-3 transition-colors",
                   isSelected &&
                     "border-brand-purple/50 bg-brand-purple/5 ring-1 ring-brand-purple/20",
                 )}
@@ -161,9 +161,9 @@ export function TrendCardsPanel({
                       activateHeader();
                     }
                   }}
-                  className="-m-1 flex cursor-pointer flex-col gap-2 rounded-control p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple/50"
+                  className="-m-1 flex min-w-0 cursor-pointer flex-col gap-2 rounded-control p-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple/50"
                 >
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     {canManageReview && selection.isSelectionMode ? (
                       <input
                         type="checkbox"
@@ -204,7 +204,7 @@ export function TrendCardsPanel({
                     ) : null}
                   </div>
 
-                  <p className="text-body font-medium text-near-black">
+                  <p className="w-full min-w-0 break-words text-body font-medium text-near-black">
                     {card.title}
                   </p>
                 </div>
