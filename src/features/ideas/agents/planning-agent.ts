@@ -31,9 +31,24 @@ export type PlanningBusinessContext = {
   industry: string | null;
   businessDescription: string | null;
   primaryIcp: string | null;
+  audienceUnderstanding?: string | null;
+  painPoints?: string | null;
   mainOffer: string | null;
+  commercialDetails?: string | null;
+  deliveryApproach?: string | null;
+  businessPositioning?: string | null;
+  questionsAndDoubts?: string | null;
   approvedProof: unknown;
   bannedTopics: unknown;
+
+  // Personal brand profile
+  founderName?: string | null;
+  roleAndWork?: string | null;
+  personalPositioning?: string | null;
+  personalReaders?: string | null;
+  contentPillars?: unknown;
+  principles?: string | null;
+  profileRevision?: number;
 };
 
 export type PlanningResource = {
@@ -134,9 +149,25 @@ function businessContextPayload(context: PlanningBusinessContext) {
     industry: context.industry,
     business_description: context.businessDescription,
     primary_icp: context.primaryIcp,
+    audience_understanding: context.audienceUnderstanding ?? null,
+    pain_points: context.painPoints ?? null,
     main_offer: context.mainOffer,
+    commercial_details: context.commercialDetails ?? null,
+    delivery_approach: context.deliveryApproach ?? null,
+    business_positioning: context.businessPositioning ?? null,
+    questions_and_doubts: context.questionsAndDoubts ?? null,
     approved_evidence: context.approvedProof,
     banned_topics: context.bannedTopics,
+
+    personal_brand_profile: {
+      founder_name: context.founderName ?? null,
+      role_and_work: context.roleAndWork ?? null,
+      personal_positioning: context.personalPositioning ?? null,
+      personal_readers: context.personalReaders ?? null,
+      content_pillars: context.contentPillars ?? [],
+      principles: context.principles ?? null,
+    },
+    profile_revision: context.profileRevision ?? 1,
   };
 }
 

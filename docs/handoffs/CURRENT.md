@@ -2,22 +2,43 @@
 
 Updated: 2026-10-06
 
-- Active editor: Gemini (pair programming on Virel)
-- Current phase: P00 completed; ready for P01 — Two context profiles.
+- Active editor: Claude Sonnet 4.6 (pair programming on Virel)
+- Current phase: P01 completed; ready for P02 — Content Bank and safe reuse foundation.
 - Repository: jawwad31/linkedin-content-os, main.
-- Starting commit: 86cab608bf83ec359274b85e942c8a8f36f69aa6
-- Product name: Virel (recorded in canonical documentation; technical repo, db, and package names preserved).
-- Deliverables: Canonical root documents installed, legacy md files reconciled/removed, historical snapshots preserved in `docs/reference/2026-10-06/`.
-- Repository files changed: `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `design.md`, `EXECUTION-PROMPTS.md`, `feature-checklist.md`, `GEMINI.md`, `IMPLEMENTATION-PLAN.md`, `operating-guidelines.md`, `security-access.md`, `START-HERE.md`, `docs/`, `md files/` (removed).
-- Application/database changes: None (documentation and baseline reconciliation only).
-- Completed: Baseline inspection of migrations, access helpers, playbook manifest/contracts, worker, Settings, resource services, and deletion policies. Recorded baseline tests, lint, and build.
+- Baseline commit: bea7b71 (docs: align personal brand content roadmap)
+- Product name: Virel (recorded in canonical documentation).
+- Deliverables:
+  - Additive database migration `supabase/migrations/20261006150000_two_context_profiles.sql` adding business and personal-brand profile columns plus `profile_revision`.
+  - Validated schemas and Zod validation in `src/features/setup/schemas.ts`.
+  - Scoped query resolution with legacy `core_pov` mapping in `src/features/setup/queries.ts`.
+  - Secure server action with revision incrementing and audit logging in `src/features/setup/actions.ts`.
+  - M3-styled 5-tab profile manager with revision badge in `src/features/setup/business-context-form.tsx`.
+  - Integration of personal-brand profile and intended personal readers into planning and post drafting prompts (`src/features/ideas/agents/planning-agent.ts`, `src/features/ideas/generate/service.ts`, `src/features/posts/agents/content-agent.ts`, `src/features/posts/generate/service.ts`).
+  - Unit and integration tests in `tests/profiles.test.ts`.
+- Repository files changed:
+  - `supabase/migrations/20261006150000_two_context_profiles.sql`
+  - `src/features/setup/schemas.ts`
+  - `src/features/setup/queries.ts`
+  - `src/features/setup/actions.ts`
+  - `src/features/setup/business-context-form.tsx`
+  - `src/features/ideas/agents/planning-agent.ts`
+  - `src/features/ideas/generate/service.ts`
+  - `src/features/posts/agents/content-agent.ts`
+  - `src/features/posts/generate/service.ts`
+  - `tests/profiles.test.ts`
+  - `feature-checklist.md`
+  - `docs/handoffs/CURRENT.md`
+- Application/database changes:
+  - Additive columns on `clients`: `audience_understanding`, `pain_points`, `commercial_details`, `delivery_approach`, `business_positioning`, `questions_and_doubts`, `role_and_work`, `personal_positioning`, `personal_readers`, `principles`, `voice_guide`, `boundaries`, `business_mentions`, `profile_revision`.
 - Validation:
-  - `npm test` (`vitest run`): 14/14 test files passed, 74/74 tests passed.
-  - `npm run lint`: passed clean (0 errors, 0 warnings).
-  - `npm run build`: Next.js 16.2.10 production build succeeded with Turbopack and 12 static/dynamic routes.
-- Commit and push: Pending for P00.
-- Deployment/manual product tests: Deployed behavior preserved; existing login, Settings, research, idea/post review, and manual Publish still load.
-- Environment dependencies: Scoped retrieval adapter (`DocumentRetrievalProvider`) and web research adapter (`WebResearchProvider`) planned; existing OpenRouter and Supabase credentials active.
-- Important preservation: Manual provisioning, six selected Account User capabilities, administrator hard-delete protections, current visual tokens, stored generation plans and QA.
-- Next step: Commit P00 (`docs: align personal brand content roadmap`), push, verify, and automatically begin P01 — Two context profiles.
+  - `npm test`: 15/15 test files passed, 79/79 tests passed.
+  - `npm run lint`: passed cleanly (0 errors).
+  - `npm run build`: Next.js 16 production build succeeded with Turbopack.
+- Behavior preserved:
+  - Manual user provisioning and forced password gate preserved.
+  - Team access and role authorization preserved.
+  - Legacy `core_pov` and `content_pillars` reactivated via deliberate mapping.
+  - Existing idea generation and post drafting workflows preserved.
+- Commit: `feat: add business and personal brand profiles`
+- Next step: P02 — Content Bank and explicit reuse foundation.
 - Blockers: None.

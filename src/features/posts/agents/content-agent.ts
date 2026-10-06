@@ -17,13 +17,31 @@ export type ContentAgentBusinessContext = {
   industry: string | null;
   businessDescription: string | null;
   primaryIcp: string | null;
+  audienceUnderstanding?: string | null;
+  painPoints?: string | null;
   mainOffer: string | null;
+  commercialDetails?: string | null;
+  deliveryApproach?: string | null;
+  businessPositioning?: string | null;
+  questionsAndDoubts?: string | null;
   approvedProof: unknown;
   bannedTopics: unknown;
+
+  // Personal brand profile
+  founderName?: string | null;
+  roleAndWork?: string | null;
+  personalPositioning?: string | null;
+  personalReaders?: string | null;
+  contentPillars?: unknown;
+  principles?: string | null;
+  voiceGuide?: string | null;
   founderVoiceSample: string | null;
   founderVoiceExamples: unknown;
   phrasesToUse: unknown;
   phrasesToAvoid: unknown;
+  boundaries?: string | null;
+  businessMentions?: string | null;
+  profileRevision?: number;
 };
 
 export type ContentAgentIdeaContext = {
@@ -110,6 +128,7 @@ export async function buildContentPrompt(input: {
       "Draft exactly one public-facing LinkedIn text post from the stored GenerationPlanV2.",
       "Treat the plan and idea metadata as private scaffolding. Never expose field labels or workflow terms.",
       "The draft will be checked deterministically and reviewed by a separate QA agent.",
+      "Write for the intended readership. When personal_readers is provided in the personal brand profile, calibrate the post for that readership rather than always assuming the buyer ICP is the sole reader.",
       "Return strict JSON only.",
     ].join("\n\n"),
     user: JSON.stringify({
@@ -117,7 +136,13 @@ export async function buildContentPrompt(input: {
         industry: input.businessContext.industry,
         business_description: input.businessContext.businessDescription,
         primary_icp: input.businessContext.primaryIcp,
+        audience_understanding: input.businessContext.audienceUnderstanding ?? null,
+        pain_points: input.businessContext.painPoints ?? null,
         main_offer: input.businessContext.mainOffer,
+        commercial_details: input.businessContext.commercialDetails ?? null,
+        delivery_approach: input.businessContext.deliveryApproach ?? null,
+        business_positioning: input.businessContext.businessPositioning ?? null,
+        questions_and_doubts: input.businessContext.questionsAndDoubts ?? null,
         approved_evidence: input.businessContext.approvedProof,
         banned_topics: input.businessContext.bannedTopics,
         founder_voice_sample: input.businessContext.founderVoiceSample,
@@ -125,6 +150,18 @@ export async function buildContentPrompt(input: {
         phrases_to_use: input.businessContext.phrasesToUse,
         phrases_to_avoid: input.businessContext.phrasesToAvoid,
       },
+      personal_brand_profile: {
+        founder_name: input.businessContext.founderName ?? null,
+        role_and_work: input.businessContext.roleAndWork ?? null,
+        personal_positioning: input.businessContext.personalPositioning ?? null,
+        personal_readers: input.businessContext.personalReaders ?? null,
+        content_pillars: input.businessContext.contentPillars ?? [],
+        principles: input.businessContext.principles ?? null,
+        voice_guide: input.businessContext.voiceGuide ?? null,
+        boundaries: input.businessContext.boundaries ?? null,
+        business_mentions: input.businessContext.businessMentions ?? null,
+      },
+      profile_revision: input.businessContext.profileRevision ?? 1,
       content_idea: {
         id: input.idea.id,
         angle: input.idea.angle,

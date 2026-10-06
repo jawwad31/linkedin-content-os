@@ -20,7 +20,7 @@ export type SaveBusinessContextState = {
 };
 
 const SAVE_ERROR_COPY =
-  "Could not save business context. Check the fields and try again.";
+  "Could not save context profile. Check the fields and try again.";
 const SETUP_FORBIDDEN_COPY =
   "You do not have permission to edit Settings for this Client Workspace.";
 
@@ -44,26 +44,45 @@ export async function saveBusinessContextAction(
   }
 
   const parsed = businessContextFormSchema.safeParse({
+    // Business profile
     name: formData.get("name"),
-    founderName: formData.get("founderName"),
-    industry: formData.get("industry"),
-    businessDescription: formData.get("businessDescription"),
-    primaryIcp: formData.get("primaryIcp"),
-    mainOffer: formData.get("mainOffer"),
-    bannedTopics: formData.get("bannedTopics"),
-    founderVoiceSample: formData.get("founderVoiceSample"),
-    phrasesToUse: formData.get("phrasesToUse"),
-    phrasesToAvoid: formData.get("phrasesToAvoid"),
-    approvedProof: formData.get("approvedProof"),
-    voiceExample1Label: formData.get("voiceExample1Label"),
-    voiceExample1Text: formData.get("voiceExample1Text"),
-    voiceExample1Url: formData.get("voiceExample1Url"),
-    voiceExample2Label: formData.get("voiceExample2Label"),
-    voiceExample2Text: formData.get("voiceExample2Text"),
-    voiceExample2Url: formData.get("voiceExample2Url"),
-    voiceExample3Label: formData.get("voiceExample3Label"),
-    voiceExample3Text: formData.get("voiceExample3Text"),
-    voiceExample3Url: formData.get("voiceExample3Url"),
+    industry: formData.get("industry") ?? "",
+    businessDescription: formData.get("businessDescription") ?? "",
+    primaryIcp: formData.get("primaryIcp") ?? "",
+    audienceUnderstanding: formData.get("audienceUnderstanding") ?? "",
+    painPoints: formData.get("painPoints") ?? "",
+    mainOffer: formData.get("mainOffer") ?? "",
+    commercialDetails: formData.get("commercialDetails") ?? "",
+    deliveryApproach: formData.get("deliveryApproach") ?? "",
+    businessPositioning: formData.get("businessPositioning") ?? "",
+    questionsAndDoubts: formData.get("questionsAndDoubts") ?? "",
+    bannedTopics: formData.get("bannedTopics") ?? "",
+    approvedProof: formData.get("approvedProof") ?? "",
+
+    // Personal-brand profile
+    founderName: formData.get("founderName") ?? "",
+    roleAndWork: formData.get("roleAndWork") ?? "",
+    personalPositioning: formData.get("personalPositioning") ?? "",
+    personalReaders: formData.get("personalReaders") ?? "",
+    contentPillars: formData.get("contentPillars") ?? "",
+    principles: formData.get("principles") ?? "",
+    voiceGuide: formData.get("voiceGuide") ?? "",
+    founderVoiceSample: formData.get("founderVoiceSample") ?? "",
+    phrasesToUse: formData.get("phrasesToUse") ?? "",
+    phrasesToAvoid: formData.get("phrasesToAvoid") ?? "",
+    boundaries: formData.get("boundaries") ?? "",
+    businessMentions: formData.get("businessMentions") ?? "",
+
+    // Voice examples
+    voiceExample1Label: formData.get("voiceExample1Label") ?? "",
+    voiceExample1Text: formData.get("voiceExample1Text") ?? "",
+    voiceExample1Url: formData.get("voiceExample1Url") ?? "",
+    voiceExample2Label: formData.get("voiceExample2Label") ?? "",
+    voiceExample2Text: formData.get("voiceExample2Text") ?? "",
+    voiceExample2Url: formData.get("voiceExample2Url") ?? "",
+    voiceExample3Label: formData.get("voiceExample3Label") ?? "",
+    voiceExample3Text: formData.get("voiceExample3Text") ?? "",
+    voiceExample3Url: formData.get("voiceExample3Url") ?? "",
   });
 
   if (!parsed.success) {
@@ -89,7 +108,8 @@ export async function saveBusinessContextAction(
     return { error: SAVE_ERROR_COPY, success: null };
   }
 
-  const update = toClientContextUpdate(parsed.data);
+  const currentRevision = typeof before.profile_revision === "number" ? before.profile_revision : 1;
+  const update = toClientContextUpdate(parsed.data, currentRevision);
 
   const { data: after, error: updateError } = await supabase
     .from("clients")
@@ -117,11 +137,12 @@ export async function saveBusinessContextAction(
       metadata: {
         changed_fields: changedFields,
         changed_count: changedFields.length,
+        profile_revision: update.profile_revision,
       },
     });
   }
 
   revalidatePath(`/client/${clientIdResult.data}/settings`);
 
-  return { error: null, success: "Business context saved." };
+  return { error: null, success: "Context profiles saved successfully." };
 }

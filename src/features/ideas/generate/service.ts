@@ -50,9 +50,23 @@ type ClientContextRow = {
   industry: string | null;
   business_description: string | null;
   primary_icp: string | null;
+  audience_understanding?: string | null;
+  pain_points?: string | null;
   main_offer: string | null;
+  commercial_details?: string | null;
+  delivery_approach?: string | null;
+  business_positioning?: string | null;
+  questions_and_doubts?: string | null;
   approved_proof: unknown;
   banned_topics: unknown;
+
+  founder_name?: string | null;
+  role_and_work?: string | null;
+  personal_positioning?: string | null;
+  personal_readers?: string | null;
+  content_pillars?: unknown;
+  principles?: string | null;
+  profile_revision?: number | null;
 };
 
 type PlanningResourceRow = {
@@ -177,7 +191,7 @@ async function getBusinessContext(
   const { data, error } = await admin
     .from("clients")
     .select(
-      "industry, business_description, primary_icp, main_offer, approved_proof, banned_topics",
+      "industry, business_description, primary_icp, main_offer, approved_proof, banned_topics, audience_understanding, pain_points, commercial_details, delivery_approach, business_positioning, questions_and_doubts, founder_name, role_and_work, personal_positioning, personal_readers, content_pillars, principles, profile_revision",
     )
     .eq("id", clientId)
     .is("deleted_at", null)
@@ -189,9 +203,23 @@ async function getBusinessContext(
     industry: data.industry,
     businessDescription: data.business_description,
     primaryIcp: data.primary_icp,
+    audienceUnderstanding: data.audience_understanding ?? null,
+    painPoints: data.pain_points ?? null,
     mainOffer: data.main_offer,
+    commercialDetails: data.commercial_details ?? null,
+    deliveryApproach: data.delivery_approach ?? null,
+    businessPositioning: data.business_positioning ?? null,
+    questionsAndDoubts: data.questions_and_doubts ?? null,
     approvedProof: data.approved_proof,
     bannedTopics: data.banned_topics,
+
+    founderName: data.founder_name ?? null,
+    roleAndWork: data.role_and_work ?? null,
+    personalPositioning: data.personal_positioning ?? null,
+    personalReaders: data.personal_readers ?? null,
+    contentPillars: data.content_pillars ?? [],
+    principles: data.principles ?? null,
+    profileRevision: typeof data.profile_revision === "number" ? data.profile_revision : 1,
   };
 }
 

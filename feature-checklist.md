@@ -9,8 +9,8 @@ Repository read access and selected source files were verified. This package has
 | Phase | Deliverable | Dependency | Status |
 |---|---|---|---|
 | P00 | Canonical docs and baseline reconciliation | None | Complete |
-| P01 | Business/personal profiles | P00 | Ready to start |
-| P02 | Content Bank and explicit reuse | P01 | Planned |
+| P01 | Business/personal profiles | P00 | Complete |
+| P02 | Content Bank and explicit reuse | P01 | Ready to start |
 | P03 | Markdown documents and scoped retrieval | P01–P02 | Planned |
 | P04 | Shared standalone drafting and editorial controls | P01–P03 | Planned |
 | P05 | Monthly allocation/defaults/source selection | P02/P04 | Planned |
@@ -23,7 +23,7 @@ Repository read access and selected source files were verified. This package has
 ## Acceptance gates
 
 - [x] P00: root canonical docs installed; legacy rule copies reconciled/archived to docs/reference/2026-10-06; current capabilities/provisioning/design preserved; baseline lint/build/tests and provider decision recorded.
-- [ ] P01: separate profiles persist; selected personal readers influence generation; older fields and Team Access preserved; scoped admin editing enforced.
+- [x] P01: separate profiles persist; selected personal readers influence generation; older fields and Team Access preserved; scoped admin editing enforced.
 - [ ] P02: experiences/resources available in Content Bank with distinct categories; current delivery/gating retained; explicit reuse and transactional reservations/use history work.
 - [ ] P03: MD/TXT originals preserved; processing/retry/version states work; selected evidence retrieved accurately; no cross-account/private-source leaks.
 - [ ] P04: all approved source entry points share generation/QA; post type/pillar/funnel/reader/takeaway editable; existing plans and one-post-per-idea invariant preserved.

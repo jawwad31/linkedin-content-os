@@ -80,6 +80,22 @@ type ClientContextRow = {
   founder_voice_examples: unknown;
   phrases_to_use: unknown;
   phrases_to_avoid: unknown;
+  audience_understanding?: string | null;
+  pain_points?: string | null;
+  commercial_details?: string | null;
+  delivery_approach?: string | null;
+  business_positioning?: string | null;
+  questions_and_doubts?: string | null;
+  founder_name?: string | null;
+  role_and_work?: string | null;
+  personal_positioning?: string | null;
+  personal_readers?: string | null;
+  content_pillars?: unknown;
+  principles?: string | null;
+  voice_guide?: string | null;
+  boundaries?: string | null;
+  business_mentions?: string | null;
+  profile_revision?: number | null;
 };
 
 type ContentIdeaRow = {
@@ -231,13 +247,30 @@ function toBusinessContext(row: ClientContextRow): ContentAgentBusinessContext {
     industry: row.industry,
     businessDescription: row.business_description,
     primaryIcp: row.primary_icp,
+    audienceUnderstanding: row.audience_understanding ?? null,
+    painPoints: row.pain_points ?? null,
     mainOffer: row.main_offer,
+    commercialDetails: row.commercial_details ?? null,
+    deliveryApproach: row.delivery_approach ?? null,
+    businessPositioning: row.business_positioning ?? null,
+    questionsAndDoubts: row.questions_and_doubts ?? null,
     approvedProof: row.approved_proof,
     bannedTopics: row.banned_topics,
     founderVoiceSample: row.founder_voice_sample,
     founderVoiceExamples: row.founder_voice_examples,
     phrasesToUse: row.phrases_to_use,
     phrasesToAvoid: row.phrases_to_avoid,
+
+    founderName: row.founder_name ?? null,
+    roleAndWork: row.role_and_work ?? null,
+    personalPositioning: row.personal_positioning ?? null,
+    personalReaders: row.personal_readers ?? null,
+    contentPillars: row.content_pillars ?? [],
+    principles: row.principles ?? null,
+    voiceGuide: row.voice_guide ?? null,
+    boundaries: row.boundaries ?? null,
+    businessMentions: row.business_mentions ?? null,
+    profileRevision: typeof row.profile_revision === "number" ? row.profile_revision : 1,
   };
 }
 
@@ -345,7 +378,7 @@ async function getBusinessContext(
   const { data, error } = await admin
     .from("clients")
     .select(
-      "industry, business_description, primary_icp, main_offer, approved_proof, banned_topics, founder_voice_sample, founder_voice_examples, phrases_to_use, phrases_to_avoid",
+      "industry, business_description, primary_icp, main_offer, approved_proof, banned_topics, founder_voice_sample, founder_voice_examples, phrases_to_use, phrases_to_avoid, audience_understanding, pain_points, commercial_details, delivery_approach, business_positioning, questions_and_doubts, founder_name, role_and_work, personal_positioning, personal_readers, content_pillars, principles, voice_guide, boundaries, business_mentions, profile_revision",
     )
     .eq("id", clientId)
     .is("deleted_at", null)

@@ -4,8 +4,8 @@ import {
   Building2,
   Mic,
   ShieldAlert,
-  ShieldCheck,
   Target,
+  User,
   type LucideIcon,
 } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
@@ -33,40 +33,64 @@ import {
   type BusinessContextFormInput,
 } from "./schemas";
 
-type TabId = "profile" | "icp" | "voice" | "evidence" | "guardrails";
+type TabId =
+  | "business_profile"
+  | "business_icp"
+  | "personal_profile"
+  | "personal_voice"
+  | "guardrails";
 
 const TABS: SegmentedNavigationItem<TabId>[] = [
-  { id: "profile", label: "Business Profile", icon: Building2 },
-  { id: "icp", label: "ICP & Offer", icon: Target },
-  { id: "voice", label: "Founder Voice", icon: Mic },
-  { id: "evidence", label: "Approved Evidence", icon: ShieldCheck },
-  { id: "guardrails", label: "Guardrails", icon: ShieldAlert },
+  { id: "business_profile", label: "Business Profile", icon: Building2 },
+  { id: "business_icp", label: "ICP & Offer", icon: Target },
+  { id: "personal_profile", label: "Personal Brand", icon: User },
+  { id: "personal_voice", label: "Voice & Style", icon: Mic },
+  { id: "guardrails", label: "Guardrails & Proof", icon: ShieldAlert },
 ];
 
 const FIELD_TABS: Record<keyof BusinessContextFormInput, TabId> = {
-  name: "profile",
-  founderName: "profile",
-  industry: "profile",
-  businessDescription: "profile",
-  primaryIcp: "icp",
-  mainOffer: "icp",
+  name: "business_profile",
+  industry: "business_profile",
+  businessDescription: "business_profile",
+  deliveryApproach: "business_profile",
+  businessPositioning: "business_profile",
+
+  primaryIcp: "business_icp",
+  audienceUnderstanding: "business_icp",
+  painPoints: "business_icp",
+  mainOffer: "business_icp",
+  commercialDetails: "business_icp",
+  questionsAndDoubts: "business_icp",
+
+  founderName: "personal_profile",
+  roleAndWork: "personal_profile",
+  personalPositioning: "personal_profile",
+  personalReaders: "personal_profile",
+  contentPillars: "personal_profile",
+  principles: "personal_profile",
+
+  voiceGuide: "personal_voice",
+  founderVoiceSample: "personal_voice",
+  phrasesToUse: "personal_voice",
+  phrasesToAvoid: "personal_voice",
+  voiceExample1Label: "personal_voice",
+  voiceExample1Text: "personal_voice",
+  voiceExample1Url: "personal_voice",
+  voiceExample2Label: "personal_voice",
+  voiceExample2Text: "personal_voice",
+  voiceExample2Url: "personal_voice",
+  voiceExample3Label: "personal_voice",
+  voiceExample3Text: "personal_voice",
+  voiceExample3Url: "personal_voice",
+
+  approvedProof: "guardrails",
   bannedTopics: "guardrails",
-  founderVoiceSample: "voice",
-  phrasesToUse: "voice",
-  phrasesToAvoid: "voice",
-  approvedProof: "evidence",
-  voiceExample1Label: "voice",
-  voiceExample1Text: "voice",
-  voiceExample1Url: "voice",
-  voiceExample2Label: "voice",
-  voiceExample2Text: "voice",
-  voiceExample2Url: "voice",
-  voiceExample3Label: "voice",
-  voiceExample3Text: "voice",
-  voiceExample3Url: "voice",
+  boundaries: "guardrails",
+  businessMentions: "guardrails",
 };
 
-function toLines(values: string[]) {
+function toLines(values: string[] | undefined) {
+  if (!values || !Array.isArray(values)) return "";
   return values.join("\n");
 }
 
@@ -119,6 +143,7 @@ function FieldBlock({
     <div className="flex flex-col gap-1.5">
       <label htmlFor={readOnly ? undefined : name} className="text-small font-medium text-near-black">
         {label}
+        {required ? <span className="ml-1 text-danger-strong">*</span> : null}
       </label>
       {readOnly ? (
         <p className="min-h-10 whitespace-pre-line break-words rounded-control border border-border-grey bg-soft-white px-3.5 py-2.5 text-body text-near-black">
@@ -165,7 +190,7 @@ export function BusinessContextForm({
   role: EffectiveClientRole;
   context: ClientBusinessContext;
 }) {
-  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  const [activeTab, setActiveTab] = useState<TabId>("business_profile");
   const [state, formAction, isPending] = useActionState(
     saveBusinessContextAction.bind(null, clientId),
     initialState,
@@ -213,64 +238,297 @@ export function BusinessContextForm({
 
   return (
     <form action={formAction} noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-surface-container-high px-2.5 py-0.5 text-caption font-semibold text-on-surface">
+            Profile Revision #{context.profileRevision}
+          </span>
+          <span className="text-caption text-muted-foreground">
+            Two distinct context profiles for Virel
+          </span>
+        </div>
+      </div>
+
       {isReadOnly ? (
         <p className="rounded-control border border-border-grey bg-soft-white px-3 py-2 text-small font-medium text-muted-foreground">
-          Account Users can view Settings but cannot edit business context.
+          Account Users can view Settings but cannot edit context profiles.
         </p>
       ) : null}
 
       <SegmentedNavigation items={TABS} activeId={activeTab} onChange={setActiveTab} />
 
-      <p className="text-caption text-muted-foreground">
-        Founder Experiences and Content Resources are managed on their dedicated pages. Research Focus is managed in Research.
-      </p>
-
-      <div hidden={activeTab !== "profile"} className="flex flex-col gap-4">
+      {/* Tab 1: Business Profile */}
+      <div hidden={activeTab !== "business_profile"} className="flex flex-col gap-4">
         <SectionIntro
           icon={Building2}
           title="Business Profile"
-          description="The durable identity and business description used as background context."
+          description="The core company identity, industry description, and delivery approach."
         />
-        <FieldBlock label="Client Workspace / business name" name="name" value={context.name} maxLength={200} required readOnly={isReadOnly} error={validationErrors.name} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FieldBlock label="Founder name" name="founderName" value={context.founderName ?? ""} maxLength={200} readOnly={isReadOnly} error={validationErrors.founderName} />
-          <FieldBlock label="Industry" name="industry" value={context.industry ?? ""} maxLength={200} readOnly={isReadOnly} error={validationErrors.industry} />
+          <FieldBlock
+            label="Business name"
+            name="name"
+            value={context.name}
+            maxLength={200}
+            required
+            readOnly={isReadOnly}
+            error={validationErrors.name}
+          />
+          <FieldBlock
+            label="Industry"
+            name="industry"
+            value={context.industry ?? ""}
+            maxLength={200}
+            readOnly={isReadOnly}
+            error={validationErrors.industry}
+          />
         </div>
-        <FieldBlock label="Business description" name="businessDescription" value={context.businessDescription ?? ""} as="textarea" rows={4} maxLength={4_000} readOnly={isReadOnly} error={validationErrors.businessDescription} />
+        <FieldBlock
+          label="Business description"
+          name="businessDescription"
+          value={context.businessDescription ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4_000}
+          helperText="Complete description of what the business does."
+          readOnly={isReadOnly}
+          error={validationErrors.businessDescription}
+        />
+        <FieldBlock
+          label="Delivery approach"
+          name="deliveryApproach"
+          value={context.deliveryApproach ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Process, methodology, or delivery method (no forced framework)."
+          readOnly={isReadOnly}
+          error={validationErrors.deliveryApproach}
+        />
+        <FieldBlock
+          label="Business positioning"
+          name="businessPositioning"
+          value={context.businessPositioning ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Alternatives buyers consider and key business differentiators."
+          readOnly={isReadOnly}
+          error={validationErrors.businessPositioning}
+        />
       </div>
 
-      <div hidden={activeTab !== "icp"} className="flex flex-col gap-4">
+      {/* Tab 2: ICP & Offer */}
+      <div hidden={activeTab !== "business_icp"} className="flex flex-col gap-4">
         <SectionIntro
           icon={Target}
-          title="ICP & Offer"
-          description="Who the content should help and the commercial context behind it."
+          title="Primary Buyer ICP & Commercial Offer"
+          description="Detailed target audience understanding, problems, and commercial offer specifics."
         />
-        <FieldBlock label="Primary ICP" name="primaryIcp" value={context.primaryIcp ?? ""} as="textarea" rows={4} maxLength={2_000} readOnly={isReadOnly} error={validationErrors.primaryIcp} />
-        <FieldBlock label="Main offer" name="mainOffer" value={context.mainOffer ?? ""} as="textarea" rows={4} maxLength={2_000} readOnly={isReadOnly} error={validationErrors.mainOffer} />
+        <FieldBlock
+          label="Primary buyer ICP"
+          name="primaryIcp"
+          value={context.primaryIcp ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Roles, industries, geography, seniority, company size, department."
+          readOnly={isReadOnly}
+          error={validationErrors.primaryIcp}
+        />
+        <FieldBlock
+          label="Audience understanding"
+          name="audienceUnderstanding"
+          value={context.audienceUnderstanding ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="What buyers care about, struggle with, value, and distrust."
+          readOnly={isReadOnly}
+          error={validationErrors.audienceUnderstanding}
+        />
+        <FieldBlock
+          label="Pain points"
+          name="painPoints"
+          value={context.painPoints ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Problem and consequences; optional frequency and urgency."
+          readOnly={isReadOnly}
+          error={validationErrors.painPoints}
+        />
+        <FieldBlock
+          label="Main offer"
+          name="mainOffer"
+          value={context.mainOffer ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Service/product, deliverables, delivery method, inclusions."
+          readOnly={isReadOnly}
+          error={validationErrors.mainOffer}
+        />
+        <FieldBlock
+          label="Commercial details (optional)"
+          name="commercialDetails"
+          value={context.commercialDetails ?? ""}
+          as="textarea"
+          rows={2}
+          maxLength={2_000}
+          helperText="Optional pricing ranges, guarantees, or exclusions."
+          readOnly={isReadOnly}
+          error={validationErrors.commercialDetails}
+        />
+        <FieldBlock
+          label="Questions and doubts (optional)"
+          name="questionsAndDoubts"
+          value={context.questionsAndDoubts ?? ""}
+          as="textarea"
+          rows={2}
+          maxLength={2_000}
+          helperText="Common questions, reservations, or objections from buyers."
+          readOnly={isReadOnly}
+          error={validationErrors.questionsAndDoubts}
+        />
       </div>
 
-      <div hidden={activeTab !== "voice"} className="flex flex-col gap-5">
+      {/* Tab 3: Personal Brand */}
+      <div hidden={activeTab !== "personal_profile"} className="flex flex-col gap-4">
+        <SectionIntro
+          icon={User}
+          title="Personal-Brand Profile"
+          description="Positioning, role, intended readers (beyond buyer ICP), content pillars, and core principles."
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FieldBlock
+            label="Name / Persona"
+            name="founderName"
+            value={context.founderName ?? ""}
+            maxLength={200}
+            readOnly={isReadOnly}
+            error={validationErrors.founderName}
+          />
+          <FieldBlock
+            label="Role and work"
+            name="roleAndWork"
+            value={context.roleAndWork ?? ""}
+            maxLength={2_000}
+            helperText="What you personally do, build, manage, or advise on."
+            readOnly={isReadOnly}
+            error={validationErrors.roleAndWork}
+          />
+        </div>
+        <FieldBlock
+          label="Expertise & personal positioning"
+          name="personalPositioning"
+          value={context.personalPositioning ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Subjects you want to be associated with and why readers should follow."
+          readOnly={isReadOnly}
+          error={validationErrors.personalPositioning}
+        />
+        <FieldBlock
+          label="Intended personal readers"
+          name="personalReaders"
+          value={context.personalReaders ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Target readership: practitioners, peers, operators, or buyers. AI can draft for these readers instead of solely substituting buyer ICP."
+          readOnly={isReadOnly}
+          error={validationErrors.personalReaders}
+        />
+        <FieldBlock
+          label="Content pillars"
+          name="contentPillars"
+          value={toLines(context.contentPillars)}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Recurring topics, themes, and boundaries. One per line."
+          readOnly={isReadOnly}
+          error={validationErrors.contentPillars}
+        />
+        <FieldBlock
+          label="Principles & approved beliefs (optional)"
+          name="principles"
+          value={context.principles ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Approved beliefs, strong points of view, and industry disagreements."
+          readOnly={isReadOnly}
+          error={validationErrors.principles}
+        />
+      </div>
+
+      {/* Tab 4: Voice & Style */}
+      <div hidden={activeTab !== "personal_voice"} className="flex flex-col gap-5">
         <SectionIntro
           icon={Mic}
-          title="Founder Voice"
-          description="Calibrate how drafts sound. Inspiration posts are style references, never factual sources."
+          title="Voice & Writing Style"
+          description="Calibrate style, tone, phrases, and reference samples."
         />
-        <FieldBlock label="Founder voice description or sample" name="founderVoiceSample" value={context.founderVoiceSample ?? ""} as="textarea" rows={4} maxLength={4_000} readOnly={isReadOnly} error={validationErrors.founderVoiceSample} />
+        <FieldBlock
+          label="Voice style guide"
+          name="voiceGuide"
+          value={context.voiceGuide ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4_000}
+          helperText="Style preferences, cadence, formatting guidelines, or externally prepared guide."
+          readOnly={isReadOnly}
+          error={validationErrors.voiceGuide}
+        />
+        <FieldBlock
+          label="Writing sample"
+          name="founderVoiceSample"
+          value={context.founderVoiceSample ?? ""}
+          as="textarea"
+          rows={4}
+          maxLength={4_000}
+          helperText="A representative post or excerpt written in the authentic voice."
+          readOnly={isReadOnly}
+          error={validationErrors.founderVoiceSample}
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FieldBlock label="Phrases to use" name="phrasesToUse" value={toLines(context.phrasesToUse)} as="textarea" rows={3} maxLength={2_000} helperText="One per line." readOnly={isReadOnly} error={validationErrors.phrasesToUse} />
-          <FieldBlock label="Phrases to avoid" name="phrasesToAvoid" value={toLines(context.phrasesToAvoid)} as="textarea" rows={3} maxLength={2_000} helperText="One per line." readOnly={isReadOnly} error={validationErrors.phrasesToAvoid} />
+          <FieldBlock
+            label="Phrases to use"
+            name="phrasesToUse"
+            value={toLines(context.phrasesToUse)}
+            as="textarea"
+            rows={3}
+            maxLength={2_000}
+            helperText="One per line."
+            readOnly={isReadOnly}
+            error={validationErrors.phrasesToUse}
+          />
+          <FieldBlock
+            label="Phrases to avoid"
+            name="phrasesToAvoid"
+            value={toLines(context.phrasesToAvoid)}
+            as="textarea"
+            rows={3}
+            maxLength={2_000}
+            helperText="One per line."
+            readOnly={isReadOnly}
+            error={validationErrors.phrasesToAvoid}
+          />
         </div>
         <div className="flex flex-col gap-4">
           <div>
-            <h4 className="text-small font-semibold text-near-black">Voice inspiration posts</h4>
+            <h4 className="text-small font-semibold text-near-black">Style-only inspiration examples</h4>
             <p className="mt-1 text-caption text-muted-foreground">
-              Add up to three posts the founder likes. The writer may learn cadence and formatting, but cannot copy their claims or wording.
+              Up to 3 style inspiration posts. Influences cadence only; never claims or facts.
             </p>
           </div>
           {([1, 2, 3] as const).map((number, index) => (
             <div key={number} className="grid grid-cols-1 gap-3 rounded-control border border-border-grey bg-soft-white p-3">
               <p className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                Inspiration post {number}
+                Inspiration example {number}
               </p>
               <FieldBlock
                 label="Label"
@@ -285,7 +543,7 @@ export function BusinessContextForm({
                 name={`voiceExample${number}Text`}
                 value={example(index as 0 | 1 | 2)?.text ?? ""}
                 as="textarea"
-                rows={6}
+                rows={5}
                 maxLength={6_000}
                 readOnly={isReadOnly}
                 error={validationErrors[`voiceExample${number}Text`]}
@@ -304,32 +562,57 @@ export function BusinessContextForm({
         </div>
       </div>
 
-      <div hidden={activeTab !== "evidence"} className="flex flex-col gap-4">
-        <SectionIntro
-          icon={ShieldCheck}
-          title="Approved Evidence"
-          description="Only real proof points the Planning, Content, and Review agents may publish."
-        />
-        <FieldBlock
-          label="Approved Evidence"
-          name="approvedProof"
-          value={toLines(context.approvedProof)}
-          as="textarea"
-          rows={7}
-          maxLength={4_000}
-          helperText="One item per line. Include the exact metric, timeframe, result, example, or claim that is approved."
-          readOnly={isReadOnly}
-          error={validationErrors.approvedProof}
-        />
-      </div>
-
+      {/* Tab 5: Guardrails & Proof */}
       <div hidden={activeTab !== "guardrails"} className="flex flex-col gap-4">
         <SectionIntro
           icon={ShieldAlert}
-          title="Guardrails & Banned Topics"
-          description="Topics and claims the Research and content workflow must not use."
+          title="Guardrails, Proof & Boundaries"
+          description="Factual evidence boundary, sensitive personal topics, and banned subjects."
         />
-        <FieldBlock label="Banned topics" name="bannedTopics" value={toLines(context.bannedTopics)} as="textarea" rows={5} maxLength={2_000} helperText="One per line." readOnly={isReadOnly} error={validationErrors.bannedTopics} />
+        <FieldBlock
+          label="Approved proof & evidence notes"
+          name="approvedProof"
+          value={toLines(context.approvedProof)}
+          as="textarea"
+          rows={5}
+          maxLength={4_000}
+          helperText="One item per line. Real approved metrics, results, client stories, or factual claims."
+          readOnly={isReadOnly}
+          error={validationErrors.approvedProof}
+        />
+        <FieldBlock
+          label="Banned topics"
+          name="bannedTopics"
+          value={toLines(context.bannedTopics)}
+          as="textarea"
+          rows={4}
+          maxLength={2_000}
+          helperText="Topics, competitors, or claims the writer and research must avoid. One per line."
+          readOnly={isReadOnly}
+          error={validationErrors.bannedTopics}
+        />
+        <FieldBlock
+          label="Personal boundaries"
+          name="boundaries"
+          value={context.boundaries ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="Private topics, client confidentiality, sensitive metrics, personal disclosures."
+          readOnly={isReadOnly}
+          error={validationErrors.boundaries}
+        />
+        <FieldBlock
+          label="Business mentions guidance"
+          name="businessMentions"
+          value={context.businessMentions ?? ""}
+          as="textarea"
+          rows={3}
+          maxLength={2_000}
+          helperText="When and how mentioning the company or commercial offer is appropriate."
+          readOnly={isReadOnly}
+          error={validationErrors.businessMentions}
+        />
       </div>
 
       {state.error ? (
@@ -340,7 +623,7 @@ export function BusinessContextForm({
       ) : null}
       {!isReadOnly ? (
         <Button type="submit" variant="brand" size="lg" disabled={isPending} className="self-start">
-          {isPending ? "Saving..." : "Save business context"}
+          {isPending ? "Saving..." : "Save Context Profiles"}
         </Button>
       ) : null}
     </form>
