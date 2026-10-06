@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Users } from "lucide-react";
+import { FileText, Users } from "lucide-react";
 
 import {
   Card,
@@ -15,6 +15,8 @@ import { getAccountTeam } from "@/features/access-management/queries";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { OperationalLogsPanel } from "@/features/setup/operational-logs-panel";
 import { getOperationalLogs } from "@/features/setup/operational-logs-queries";
+import { DocumentManager } from "@/features/documents/document-manager";
+import { listClientDocuments } from "@/features/documents/service";
 import {
   canRoleManageClientUsers,
   canRoleViewOperationalLogs,
@@ -40,12 +42,28 @@ export default async function SetupPage({
     <div>
       <PageHeader
         title="Settings"
-        description="Manage this Account's content context and user access."
+        description="Manage this Account's content context, reference documents, and user access."
       />
 
       {role ? (
         <div className="mt-6 flex flex-col gap-6">
           <BusinessContextSection clientId={clientId} role={role} />
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+                <CardTitle>Supporting Documents & Evidence</CardTitle>
+              </div>
+              <CardDescription>
+                Upload markdown briefs, customer interviews, and evidence files. Scoped retrieval
+                extracts relevant proof during drafting without polluting prompt logs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DocumentsSection clientId={clientId} role={role} />
+            </CardContent>
+          </Card>
 
           {canRoleManageClientUsers(role) ? (
             <Card>
@@ -73,6 +91,17 @@ export default async function SetupPage({
       ) : null}
     </div>
   );
+}
+
+async function DocumentsSection({
+  clientId,
+  role,
+}: {
+  clientId: string;
+  role: NonNullable<Awaited<ReturnType<typeof getCurrentUserRoleForClient>>>;
+}) {
+  const docs = await listClientDocuments(clientId);
+  return <DocumentManager clientId={clientId} role={role} documents={docs} />;
 }
 
 async function TeamAccessList({ clientId }: { clientId: string }) {

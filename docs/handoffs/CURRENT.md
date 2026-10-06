@@ -3,43 +3,41 @@
 Updated: 2026-10-06
 
 - Active editor: Gemini 3.8 Flash (pair programming on Virel)
-- Current phase: P02 completed; ready for P03 — Supporting files and retrieval.
+- Current phase: P03 completed; ready for P04 — Shared standalone writer and simpler editor.
 - Repository: jawwad31/linkedin-content-os, main.
-- Baseline commit: c7b1770 (feat: add business and personal brand profiles)
+- Baseline commit: 267636c (feat: unify content bank and track explicit reuse)
 - Product name: Virel (recorded in canonical documentation).
 - Deliverables:
-  - Additive database migration `supabase/migrations/20261006160000_content_bank_and_source_usage.sql` adding category, readiness, allow_reuse, raw_notes, and takeaway to `founder_experiences` and `content_resources`, plus new `source_usage` table with RLS and initial backfill from existing ideas/posts.
-  - Validated schemas and Zod validation in `src/features/content-bank/schemas.ts` for all 8 categories (problem_solved, case_study, experiment, lesson, observation, process, achievement, lead_magnet) and readiness states.
-  - Atomic reservation and usage tracking service in `src/features/content-bank/usage-service.ts` enforcing single-use contention, multi-angle reuse eligibility, draft failure release, and post deletion tombstone preservation.
-  - Scoped unified queries and mutation services in `src/features/content-bank/queries.ts` and `src/features/content-bank/service.ts` enforcing capability and admin gates.
-  - Server actions in `src/features/content-bank/actions.ts`.
-  - Content Bank UI panel and capture form supporting typed notes and pasted transcripts in `src/features/content-bank/content-bank-panel.tsx`.
-  - Route page `src/app/client/[client_id]/content-bank/page.tsx` and updated sidebar navigation in `src/components/app-shell/nav-items.ts`.
-  - Integrated usage tracking and tombstone preservation into post review in `src/features/posts/review/service.ts`.
-  - Comprehensive unit and integration test suite in `tests/content-bank.test.ts`.
+  - Additive database migration `supabase/migrations/20261006170000_documents_and_retrieval.sql` creating `client_documents` table with RLS, purpose checks, versioning, status indexes, and SHA256 hashes.
+  - Document schemas in `src/features/documents/schemas.ts` defining 4 distinct purposes (`source_material`, `private_evidence`, `reader_download`, `profile_reference`), status lifecycle, and context manifest contracts.
+  - Scoped retrieval service in `src/features/documents/retrieval-service.ts` providing deterministic SHA256 hashing, markdown semantic section chunking, term-frequency relevance scoring, provenance retention, and strict exclusion of archived or private-evidence leaks.
+  - Context manifest builder in `src/features/documents/context-builder.ts` computing deterministic token estimates and bundling profile revisions, source references, and excerpt hashes.
+  - Document management service in `src/features/documents/service.ts` enforcing admin-only gates for reader downloads and profile reference files, version incrementing, and audit logging.
+  - Server actions in `src/features/documents/actions.ts`.
+  - Document management UI in `src/features/documents/document-manager.tsx` with safe preformatted markdown preview (disabling scripts), purpose selector, version tracking, and archive/delete controls.
+  - Integrated into Settings page in `src/app/client/[client_id]/settings/page.tsx`.
+  - Comprehensive unit and integration test suite in `tests/documents-retrieval.test.ts`.
 - Repository files changed:
-  - `supabase/migrations/20261006160000_content_bank_and_source_usage.sql`
-  - `src/features/content-bank/schemas.ts`
-  - `src/features/content-bank/usage-service.ts`
-  - `src/features/content-bank/queries.ts`
-  - `src/features/content-bank/service.ts`
-  - `src/features/content-bank/actions.ts`
-  - `src/features/content-bank/content-bank-panel.tsx`
-  - `src/app/client/[client_id]/content-bank/page.tsx`
-  - `src/components/app-shell/nav-items.ts`
-  - `src/features/posts/review/service.ts`
-  - `tests/content-bank.test.ts`
+  - `supabase/migrations/20261006170000_documents_and_retrieval.sql`
+  - `src/features/documents/schemas.ts`
+  - `src/features/documents/retrieval-service.ts`
+  - `src/features/documents/context-builder.ts`
+  - `src/features/documents/service.ts`
+  - `src/features/documents/actions.ts`
+  - `src/features/documents/document-manager.tsx`
+  - `src/app/client/[client_id]/settings/page.tsx`
+  - `tests/documents-retrieval.test.ts`
   - `feature-checklist.md`
   - `docs/handoffs/CURRENT.md`
 - Validation:
-  - `npm test`: 16/16 test files passed, 92/92 tests passed.
+  - `npm test`: 17/17 test files passed, 106/106 tests passed.
   - `npm run lint`: passed cleanly (0 errors, 0 warnings).
   - `npm run build`: Next.js 16 production build succeeded with Turbopack.
 - Behavior preserved:
-  - Existing founder experiences and resources remain fully operational on their existing routes.
-  - Lead magnet admin capabilities and comment-gating rules preserved.
-  - Published usage history is permanently retained when posts are deleted.
-  - One active post per idea invariant preserved.
-- Commit: `feat: unify content bank and track explicit reuse`
-- Next step: P03 — Supporting files and retrieval.
+  - Uploaded files are strictly treated as untrusted data; scripts and prompt injections cannot override application rules.
+  - Private evidence is completely decoupled from reader downloads.
+  - Original file text is preserved; replacement immediately excludes previous versions from retrieval.
+  - Existing settings, profiles, team access, and operational logs continue to function as designed.
+- Commit: `feat: add private supporting documents and retrieval`
+- Next step: P04 — Shared standalone writer and simpler editor.
 - Blockers: None.
