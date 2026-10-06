@@ -13,8 +13,8 @@ Repository read access and selected source files were verified. This package has
 | P02 | Content Bank and explicit reuse | P01 | Complete |
 | P03 | Markdown documents and scoped retrieval | P01–P02 | Complete |
 | P04 | Shared standalone drafting and editorial controls | P01–P03 | Complete |
-| P05 | Monthly allocation/defaults/source selection | P02/P04 | Implemented, awaiting migration and deployment |
-| P06 | Resumable calendar draft batches | P05 | Blocked until the P05 migration is applied and P05 is deployed |
+| P05 | Monthly allocation/defaults/source selection | P02/P04 | Complete (commit 4160ec1; migrations applied and manual checks reported passed 2026-10-07) |
+| P06 | Resumable calendar draft batches | P05 | In progress |
 | P07 | Saved prompt and manual web research | P00/P04 | Planned |
 | P08 | Schedules, source monitoring, notifications | P07 | Planned |
 | P09 | Newsletter editions | P02–P04/P07 | Planned |
@@ -27,7 +27,7 @@ Repository read access and selected source files were verified. This package has
 - [x] P02: experiences/resources available in Content Bank with distinct categories; current delivery/gating retained; explicit reuse and transactional reservations/use history work.
 - [x] P03: MD/TXT originals preserved; processing/retry/version states work; selected evidence retrieved accurately; no cross-account/private-source leaks.
 - [x] P04: all approved source entry points share generation/QA; post type/pillar/funnel/reader/takeaway editable; existing plans and one-post-per-idea invariant preserved.
-- [ ] P05: Save for this month differs from Save as default; existing months immutable to default changes; deterministic actual allocation; source shortage and news cap handled. Implemented and covered by automated tests (SQL on PostgreSQL via PGlite, service, allocation, render). Not complete: migrations `20261006160000`–`20261006190000` must be applied, the web service deployed, and the P05 post-deploy checks (two months, change defaults, first month unchanged, shortage counts, entry references) performed.
+- [x] P05: Save for this month differs from Save as default; existing months immutable to default changes; deterministic actual allocation; source shortage and news cap handled. Covered by automated tests (SQL on PostgreSQL via PGlite, service, allocation, render). Migrations `20261006150000`-`20261006190000` applied to production and the post-deploy checks reported passed by Jawad on 2026-10-07; the two-window contention check result was not itemised.
 - [ ] P06: user-triggered batches resume by slot; failures do not consume entries; retries do not duplicate drafts; cancellation and permission checks hold.
 - [ ] P07: saved research prompt editable; run uses saved revision; profile off means independent research; findings include evidence/dates/uncertainty; no autonomous posts.
 - [ ] P08: timezone-aware due times and shared locking; pause/catch-up/retry; blog/article monitoring; in-app notifications; bounded and safe URL fetching.
