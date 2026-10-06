@@ -1,0 +1,63 @@
+"use server";
+
+import {
+  createContentBankEntry,
+  updateContentBankEntry,
+  toggleAllowReuse,
+  archiveContentBankEntry,
+} from "./service";
+import type { CreateContentBankEntryInput } from "./schemas";
+
+export type ActionState = {
+  error: string | null;
+  success: string | null;
+};
+
+export async function createContentBankEntryAction(
+  clientId: string,
+  input: CreateContentBankEntryInput,
+) {
+  const result = await createContentBankEntry(clientId, input);
+  if (!result.ok) {
+    return { error: result.message, success: null };
+  }
+  return { error: null, success: "Content Bank entry created successfully." };
+}
+
+export async function updateContentBankEntryAction(
+  clientId: string,
+  entryId: string,
+  sourceType: "founder_experience" | "content_resource",
+  input: Partial<CreateContentBankEntryInput>,
+) {
+  const result = await updateContentBankEntry(clientId, entryId, sourceType, input);
+  if (!result.ok) {
+    return { error: result.message, success: null };
+  }
+  return { error: null, success: "Content Bank entry updated successfully." };
+}
+
+export async function toggleAllowReuseAction(
+  clientId: string,
+  entryId: string,
+  sourceType: "founder_experience" | "content_resource",
+  allowReuse: boolean,
+) {
+  const result = await toggleAllowReuse(clientId, entryId, sourceType, allowReuse);
+  if (!result.ok) {
+    return { error: result.message, success: null };
+  }
+  return { error: null, success: "Reuse permission updated." };
+}
+
+export async function archiveContentBankEntryAction(
+  clientId: string,
+  entryId: string,
+  sourceType: "founder_experience" | "content_resource",
+) {
+  const result = await archiveContentBankEntry(clientId, entryId, sourceType);
+  if (!result.ok) {
+    return { error: result.message, success: null };
+  }
+  return { error: null, success: "Entry archived." };
+}

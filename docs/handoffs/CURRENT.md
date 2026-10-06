@@ -2,43 +2,44 @@
 
 Updated: 2026-10-06
 
-- Active editor: Claude Sonnet 4.6 (pair programming on Virel)
-- Current phase: P01 completed; ready for P02 — Content Bank and safe reuse foundation.
+- Active editor: Gemini 3.8 Flash (pair programming on Virel)
+- Current phase: P02 completed; ready for P03 — Supporting files and retrieval.
 - Repository: jawwad31/linkedin-content-os, main.
-- Baseline commit: bea7b71 (docs: align personal brand content roadmap)
+- Baseline commit: c7b1770 (feat: add business and personal brand profiles)
 - Product name: Virel (recorded in canonical documentation).
 - Deliverables:
-  - Additive database migration `supabase/migrations/20261006150000_two_context_profiles.sql` adding business and personal-brand profile columns plus `profile_revision`.
-  - Validated schemas and Zod validation in `src/features/setup/schemas.ts`.
-  - Scoped query resolution with legacy `core_pov` mapping in `src/features/setup/queries.ts`.
-  - Secure server action with revision incrementing and audit logging in `src/features/setup/actions.ts`.
-  - M3-styled 5-tab profile manager with revision badge in `src/features/setup/business-context-form.tsx`.
-  - Integration of personal-brand profile and intended personal readers into planning and post drafting prompts (`src/features/ideas/agents/planning-agent.ts`, `src/features/ideas/generate/service.ts`, `src/features/posts/agents/content-agent.ts`, `src/features/posts/generate/service.ts`).
-  - Unit and integration tests in `tests/profiles.test.ts`.
+  - Additive database migration `supabase/migrations/20261006160000_content_bank_and_source_usage.sql` adding category, readiness, allow_reuse, raw_notes, and takeaway to `founder_experiences` and `content_resources`, plus new `source_usage` table with RLS and initial backfill from existing ideas/posts.
+  - Validated schemas and Zod validation in `src/features/content-bank/schemas.ts` for all 8 categories (problem_solved, case_study, experiment, lesson, observation, process, achievement, lead_magnet) and readiness states.
+  - Atomic reservation and usage tracking service in `src/features/content-bank/usage-service.ts` enforcing single-use contention, multi-angle reuse eligibility, draft failure release, and post deletion tombstone preservation.
+  - Scoped unified queries and mutation services in `src/features/content-bank/queries.ts` and `src/features/content-bank/service.ts` enforcing capability and admin gates.
+  - Server actions in `src/features/content-bank/actions.ts`.
+  - Content Bank UI panel and capture form supporting typed notes and pasted transcripts in `src/features/content-bank/content-bank-panel.tsx`.
+  - Route page `src/app/client/[client_id]/content-bank/page.tsx` and updated sidebar navigation in `src/components/app-shell/nav-items.ts`.
+  - Integrated usage tracking and tombstone preservation into post review in `src/features/posts/review/service.ts`.
+  - Comprehensive unit and integration test suite in `tests/content-bank.test.ts`.
 - Repository files changed:
-  - `supabase/migrations/20261006150000_two_context_profiles.sql`
-  - `src/features/setup/schemas.ts`
-  - `src/features/setup/queries.ts`
-  - `src/features/setup/actions.ts`
-  - `src/features/setup/business-context-form.tsx`
-  - `src/features/ideas/agents/planning-agent.ts`
-  - `src/features/ideas/generate/service.ts`
-  - `src/features/posts/agents/content-agent.ts`
-  - `src/features/posts/generate/service.ts`
-  - `tests/profiles.test.ts`
+  - `supabase/migrations/20261006160000_content_bank_and_source_usage.sql`
+  - `src/features/content-bank/schemas.ts`
+  - `src/features/content-bank/usage-service.ts`
+  - `src/features/content-bank/queries.ts`
+  - `src/features/content-bank/service.ts`
+  - `src/features/content-bank/actions.ts`
+  - `src/features/content-bank/content-bank-panel.tsx`
+  - `src/app/client/[client_id]/content-bank/page.tsx`
+  - `src/components/app-shell/nav-items.ts`
+  - `src/features/posts/review/service.ts`
+  - `tests/content-bank.test.ts`
   - `feature-checklist.md`
   - `docs/handoffs/CURRENT.md`
-- Application/database changes:
-  - Additive columns on `clients`: `audience_understanding`, `pain_points`, `commercial_details`, `delivery_approach`, `business_positioning`, `questions_and_doubts`, `role_and_work`, `personal_positioning`, `personal_readers`, `principles`, `voice_guide`, `boundaries`, `business_mentions`, `profile_revision`.
 - Validation:
-  - `npm test`: 15/15 test files passed, 79/79 tests passed.
-  - `npm run lint`: passed cleanly (0 errors).
+  - `npm test`: 16/16 test files passed, 92/92 tests passed.
+  - `npm run lint`: passed cleanly (0 errors, 0 warnings).
   - `npm run build`: Next.js 16 production build succeeded with Turbopack.
 - Behavior preserved:
-  - Manual user provisioning and forced password gate preserved.
-  - Team access and role authorization preserved.
-  - Legacy `core_pov` and `content_pillars` reactivated via deliberate mapping.
-  - Existing idea generation and post drafting workflows preserved.
-- Commit: `feat: add business and personal brand profiles`
-- Next step: P02 — Content Bank and explicit reuse foundation.
+  - Existing founder experiences and resources remain fully operational on their existing routes.
+  - Lead magnet admin capabilities and comment-gating rules preserved.
+  - Published usage history is permanently retained when posts are deleted.
+  - One active post per idea invariant preserved.
+- Commit: `feat: unify content bank and track explicit reuse`
+- Next step: P03 — Supporting files and retrieval.
 - Blockers: None.

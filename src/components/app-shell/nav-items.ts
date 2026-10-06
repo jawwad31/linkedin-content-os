@@ -8,6 +8,7 @@ import {
   Settings,
   FileText,
   Library,
+  Layers,
 } from "lucide-react";
 
 export type NavItem = {
@@ -31,6 +32,12 @@ export function getNavItems(clientId: string): NavItem[] {
       href: `/client/${clientId}/dashboard`,
       icon: LayoutDashboard,
       accent: "orange",
+    },
+    {
+      label: "Content Bank",
+      href: `/client/${clientId}/content-bank`,
+      icon: Layers,
+      accent: "purple",
     },
     {
       label: "Research",

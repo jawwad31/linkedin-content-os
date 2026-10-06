@@ -15,6 +15,10 @@ import { getServerUser } from "@/lib/supabase/session";
 
 import { needsEditRequestSchema } from "./schemas";
 import type { ReviewPostStatus } from "./queries";
+import {
+  handlePostDeletionUsageCleanup,
+  markSourceUsagePublished,
+} from "@/features/content-bank/usage-service";
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
@@ -324,6 +328,12 @@ export async function archivePost(
     nextStatus: "archived",
   });
 
+  await handlePostDeletionUsageCleanup({
+    clientId: result.auth.clientId,
+    postId: result.auth.postId,
+    isPublished: result.post.status === "published",
+  });
+
   revalidatePath(`/client/${result.auth.clientId}/publish`);
   revalidatePath(
     `/client/${result.auth.clientId}/posts/${result.auth.postId}/review`,
@@ -357,6 +367,11 @@ export async function markPostPublished(
     .maybeSingle<{ id: string }>();
 
   if (error || !data) return GENERIC_FAILURE;
+
+  await markSourceUsagePublished({
+    clientId: auth.clientId,
+    postId: auth.postId,
+  });
 
   await auditPostStatusChange({
     clientId: auth.clientId,
