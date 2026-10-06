@@ -16,26 +16,89 @@ type SupabaseAnyClient =
   | Awaited<ReturnType<typeof createClient>>
   | ReturnType<typeof createAdminClient>;
 
+type ReserveSourceParams = {
+  clientId: string;
+  sourceId: string;
+  sourceType: SourceType;
+  channel?: UsageChannel;
+  contentIdeaId?: string | null;
+  postId?: string | null;
+  angle?: string | null;
+  takeaway?: string | null;
+};
+
+const RESERVE_ERROR_MESSAGES: Record<string, string> = {
+  NOT_FOUND: "Content Bank source entry was not found.",
+  ARCHIVED_ENTRY: "Archived content bank entries cannot be reserved or drafted.",
+  SINGLE_USE_CONFLICT:
+    "This entry is single-use and has already been reserved or used in a post. Enable reuse on this entry to draft another angle.",
+};
+
+/** PostgREST / Postgres codes for "this function does not exist (yet)". */
+function isMissingFunctionError(error: { code?: string } | null): boolean {
+  return error?.code === "PGRST202" || error?.code === "42883";
+}
+
 /**
  * Atomically reserves a Content Bank source entry for a draft, calendar slot, or newsletter.
- * If allow_reuse is false, checks for any existing active usage (reserved, used, published)
- * and returns SINGLE_USE_CONFLICT if already claimed.
+ * The check and the insert run in one SQL function that holds a per-entry advisory lock, so a
+ * concurrent calendar plan or standalone draft cannot also claim a single-use entry. If
+ * allow_reuse is false and the entry has active usage (reserved, used, published), returns
+ * SINGLE_USE_CONFLICT.
  */
 export async function reserveSourceEntry(
-  params: {
-    clientId: string;
-    sourceId: string;
-    sourceType: SourceType;
-    channel?: UsageChannel;
-    contentIdeaId?: string | null;
-    postId?: string | null;
-    angle?: string | null;
-    takeaway?: string | null;
-  },
+  params: ReserveSourceParams,
   customClient?: SupabaseAnyClient,
 ): Promise<ReserveSourceResult> {
   const supabase = customClient ?? (await createClient());
 
+  const { data, error } = await supabase.rpc("reserve_content_bank_source", {
+    p_client_id: params.clientId,
+    p_source_id: params.sourceId,
+    p_source_type: params.sourceType,
+    p_channel: params.channel ?? "linkedin_post",
+    p_content_idea_id: params.contentIdeaId ?? null,
+    p_post_id: params.postId ?? null,
+    p_angle: params.angle ?? null,
+    p_takeaway: params.takeaway ?? null,
+  });
+
+  if (isMissingFunctionError(error)) {
+    // The P05 migration has not been applied yet. Remove this fallback once it is
+    // confirmed in every environment.
+    return reserveSourceEntryWithoutLock(params, supabase);
+  }
+
+  const result = data as { ok?: boolean; code?: string; usage_id?: string } | null;
+
+  if (error || !result) {
+    return {
+      ok: false,
+      code: "RESERVATION_FAILED",
+      error: "Failed to reserve the source entry.",
+    };
+  }
+
+  if (result.ok && result.usage_id) {
+    return { ok: true, usageId: result.usage_id };
+  }
+
+  const code = result.code ?? "RESERVATION_FAILED";
+  return {
+    ok: false,
+    code,
+    error: RESERVE_ERROR_MESSAGES[code] ?? "Failed to reserve the source entry.",
+  };
+}
+
+/**
+ * Pre-P05 behaviour: check, then insert, as separate statements. Not safe under
+ * contention; kept only until the reserve_content_bank_source migration is applied.
+ */
+async function reserveSourceEntryWithoutLock(
+  params: ReserveSourceParams,
+  supabase: SupabaseAnyClient,
+): Promise<ReserveSourceResult> {
   // 1. Verify existence, ownership, and readiness of source entry
   const table =
     params.sourceType === "founder_experience"

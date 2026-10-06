@@ -97,7 +97,11 @@ describe("Content Bank and Safe Reuse (P02)", () => {
     });
   });
 
-  describe("Atomic Reservation and Contention Mechanics", () => {
+  describe("Reservation fallback before the P05 migration is applied", () => {
+    // PostgREST reports a missing function with PGRST202; the service then uses the
+    // pre-P05 check-then-insert path, which these tests exercise.
+    const missingRpc = async () => ({ data: null, error: { code: "PGRST202" } });
+
     it("rejects reservation when single-use entry is already in use", async () => {
       const mockSingleUseSource = {
         id: "source-1",
@@ -108,6 +112,7 @@ describe("Content Bank and Safe Reuse (P02)", () => {
       };
 
       const mockClient = {
+        rpc: missingRpc,
         from: (table: string) => {
           if (table === "founder_experiences") {
             return {
@@ -168,6 +173,7 @@ describe("Content Bank and Safe Reuse (P02)", () => {
       };
 
       const mockClient = {
+        rpc: missingRpc,
         from: (table: string) => {
           if (table === "founder_experiences") {
             return {
@@ -226,6 +232,7 @@ describe("Content Bank and Safe Reuse (P02)", () => {
       };
 
       const mockClient = {
+        rpc: missingRpc,
         from: () => ({
           select: () => ({
             eq: () => ({
@@ -254,6 +261,82 @@ describe("Content Bank and Safe Reuse (P02)", () => {
       expect(result.ok).toBe(false);
       if (result.ok) return;
       expect(result.code).toBe("ARCHIVED_ENTRY");
+    });
+  });
+
+  describe("Atomic reservation through reserve_content_bank_source", () => {
+    const rpcClient = (result: { data: unknown; error: { code?: string } | null }) => {
+      const calls: { name: string; args: Record<string, unknown> }[] = [];
+      const client = {
+        rpc: async (name: string, args: Record<string, unknown>) => {
+          calls.push({ name, args });
+          return result;
+        },
+      } as never;
+      return { client, calls };
+    };
+
+    it("reserves through one SQL call and returns the usage id", async () => {
+      const { client, calls } = rpcClient({
+        data: { ok: true, usage_id: "usage-9" },
+        error: null,
+      });
+
+      const result = await reserveSourceEntry(
+        {
+          clientId: "client-1",
+          sourceId: "source-1",
+          sourceType: "content_resource",
+          channel: "calendar_slot",
+          angle: "Angle",
+        },
+        client,
+      );
+
+      expect(result).toEqual({ ok: true, usageId: "usage-9" });
+      expect(calls).toHaveLength(1);
+      expect(calls[0].name).toBe("reserve_content_bank_source");
+      expect(calls[0].args).toMatchObject({
+        p_client_id: "client-1",
+        p_source_id: "source-1",
+        p_source_type: "content_resource",
+        p_channel: "calendar_slot",
+        p_angle: "Angle",
+      });
+    });
+
+    it.each([
+      ["SINGLE_USE_CONFLICT", "single-use"],
+      ["ARCHIVED_ENTRY", "Archived"],
+      ["NOT_FOUND", "not found"],
+    ])("maps %s to a safe message", async (code, fragment) => {
+      const { client } = rpcClient({ data: { ok: false, code }, error: null });
+      const result = await reserveSourceEntry(
+        { clientId: "c", sourceId: "s", sourceType: "founder_experience" },
+        client,
+      );
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe(code);
+      expect(result.error).toContain(fragment);
+    });
+
+    it("never leaks a raw database error", async () => {
+      const { client } = rpcClient({
+        data: null,
+        error: { code: "XX000", message: 'relation "source_usage" is locked' } as never,
+      });
+      const result = await reserveSourceEntry(
+        { clientId: "c", sourceId: "s", sourceType: "founder_experience" },
+        client,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "RESERVATION_FAILED",
+        error: "Failed to reserve the source entry.",
+      });
     });
   });
 

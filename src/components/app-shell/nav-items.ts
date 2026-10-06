@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  CalendarDays,
   LayoutDashboard,
   Lightbulb,
   Quote,
@@ -44,6 +45,12 @@ export function getNavItems(clientId: string): NavItem[] {
       href: `/client/${clientId}/research`,
       icon: Radar,
       accent: "purple",
+    },
+    {
+      label: "Calendar",
+      href: `/client/${clientId}/calendar`,
+      icon: CalendarDays,
+      accent: "orange",
     },
     {
       label: "Founder Experiences",

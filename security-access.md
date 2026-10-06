@@ -140,6 +140,7 @@ Protected:
 /clients
 /client/[client_id]/dashboard
 /client/[client_id]/research
+/client/[client_id]/calendar
 /client/[client_id]/founder-experiences
 /client/[client_id]/resources
 /client/[client_id]/ideas
@@ -189,6 +190,9 @@ Enable RLS on:
 - `trend_cards`
 - `founder_experiences`
 - `content_resources`
+- `calendar_defaults`
+- `content_calendars`
+- `calendar_slots`
 - `content_ideas`
 - `posts`
 - `research_runs`
@@ -484,6 +488,10 @@ Record lightweight audit logs for:
 - post approved
 - post rejected
 - post marked published
+- calendar month settings saved / reset to defaults (`calendar_month_settings_saved`, `calendar_month_reset_to_defaults`)
+- calendar defaults saved (`calendar_defaults_saved`)
+- calendar plan committed or replanned (`calendar_plan_committed`)
+- calendar slots cancelled (`calendar_slots_cancelled`)
 
 Audit log fields:
 

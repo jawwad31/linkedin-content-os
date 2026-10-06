@@ -6,6 +6,7 @@ import { z } from "zod";
 import { canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
+import { isMissingTableError } from "@/lib/supabase/schema-errors";
 import { getServerUser } from "@/lib/supabase/session";
 
 const uuidSchema = z.string().uuid();
@@ -60,6 +61,30 @@ export async function deleteFounderExperience(
       ok: false,
       code: "DEPENDENCY_CONFLICT",
       message: "This Founder Experience cannot be deleted because a Content Idea depends on it.",
+    };
+  }
+
+  // A plain GET, not HEAD: a failed HEAD request carries no error body, so the client
+  // library would report the failure as success and hide a real dependency check error.
+  const { data: plannedSlots, error: planError } = await supabase
+    .from("calendar_slots")
+    .select("id")
+    .eq("client_id", clientIdResult.data)
+    .eq("source_id", experienceIdResult.data)
+    .neq("status", "cancelled")
+    .limit(1);
+
+  // Before the calendar migration is applied no slot can exist, so a missing table is
+  // not a dependency. Any other error still blocks the delete.
+  if (planError && !isMissingTableError(planError)) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not perform dependency check." };
+  }
+
+  if ((plannedSlots?.length ?? 0) > 0) {
+    return {
+      ok: false,
+      code: "DEPENDENCY_CONFLICT",
+      message: "This Founder Experience cannot be deleted because it is planned in a content calendar. Cancel that slot first.",
     };
   }
 
