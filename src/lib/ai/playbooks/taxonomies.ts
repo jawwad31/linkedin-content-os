@@ -2,6 +2,35 @@ export const SOURCE_MODES = [
   "founder_experience",
   "trend_card",
   "trend_reaction",
+  "content_resource",
+  "profile_led",
+  "custom_upload",
+  "research_brief",
+] as const;
+
+export const ALLOCATION_BUCKETS = [
+  "experience",
+  "asset",
+  "evergreen",
+  "news",
+] as const;
+
+export const FUNNEL_STAGES = [
+  "Discovery",
+  "Depth",
+  "Authority",
+  "Commercial",
+] as const;
+
+export const POST_TYPES = [
+  "framework",
+  "case_study",
+  "contrarian_take",
+  "how_to",
+  "teardown",
+  "listicle",
+  "story",
+  "lead_magnet_offer",
 ] as const;
 
 export const ANGLE_TYPES = [
@@ -100,6 +129,9 @@ export const CREDIBILITY_STRENGTHS = [
 ] as const;
 
 export type SourceMode = (typeof SOURCE_MODES)[number];
+export type AllocationBucket = (typeof ALLOCATION_BUCKETS)[number];
+export type FunnelStage = (typeof FUNNEL_STAGES)[number];
+export type PostType = (typeof POST_TYPES)[number];
 export type AngleType = (typeof ANGLE_TYPES)[number];
 export type ContentArchetype = (typeof CONTENT_ARCHETYPES)[number];
 export type PostStructure = (typeof POST_STRUCTURES)[number];

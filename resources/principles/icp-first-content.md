@@ -13,14 +13,18 @@ Strong content should:
 - Stay commercially relevant to the offer without becoming a pitch.
 - Be specific enough that the ICP recognizes themselves.
 
+## Selected-Reader Relevance
+
+Every post specifies an intended reader (e.g. buyers, practitioners, peers, or specialists). When an intended reader is specified, calibrate the post's tone, tension, and vocabulary to that reader rather than defaulting blindly to generic buyer ICP assumptions. Content for practitioners should respect practitioner craft; content for peers should respect peer standards.
+
 ## Avoid
 
-- Writing for competitors or generic creators.
+- Writing for generic creators or clickbait audiences.
 - Broad applause lines that any audience could agree with.
 - Motivation without operating insight.
-- Trend commentary without buyer relevance.
+- Trend commentary without reader relevance.
 - Content that attracts engagement from the wrong audience.
-- Claims that sound impressive but do not help the buyer think better.
+- Claims that sound impressive but do not help the reader think better.
 
 ## Buyer Belief Shift
 

@@ -3,41 +3,45 @@
 Updated: 2026-10-06
 
 - Active editor: Gemini 3.8 Flash (pair programming on Virel)
-- Current phase: P03 completed; ready for P04 — Shared standalone writer and simpler editor.
+- Current phase: P04 completed; ready for P05 — Monthly settings, source selection, and calendar plan.
 - Repository: jawwad31/linkedin-content-os, main.
-- Baseline commit: 267636c (feat: unify content bank and track explicit reuse)
+- Baseline commit: 9f88aff (feat: add private supporting documents and retrieval)
 - Product name: Virel (recorded in canonical documentation).
-- Deliverables:
-  - Additive database migration `supabase/migrations/20261006170000_documents_and_retrieval.sql` creating `client_documents` table with RLS, purpose checks, versioning, status indexes, and SHA256 hashes.
-  - Document schemas in `src/features/documents/schemas.ts` defining 4 distinct purposes (`source_material`, `private_evidence`, `reader_download`, `profile_reference`), status lifecycle, and context manifest contracts.
-  - Scoped retrieval service in `src/features/documents/retrieval-service.ts` providing deterministic SHA256 hashing, markdown semantic section chunking, term-frequency relevance scoring, provenance retention, and strict exclusion of archived or private-evidence leaks.
-  - Context manifest builder in `src/features/documents/context-builder.ts` computing deterministic token estimates and bundling profile revisions, source references, and excerpt hashes.
-  - Document management service in `src/features/documents/service.ts` enforcing admin-only gates for reader downloads and profile reference files, version incrementing, and audit logging.
-  - Server actions in `src/features/documents/actions.ts`.
-  - Document management UI in `src/features/documents/document-manager.tsx` with safe preformatted markdown preview (disabling scripts), purpose selector, version tracking, and archive/delete controls.
-  - Integrated into Settings page in `src/app/client/[client_id]/settings/page.tsx`.
-  - Comprehensive unit and integration test suite in `tests/documents-retrieval.test.ts`.
+- Deliverables for P04:
+  - Additive database migration `supabase/migrations/20261006180000_shared_writer_and_editorial_controls.sql` extending `posts` and `content_ideas` with `allocation_bucket`, `post_type`, `funnel_stage`, `intended_reader`, `primary_takeaway`, `content_pillar`, `brief_overrides`, `draft_version`, and `approved_draft_version`.
+  - Extended taxonomies in `src/lib/ai/playbooks/taxonomies.ts`: 8 post types, 4 funnel stages (`Discovery`, `Depth`, `Authority`, `Commercial`), 4 allocation buckets (`experience`, `asset`, `evergreen`, `news`), and extended source modes without breaking legacy modes.
+  - Contracts and schemas in `src/lib/ai/playbooks/contracts.ts`: versioned `GenerationPlanV2` with `editorial` block, `adaptGenerationPlan` helper providing defaults for legacy plans, and `strategyOverridesSchema` supporting editorial controls.
+  - Runtime playbooks updated: `resources/craft/linkedin-writing-guide.md` and `resources/principles/icp-first-content.md` with explicit funnel stage writing rules, selected-reader relevance replacing buyer-only assumptions, and strict proof safety for profile-led educational drafts (forbidding invented experiences, personal anecdotes, or fabricated metrics).
+  - Post review & approval invalidation engine in `src/features/posts/review/service.ts`: `editPostContent` automatically increments `draft_version`, reverts status from `'approved'` to `'review'`, clears `approved_at`, and invalidates prior approval; `markPostPublished` strictly rejects stale approvals where `approved_draft_version !== draft_version`.
+  - Shared standalone writer service in `src/features/posts/generate/standalone-service.ts`: direct source resolution (founder experience, asset/content resource, profile-led educational, custom upload, research/trend), backing `content_ideas` row to preserve the "one active post per idea" invariant, atomic reservation commit/release, and reviewed post generation.
+  - UI updates in `src/app/client/[client_id]/posts/[post_id]/review/page.tsx`: editorial brief badges (funnel stage, post type, draft version) and stale approval warning banner.
+  - Comprehensive unit and integration test suites in `tests/standalone-drafting.test.ts` and `tests/generation-contract.test.ts`.
 - Repository files changed:
-  - `supabase/migrations/20261006170000_documents_and_retrieval.sql`
-  - `src/features/documents/schemas.ts`
-  - `src/features/documents/retrieval-service.ts`
-  - `src/features/documents/context-builder.ts`
-  - `src/features/documents/service.ts`
-  - `src/features/documents/actions.ts`
-  - `src/features/documents/document-manager.tsx`
-  - `src/app/client/[client_id]/settings/page.tsx`
-  - `tests/documents-retrieval.test.ts`
+  - `supabase/migrations/20261006180000_shared_writer_and_editorial_controls.sql`
+  - `src/lib/ai/playbooks/taxonomies.ts`
+  - `src/lib/ai/playbooks/contracts.ts`
+  - `src/features/posts/agents/content-agent.ts`
+  - `src/features/posts/generate/service.ts`
+  - `src/features/posts/generate/standalone-service.ts`
+  - `src/features/posts/review/schemas.ts`
+  - `src/features/posts/review/service.ts`
+  - `src/features/posts/review/queries.ts`
+  - `src/app/client/[client_id]/posts/[post_id]/review/page.tsx`
+  - `resources/craft/linkedin-writing-guide.md`
+  - `resources/principles/icp-first-content.md`
+  - `tests/generation-contract.test.ts`
+  - `tests/standalone-drafting.test.ts`
   - `feature-checklist.md`
   - `docs/handoffs/CURRENT.md`
 - Validation:
-  - `npm test`: 17/17 test files passed, 106/106 tests passed.
+  - `npm test`: 18/18 test files passed, 115/115 tests passed.
   - `npm run lint`: passed cleanly (0 errors, 0 warnings).
   - `npm run build`: Next.js 16 production build succeeded with Turbopack.
 - Behavior preserved:
-  - Uploaded files are strictly treated as untrusted data; scripts and prompt injections cannot override application rules.
-  - Private evidence is completely decoupled from reader downloads.
-  - Original file text is preserved; replacement immediately excludes previous versions from retrieval.
-  - Existing settings, profiles, team access, and operational logs continue to function as designed.
-- Commit: `feat: add private supporting documents and retrieval`
-- Next step: P04 — Shared standalone writer and simpler editor.
+  - One active post per idea invariant strictly maintained across both standalone and batch idea drafting.
+  - Legacy source modes (`founder_experience`, `trend_card`, `trend_reaction`) and generation plans remain 100% compatible.
+  - Approval cannot be forged; any content/brief edit requires renewed human review before publication.
+  - Post deletion tombstone preservation and usage accounting from P02 remain intact.
+- Commit: `feat: unify source based drafting and editorial controls`
+- Next step: P05 — Monthly settings, source selection, and calendar plan.
 - Blockers: None.

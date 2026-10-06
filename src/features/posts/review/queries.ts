@@ -37,6 +37,14 @@ export type ReviewPost = {
   qaWarnings: QaWarningCode[];
   sourceContextUsed: unknown;
   status: ReviewPostStatus;
+  allocationBucket?: string | null;
+  postType?: string | null;
+  funnelStage?: string | null;
+  intendedReader?: string | null;
+  primaryTakeaway?: string | null;
+  contentPillar?: string | null;
+  draftVersion?: number;
+  approvedDraftVersion?: number | null;
   editNote: string | null;
   approvedAt: string | null;
   publishedAt: string | null;
@@ -56,6 +64,14 @@ type ReviewPostRow = {
   qa_result: unknown;
   source_context_used: unknown;
   status: ReviewPostStatus;
+  allocation_bucket?: string | null;
+  post_type?: string | null;
+  funnel_stage?: string | null;
+  intended_reader?: string | null;
+  primary_takeaway?: string | null;
+  content_pillar?: string | null;
+  draft_version?: number;
+  approved_draft_version?: number | null;
   edit_note: string | null;
   approved_at: string | null;
   published_at: string | null;
@@ -108,7 +124,7 @@ export async function getReviewPosts(
   const { data, error } = await supabase
     .from("posts")
     .select(
-      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, edit_note, approved_at, published_at, created_at",
+      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, allocation_bucket, post_type, funnel_stage, intended_reader, primary_takeaway, content_pillar, draft_version, approved_draft_version, edit_note, approved_at, published_at, created_at",
     )
     .eq("client_id", clientId)
     .is("deleted_at", null)
@@ -166,6 +182,14 @@ export async function getReviewPosts(
         qaWarnings: warningsFromQaResult(row.qa_result),
         sourceContextUsed: row.source_context_used,
         status: row.status,
+        allocationBucket: row.allocation_bucket ?? null,
+        postType: row.post_type ?? null,
+        funnelStage: row.funnel_stage ?? null,
+        intendedReader: row.intended_reader ?? null,
+        primaryTakeaway: row.primary_takeaway ?? null,
+        contentPillar: row.content_pillar ?? null,
+        draftVersion: row.draft_version ?? 1,
+        approvedDraftVersion: row.approved_draft_version ?? null,
         editNote: row.edit_note,
         approvedAt: row.approved_at,
         publishedAt: row.published_at,
@@ -206,7 +230,7 @@ export async function getReviewPost(
     supabase
       .from("posts")
       .select(
-        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, edit_note, approved_at, published_at, created_at",
+        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, allocation_bucket, post_type, funnel_stage, intended_reader, primary_takeaway, content_pillar, draft_version, approved_draft_version, edit_note, approved_at, published_at, created_at",
       )
       .eq("client_id", clientId)
       .eq("id", postId)
@@ -271,6 +295,14 @@ export async function getReviewPost(
       qaWarnings: warningsFromQaResult(row.qa_result),
       sourceContextUsed: row.source_context_used,
       status: row.status,
+      allocationBucket: row.allocation_bucket ?? null,
+      postType: row.post_type ?? null,
+      funnelStage: row.funnel_stage ?? null,
+      intendedReader: row.intended_reader ?? null,
+      primaryTakeaway: row.primary_takeaway ?? null,
+      contentPillar: row.content_pillar ?? null,
+      draftVersion: row.draft_version ?? 1,
+      approvedDraftVersion: row.approved_draft_version ?? null,
       editNote: row.edit_note,
       approvedAt: row.approved_at,
       publishedAt: row.published_at,

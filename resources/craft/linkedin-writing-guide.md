@@ -85,6 +85,48 @@ example in the reaction.
 
 Do not intensify "this might matter" into "this will transform the market."
 
+### Content Resource (Asset-Led)
+
+Teach the operating framework or principle behind the asset. Focus on actionable
+distinctions that help the reader understand the system before requesting the asset.
+First person is restrained; do not claim automatic delivery or invent unstated assets.
+
+### Profile-Led (Educational / Principles)
+
+Write from the founder's codified principles, frameworks, and domain expertise.
+Strictly educational. **Crucial proof rule:** NEVER invent founder experiences,
+personal anecdotes, client case studies, or fabricated metrics when drafting profile-led
+content. Use clean explanations, conceptual models, and operational frameworks.
+
+### Custom Upload / Document Support
+
+Draw evidence directly from the uploaded supporting document or brief notes.
+Do not extrapolate beyond the provided text. Cite or reference only documented facts.
+
+### Research Brief
+
+Synthesize findings, market shifts, and citations from the research brief.
+State evidence as external developments or industry dynamics without claiming personal
+involvement.
+
+## Funnel-Stage Writing Rules
+
+### Discovery
+Focus on problem awareness, recognizable friction, and reframing common misconceptions.
+Make it accessible to both practitioners and buyers. High clarity, zero insider jargon.
+
+### Depth
+Focus on mechanics, execution steps, and tactical how-to. Break down processes, teardowns,
+and non-obvious failure modes for hands-on practitioners.
+
+### Authority
+Focus on strong conviction, contrarian reframes, operator standards, and hard-won
+benchmarks grounded in real operating constraints.
+
+### Commercial
+Focus on business outcomes, decision criteria, cost of inaction, offer capabilities,
+or structured lead-magnet asset offers.
+
 ## Founder Voice and Inspiration Posts
 
 Use the voice sample, phrases to use, phrases to avoid, and up to three

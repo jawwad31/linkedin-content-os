@@ -9,12 +9,15 @@ import {
 } from "@/lib/ai/playbooks/contracts";
 import { computeGenerationPlanInputHash } from "@/lib/ai/playbooks/plan-hash";
 import {
+  ALLOCATION_BUCKETS,
   ANGLE_TYPES,
   BODY_FRAMEWORKS,
   CONTENT_ARCHETYPES,
   CTA_TYPES,
+  FUNNEL_STAGES,
   HOOK_TYPES,
   POST_STRUCTURES,
+  POST_TYPES,
   SOURCE_MODES,
 } from "@/lib/ai/playbooks/taxonomies";
 
@@ -32,7 +35,13 @@ const hashInput = {
 
 describe("GenerationPlanV2", () => {
   it("enforces every fixed taxonomy and the resource-post semantic contract", () => {
-    expect(SOURCE_MODES).toHaveLength(3);
+    expect(SOURCE_MODES).toHaveLength(7);
+    expect(SOURCE_MODES).toContain("founder_experience");
+    expect(SOURCE_MODES).toContain("trend_card");
+    expect(SOURCE_MODES).toContain("trend_reaction");
+    expect(ALLOCATION_BUCKETS).toHaveLength(4);
+    expect(FUNNEL_STAGES).toHaveLength(4);
+    expect(POST_TYPES).toHaveLength(8);
     expect(ANGLE_TYPES).toHaveLength(15);
     expect(CONTENT_ARCHETYPES).toHaveLength(6);
     expect(POST_STRUCTURES).toHaveLength(4);

@@ -353,7 +353,26 @@ export default async function PostReviewPage({
             <Badge variant={STATUS_BADGE_VARIANT[post.status]}>
               {STATUS_LABELS[post.status] ?? post.status}
             </Badge>
+            {post.funnelStage ? (
+              <Badge variant="outline" className="text-brand-purple border-brand-purple/30">
+                {post.funnelStage} Stage
+              </Badge>
+            ) : null}
+            {post.postType ? (
+              <Badge variant="outline">
+                {post.postType.replace(/_/g, " ")}
+              </Badge>
+            ) : null}
+            <span className="text-caption font-mono text-muted-foreground">
+              v{post.draftVersion ?? 1}
+            </span>
           </div>
+          {post.draftVersion && post.approvedDraftVersion && post.draftVersion !== post.approvedDraftVersion ? (
+            <div className="mt-2 flex items-center gap-2 rounded-control bg-warning/10 border border-warning/30 px-3 py-2 text-caption text-warning-strong font-medium">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Draft updated after approval. Renewed review is required before publishing.</span>
+            </div>
+          ) : null}
           <p className="mt-1 max-w-3xl text-small text-muted-foreground">
             Inspect and review this post&apos;s workflow status and content details.
           </p>

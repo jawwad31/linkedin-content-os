@@ -60,12 +60,11 @@ export type GeneratePostData = {
   alreadyGenerated?: boolean;
 };
 
-type AdminClient = ReturnType<typeof createAdminClient>;
+import type { SourceMode } from "@/lib/ai/playbooks/taxonomies";
 
-type ContentIdeaSourceType =
-  | "founder_experience"
-  | "trend_card"
-  | "trend_reaction";
+export type AdminClient = ReturnType<typeof createAdminClient>;
+
+export type ContentIdeaSourceType = SourceMode;
 
 type ContentIdeaStatus = "draft" | "ready" | "used" | "archived";
 
@@ -98,7 +97,7 @@ type ClientContextRow = {
   profile_revision?: number | null;
 };
 
-type ContentIdeaRow = {
+export type ContentIdeaRow = {
   id: string;
   source_type: ContentIdeaSourceType;
   source_ids_json: unknown;
@@ -371,7 +370,7 @@ function trendCardRecord(card: TrendCardRow): Record<string, unknown> {
   };
 }
 
-async function getBusinessContext(
+export async function getBusinessContext(
   admin: AdminClient,
   clientId: string,
 ): Promise<ContentAgentBusinessContext | null> {
@@ -388,7 +387,7 @@ async function getBusinessContext(
   return toBusinessContext(data);
 }
 
-async function getApprovedPlanningResources(
+export async function getApprovedPlanningResources(
   admin: AdminClient,
   clientId: string,
 ): Promise<PlanningResource[]> {
@@ -416,7 +415,7 @@ async function getApprovedPlanningResources(
   }));
 }
 
-async function isCommentGateEligible(
+export async function isCommentGateEligible(
   admin: AdminClient,
   clientId: string,
   ignorePostId?: string,
@@ -808,7 +807,7 @@ type ReviewedPostValues = {
   sourceContextUsed: Record<string, unknown>;
 };
 
-async function produceReviewedPost(input: {
+export async function produceReviewedPost(input: {
   clientId: string;
   userId: string;
   businessContext: ContentAgentBusinessContext;

@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import type { GenerationPlanV2 } from "@/lib/ai/playbooks/contracts";
+import type { SourceMode } from "@/lib/ai/playbooks/taxonomies";
 import { loadContentPlaybook } from "@/lib/ai/playbooks/loader";
 import { writeLlmLog } from "@/lib/llm/log";
 import {
@@ -46,7 +47,7 @@ export type ContentAgentBusinessContext = {
 
 export type ContentAgentIdeaContext = {
   id: string;
-  sourceType: "founder_experience" | "trend_card" | "trend_reaction";
+  sourceType: SourceMode;
   angle: string;
   buyerPain: string | null;
   commercialRelevance: string | null;
@@ -128,9 +129,19 @@ export async function buildContentPrompt(input: {
       "Draft exactly one public-facing LinkedIn text post from the stored GenerationPlanV2.",
       "Treat the plan and idea metadata as private scaffolding. Never expose field labels or workflow terms.",
       "The draft will be checked deterministically and reviewed by a separate QA agent.",
-      "Write for the intended readership. When personal_readers is provided in the personal brand profile, calibrate the post for that readership rather than always assuming the buyer ICP is the sole reader.",
+      `Post Funnel Stage: ${input.idea.generationPlan.editorial?.funnelStage ?? "Depth"}. Follow the writing guidelines for this stage.`,
+      `Post Type: ${input.idea.generationPlan.editorial?.postType ?? "framework"}.`,
+      input.idea.generationPlan.editorial?.intendedReader
+        ? `Target Intended Reader: "${input.idea.generationPlan.editorial.intendedReader}". Calibrate tone, vocabulary, and tension specifically for this reader rather than assuming the buyer ICP is the sole audience.`
+        : "Write for the intended readership. When personal_readers is provided in the personal brand profile, calibrate the post for that readership rather than always assuming the buyer ICP is the sole reader.",
+      input.idea.generationPlan.editorial?.primaryTakeaway
+        ? `Primary Takeaway: "${input.idea.generationPlan.editorial.primaryTakeaway}". Ensure the post delivers this exact takeaway.`
+        : "",
+      input.sourceContext.sourceType === "profile_led"
+        ? "STRICT PROOF SAFETY (PROFILE-LED): Strictly educational. Do NOT invent founder experiences, personal anecdotes, client results, or fabricated metrics. Teach from principles and frameworks only."
+        : "",
       "Return strict JSON only.",
-    ].join("\n\n"),
+    ].filter(Boolean).join("\n\n"),
     user: JSON.stringify({
       business_context: {
         industry: input.businessContext.industry,

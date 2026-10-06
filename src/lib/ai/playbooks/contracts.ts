@@ -1,12 +1,15 @@
 import { z } from "zod";
 
 import {
+  ALLOCATION_BUCKETS,
   ANGLE_TYPES,
   BODY_FRAMEWORKS,
   CONTENT_ARCHETYPES,
   CTA_TYPES,
+  FUNNEL_STAGES,
   HOOK_TYPES,
   POST_STRUCTURES,
+  POST_TYPES,
   RECOMMENDED_FORMATS,
   SOURCE_MODES,
 } from "./taxonomies";
@@ -42,6 +45,16 @@ export const generationPlanV2Schema = z
       allowedClaims: z.array(boundedString(700)).max(12),
       claimBoundaries: z.array(boundedString(700)).max(12),
     }),
+    editorial: z
+      .object({
+        allocationBucket: z.enum(ALLOCATION_BUCKETS).default("experience"),
+        postType: z.enum(POST_TYPES).default("framework"),
+        funnelStage: z.enum(FUNNEL_STAGES).default("Depth"),
+        intendedReader: boundedString(500).optional(),
+        primaryTakeaway: boundedString(700).optional(),
+        contentPillar: boundedString(500).optional(),
+      })
+      .optional(),
   })
   .superRefine((plan, context) => {
     const isResourcePost = plan.execution.contentArchetype === "resource_post";
@@ -66,6 +79,11 @@ export const strategyOverridesSchema = z
     postStructure: z.enum(POST_STRUCTURES).optional(),
     ctaType: z.enum(CTA_TYPES).optional(),
     resourceId: z.string().uuid().optional(),
+    postType: z.enum(POST_TYPES).optional(),
+    funnelStage: z.enum(FUNNEL_STAGES).optional(),
+    intendedReader: boundedString(500).optional(),
+    primaryTakeaway: boundedString(700).optional(),
+    contentPillar: boundedString(500).optional(),
   })
   .strict();
 
@@ -142,6 +160,23 @@ export function applyStrategyOverrides(
     throw new Error("Resource posts require a selected resource and comment gate.");
   }
 
+  const editorial = plan.editorial
+    ? { ...plan.editorial }
+    : {
+        allocationBucket: "experience" as const,
+        postType: overrides.postType ?? ("framework" as const),
+        funnelStage: overrides.funnelStage ?? ("Depth" as const),
+        intendedReader: overrides.intendedReader,
+        primaryTakeaway: overrides.primaryTakeaway,
+        contentPillar: overrides.contentPillar,
+      };
+
+  if (overrides.postType) editorial.postType = overrides.postType;
+  if (overrides.funnelStage) editorial.funnelStage = overrides.funnelStage;
+  if (overrides.intendedReader) editorial.intendedReader = overrides.intendedReader;
+  if (overrides.primaryTakeaway) editorial.primaryTakeaway = overrides.primaryTakeaway;
+  if (overrides.contentPillar) editorial.contentPillar = overrides.contentPillar;
+
   return generationPlanV2Schema.parse({
     ...plan,
     strategy: {
@@ -149,7 +184,28 @@ export function applyStrategyOverrides(
       angleType: overrides.angleType ?? plan.strategy.angleType,
     },
     execution,
+    editorial,
   });
+}
+
+export function adaptGenerationPlan(rawPlan: unknown): GenerationPlanV2 | null {
+  if (!rawPlan || typeof rawPlan !== "object") return null;
+  const p = rawPlan as Record<string, unknown>;
+  const withEditorial = {
+    ...p,
+    editorial: p.editorial ?? {
+      allocationBucket: "experience",
+      postType: "framework",
+      funnelStage: "Depth",
+    },
+  };
+  const parsed = generationPlanV2Schema.safeParse(withEditorial);
+  if (parsed.success) return parsed.data;
+
+  const fallback = generationPlanV2Schema.safeParse(rawPlan);
+  if (fallback.success) return fallback.data;
+
+  return null;
 }
 
 export function isCompatibleGenerationPlan(
