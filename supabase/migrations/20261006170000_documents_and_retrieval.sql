@@ -79,9 +79,9 @@ create policy "Authorized users can insert client documents"
         and ca.user_id = auth.uid()
         and ca.invitation_status = 'accepted'
         and (
-          ca.permissions ? 'founder_experience_manage'
-          or ca.permissions ? 'ideas_manage'
-          or ca.permissions ? 'posts_draft'
+          'founder_experience_manage' = any (ca.permissions)
+          or 'ideas_manage' = any (ca.permissions)
+          or 'posts_draft' = any (ca.permissions)
         )
       )
     )
@@ -100,9 +100,9 @@ create policy "Authorized users can update client documents"
         and ca.user_id = auth.uid()
         and ca.invitation_status = 'accepted'
         and (
-          ca.permissions ? 'founder_experience_manage'
-          or ca.permissions ? 'ideas_manage'
-          or ca.permissions ? 'posts_draft'
+          'founder_experience_manage' = any (ca.permissions)
+          or 'ideas_manage' = any (ca.permissions)
+          or 'posts_draft' = any (ca.permissions)
         )
       )
     )

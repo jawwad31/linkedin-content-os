@@ -93,9 +93,9 @@ create policy "Authorized users can insert source usage"
       and ca.user_id = auth.uid()
       and ca.invitation_status = 'accepted'
       and (
-        ca.permissions ? 'ideas_manage'
-        or ca.permissions ? 'posts_draft'
-        or ca.permissions ? 'posts_publish'
+        'ideas_manage' = any (ca.permissions)
+        or 'posts_draft' = any (ca.permissions)
+        or 'posts_publish' = any (ca.permissions)
       )
     )
   );
@@ -110,9 +110,9 @@ create policy "Authorized users can update source usage"
       and ca.user_id = auth.uid()
       and ca.invitation_status = 'accepted'
       and (
-        ca.permissions ? 'ideas_manage'
-        or ca.permissions ? 'posts_draft'
-        or ca.permissions ? 'posts_publish'
+        'ideas_manage' = any (ca.permissions)
+        or 'posts_draft' = any (ca.permissions)
+        or 'posts_publish' = any (ca.permissions)
       )
     )
   );
@@ -154,9 +154,12 @@ select
   case when p.status = 'published' then 'published' else 'used' end as status,
   p.content_idea_id,
   p.id as post_id,
-  p.title as angle
+  ci.angle as angle
 from public.posts p
-join public.content_resources cr on cr.id = p.selected_resource_id
+join public.content_ideas ci on ci.id = p.content_idea_id
+join public.content_resources cr
+  on cr.id = ci.selected_resource_id
+  and cr.client_id = p.client_id
 where p.deleted_at is null
 and not exists (
   select 1 from public.source_usage su
