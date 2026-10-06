@@ -65,27 +65,21 @@ The app should be simple on the surface and structured underneath.
 User-facing workflow:
 
 ```text
-Setup → Research → TrendCards → Ideas → Posts → Review → Publish
+Settings → Research → TrendCards → Ideas → Posts → Review → Publish
 ```
 
-Internal intelligence workflow:
-
-```text
-Business Context
-→ Research Agent
-→ TrendCards
-→ Planning Agent
-→ Content Ideas
-→ Content Agent
-→ Review Workflow
-→ Manual Publish Queue
-```
+Important details:
+- Founder Experiences and Research are independent input paths.
+- Research internally runs sequentially: Collect RSS → Classify Articles → Synthesize TrendCards.
+- Ideas can originate from: Founder Experiences, approved TrendCard, or Trend Reaction.
+- One selected Content Idea produces one active Post.
+- Review follows Post generation.
+- Publishing remains manual (there is no automatic publishing or LinkedIn publishing API).
 
 Important rules:
-
 - Business context is always-on background context.
-- Business context is not a standalone generation mode.
 - Business context is never a fourth idea source.
+- Business context is not a standalone generation mode.
 - There must be no `business_context_only` mode.
 - Humans review before posts move to publish queue.
 - No scheduler should auto-generate ideas or posts.
@@ -134,7 +128,7 @@ Do not design for public self-serve signup in v1.
 | User provisioning | Manual administrator creation; no invitation or reset email |
 | Access model | Agency model with `agency_admin`, `client_admin`, and `client_user` only |
 | Audit logs | Lightweight logs: user, action, timestamp, client |
-| Delete policy | Soft delete business records; hard delete temporary logs |
+| Delete policy | Soft delete by default; Admin hard delete for 6 specific entity types; hard delete temporary logs |
 | Publishing | Manual only; no LinkedIn API |
 
 ---
@@ -193,7 +187,7 @@ UX patterns may be adopted from either reference gradually, one screen at a time
 - dark sidebar with a current-workspace card
 - top header
 - denser dashboard layout
-- tabbed/card Setup layout
+- tabbed/card Settings layout
 
 Never copy from either reference:
 
@@ -220,14 +214,14 @@ Build in v1:
 2. Manual administrator-created users with temporary passwords; no SMTP or email invitation flow.
 3. Client selector with many users ↔ many clients.
 4. Agency access roles: `agency_admin`, `client_admin`, and `client_user`.
-5. Client setup / always-on business context.
+5. Client Settings / always-on business context.
 6. Founder Experience records.
 7. RSS source management.
 8. Persistent Railway worker for RSS collection.
 9. Manual Run Research Agent button.
 10. Article classification.
 11. TrendCard synthesis.
-12. Founder Take and Trend Reactions on TrendCards.
+12. Trend Reactions on TrendCards (one per TrendCard; Founder Take input was removed from the Research UI, existing stored values still feed Ideas/Post generation).
 13. Approve or archive TrendCards.
 14. Content Idea generation from exactly three modes:
     - `founder_experience`
@@ -247,7 +241,7 @@ Build in v1:
 19. Research run tracking.
 20. Safe LLM metadata logs.
 21. Lightweight audit logs.
-22. Soft delete for business records.
+22. Soft delete for business records by default (except for the 6 entity types allowing administrator hard deletion).
 
 ---
 
@@ -406,9 +400,9 @@ linkedin-content-os
     └── strategy/post-structures.md
 ```
 
-`SKILL.md` is a compact developer router and is not injected into application
-prompts. Production stages load only allowlisted stage skills and resources
-through the server-only TypeScript playbook manifest.
+`SKILL.md` is a compact Codex/developer router and is never injected into
+application prompts. Production stages load only explicitly allowlisted stage
+skills and resources through the server-only TypeScript playbook manifest.
 
 Do not create:
 
@@ -465,9 +459,16 @@ Rules:
 - RSS claims are context, not verified proof
 - do not duplicate existing TrendCards
 - source links are resolved from cited `market_signal_items`; the model must only return cited source item IDs
-- founder POV must come from a human Founder Take or Trend Reaction, not generated `founder_pov`
+- founder POV must come from an existing Founder Take value or a Trend Reaction, not generated `founder_pov` (Founder Take is no longer addable from the Research UI; only Trend Reaction, limited to one per TrendCard, can be added there)
 - do not expose raw prompts
 - do not flash raw LLM errors
+
+Current Pipeline Behavior:
+- **Collection**: Collects from active RSS Sources. Inserts only new articles. Dedupes using `client_id` plus `content_hash`. Existing duplicates are skipped/counted, never re-inserted.
+- **Classification**: Processes only articles with status `new`. Maximum 50 articles per run. Internal batch size is 12. Classifies as `relevant` or `irrelevant` with a score and reason. Failed classifications remain `new` and are retryable.
+- **TrendCard Synthesis**: Processes up to 30 active relevant articles. Groups evidence into distinct market shifts (not one card per article). Zero TrendCards is a valid outcome when evidence is insufficient. Only articles cited by successfully created TrendCards transition to `used`. Uncited relevant articles remain `relevant` and retryable. Failed synthesis leaves articles `relevant`. Existing active TrendCards are supplied during prompt assembly to reduce duplication. Exact title duplication is rejected at the database or application level.
+- **Model Routing**: Router targets `OPENROUTER_RESEARCH_MODEL` if configured, falling back to `OPENROUTER_MODEL` otherwise. (Do not hardcode environment-specific model names).
+- **Hardening**: Structured JSON schema outputs are enforced where supported. Generates corrective retries on invalid JSON or schema mismatches. Retries transient network, timeout, 429, and 5xx failures. Validates locally using Zod. Excludes raw prompts or raw LLM responses from schema error logging. Handles no-evidence, zero-card, and partial-failure outcomes gracefully.
 
 ### Planning Agent
 
@@ -484,8 +485,8 @@ Always receives business context:
 - banned topics
 
 Founder voice, style inspiration, and phrase preferences are drafting/review
-inputs. Content Resources are separately managed and available only for
-compatible resource-post planning.
+inputs, not idea sources. Content Resources are separately managed and are
+available only for compatible resource-post planning.
 
 Allowed modes only:
 
@@ -513,17 +514,39 @@ Output contract:
 - `proof_notes`
 - complete `generation_plan` matching `GenerationPlanV2`
 
-Every GenerationPlanV2 includes the fixed source mode, an eight-part visible
-strategy, compatible execution choices, hidden claim boundaries, and an
-optional approved resource. New ideas store the plan, version, input hash, and
-safe overrides. Generate Post replans only when those inputs changed.
+`GenerationPlanV2` contains:
+
+- exactly one of the three source modes
+- a visible eight-part strategy: target ICP, current belief, desired belief,
+  core argument, source anchor, proof, angle, and risk/readiness
+- hidden safety fields for allowed claims and claim boundaries
+- one of 15 angle types
+- one of 6 content archetypes, including controlled `resource_post`
+- one of 4 macro post structures
+- one of 6 body frameworks
+- one of 7 hook types
+- one of 7 CTA types, including `comment_gate` and `none`
+- an argument outline and optional approved resource ID
+
+All generated posts remain text in this version. Review may store an advisory
+recommendation for text, carousel, video, poll, or newsletter without creating
+that asset.
+
+Current Agent Behavior:
+- **Always-on Context**: Business context is injected into every Planning run.
+- **Founder Direction**: Added by user after Idea generation to refine angles.
+- **Quantity & Quality**: Generates 3–5 Ideas only when source quality supports it. Returning fewer or zero Ideas is valid when evidence is insufficient.
+- **Angle Deduplication**: Excludes filler and duplicate angles that overlap with recent content ideas.
+- **Factual Restraints**: Never invents proof, results, metrics, stories, quotes, or experiences.
+- **POV Rules**: TrendCard sources provide market context, not founder experience. Trend Reaction uses the founder's reaction text as the primary POV.
+- **Plan Persistence**: New ideas store the plan, version, input hash, and safe idea-level overrides. Generate Post reuses a compatible current plan and replans only when inputs changed.
 
 ### Content Agent
 
 Purpose:
 
-Turn one approved ContentIdea and GenerationPlanV2 into a draft for independent
-QA.
+Turn one approved ContentIdea and stored GenerationPlanV2 into a draft for
+independent QA.
 
 Inputs:
 
@@ -551,25 +574,33 @@ Rules:
 - do not invent founder stories
 - do not invent client results
 - do not use banned topics
-- use comment gating only for a selected active approved Content Resource
+- use comment gating only for a selected active approved Content Resource, with
+  the saved keyword and no automatic-delivery promise
 - do not use generic P.S. engagement questions
 - do not write for competitors/generic creators
 - write for the ICP
 - build around one buyer belief shift
 
-Deterministic checks cover scaffolding, banned language, unsupported numbers
-and quotes, CTA count, taxonomy validity, and source-mode drift. A separate QA
-agent returns `pass`, `revised`, or `blocked`; blocked drafts are not stored and
-one bounded corrective retry is allowed. Raw prompts, sensitive context, and
-post copy are not written to LLM or audit logs.
+Current Agent Behavior:
+- **Model Routing**: Router targets `OPENROUTER_CONTENT_MODEL` if configured, falling back to `OPENROUTER_MODEL` otherwise. (Do not hardcode specific model names).
+- **One Post per Idea Workflow**: One approved/ready Content Idea generates exactly one active Post. A partial unique index enforces this constraint (`deleted_at IS NULL` context). Repeated generation requests return the existing active Post instead of duplicating it, and race conditions are handled safely. The Idea status becomes `used` once its Post is successfully generated. The Ideas list shows `Post Drafted` and `Open Post`, and disabling the generation action. Alternative drafts must be requested using the Needs Edit → Edit Note → Redraft workflow.
+- **Scaffolding Hygiene**: Planning metadata is private and must not appear as internal labels in public Post copy. Deterministic checks scan scaffolding, banned language, unsupported numbers and quotes, multiple CTAs, taxonomy values, and source-mode drift.
+- **Independent Review**: A separate QA/finalization agent checks source fidelity, credibility, ICP fit, belief-shift clarity, voice, structure, CTA fit, and readability. It returns `pass`, `revised`, or `blocked`. Pass/revised posts enter human review; blocked drafts are not stored. One bounded corrective QA retry is allowed.
+- **Safe Logging**: Raw prompts, sensitive context, drafts, and final posts are not written to LLM or audit logs.
 
 ### Review Agent
 
-Independently validates source fidelity, credibility, ICP fit, belief-shift
-clarity, voice, structure, CTA fit, and readability. Pass/revised posts enter
-human review. Needs Edit, Approve, Reject, and manual Publish remain human
-workflow actions. QA also stores an advisory format recommendation without
-creating carousel, video, poll, or newsletter assets.
+Purpose:
+
+Independently validate and safely finalize one generated draft.
+
+Persistence:
+
+- structured `qa_result` is stored only with pass/revised posts
+- structured `format_recommendation` is advisory and is stored only with a
+  pass/revised text draft
+- blocked drafts are not inserted
+- human Needs Edit, Redraft, Approve, Reject, and manual Publish remain authoritative
 
 ---
 
@@ -651,14 +682,14 @@ Public:
 Protected:
 
 - `/clients`
-- `/client/[client_id]/dashboard`
-- `/client/[client_id]/research`
-- `/client/[client_id]/founder-experiences`
-- `/client/[client_id]/resources`
-- `/client/[client_id]/ideas`
-- `/client/[client_id]/posts`
-- `/client/[client_id]/publish`
-- `/client/[client_id]/settings`
+- `/client/[client_id]/dashboard` (Overview)
+- `/client/[client_id]/research` (Research)
+- `/client/[client_id]/founder-experiences` (Founder Experiences)
+- `/client/[client_id]/resources` (Content Resources)
+- `/client/[client_id]/ideas` (Ideas)
+- `/client/[client_id]/posts` (Posts)
+- `/client/[client_id]/publish` (Publish)
+- `/client/[client_id]/settings` (Settings)
 - `/client/[client_id]/posts/[post_id]/review`
 
 Primary sidebar nav order: Overview, Research, Founder Experiences, Resources, Ideas, Posts, Publish, Settings. Post Review is not a primary nav item — it appears only contextually while viewing that exact post.
@@ -676,7 +707,7 @@ The Settings page is the always-on business context editor for a client.
 - Input is validated with Zod.
 - Successful updates write an audit log with `action: client_settings_updated`. Audit metadata stays minimal (e.g. changed field names and count) — never full business context values.
 - Account Team Access remains part of Settings and must not be broken by business-context changes. Access is created immediately; no pending invitation is created.
-- Founder Experiences are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings.
+- Founder Experiences entries are separate records with their own primary route and nav item (`/client/[client_id]/founder-experiences`) — not part of Settings at all.
 
 Supported Business Context fields (on `clients`):
 
@@ -693,10 +724,13 @@ Supported Business Context fields (on `clients`):
 - `phrases_to_avoid`
 - `approved_proof`
 
-`research_keywords` is edited on Research. Legacy POV, content-pillar,
-reference-material, and publishing-preference columns are not active
-generation context. Content Resources are separate records and never a source
-mode.
+`research_keywords` remains on `clients` but is edited on Research, not
+Settings. Legacy POV, content-pillar, reference-material, and publishing-
+preference columns may remain for migration compatibility but are not active
+generation context.
+
+Content Resources are separate client-scoped records. They are not reference
+material and do not become a fourth source mode.
 
 ---
 
@@ -820,9 +854,62 @@ Tables:
 
 Every client-owned table must include `client_id`.
 
-Soft delete business records with `deleted_at`.
+## Hard-Delete Policy
 
-Use hard delete only for temporary logs or expired temporary artifacts.
+Administrator hard deletion is implemented using SQL DELETE for these six specific entity types:
+- RSS Sources (`rss_sources`)
+- Collected Articles (`market_signal_items`)
+- TrendCards (`trend_cards`)
+- Founder Experience entries (`founder_experiences`)
+- Content Ideas (`content_ideas`)
+- Posts (`posts`)
+
+Allowed roles:
+- `agency_admin`, when the Client Workspace belongs to that administrator's Agency.
+- `client_admin`, for that exact Client Workspace.
+- Blocked: `client_user`, unauthenticated users, users from other Client Workspaces, and administrators from other Agencies.
+
+Security & Isolation:
+- Every Delete request uses the authenticated session-bound Supabase client so that the custom DELETE RLS policies remain active.
+- No `SUPABASE_SERVICE_ROLE_KEY` bypass is used.
+- Cross-client and cross-Agency deletions are denied.
+- Bulk deletion for Collected Articles, TrendCards, Content Ideas, and Posts uses one authenticated `POST /api/client/[client_id]/batch-delete` request. The request has a strict entity allowlist, UUID validation, exact `DELETE` confirmation, a 100-record limit, and bounded server concurrency.
+- The batch endpoint delegates every item to the existing entity delete service. Per-record client scoping, dependency checks, returned-row verification, audit logging, RLS, and safe error mapping therefore remain authoritative; partial success never bypasses a failed record.
+
+Dependency & Conflict Behavior:
+- Never silently cascade-delete downstream business content. If a dependency exists, return a `DEPENDENCY_CONFLICT` (HTTP 409) status with a safe error message.
+- RSS Source: Allow hard deletion even when articles were collected (articles remain with `rss_source_id` set to null).
+- Collected Article: Block if cited by any active TrendCard.
+- TrendCard: Block if referenced by active founder experiences or content ideas. On delete, restore uncited 'used' articles back to 'relevant' atomically.
+- Founder Experience: Block if referenced by active content ideas.
+- Content Idea: Block if referenced by active posts. This blocks ideas linked to posts in review, needs_edit, approved, rejected, or published states. The post must be deleted first. Deleting a content idea never automatically deletes its post.
+- Post: Allow deletion. If no active posts remain for the linked Content Idea, set its status back to 'ready'.
+
+Permanent Confirmation Requirements:
+- Every Delete control requires confirmation: "Delete this {record type}? This permanently deletes \"{record title}\". This action cannot be undone."
+- For Approved or Published Posts, the API and UI require the user to type exactly "DELETE" to confirm. Deleting an internal published Post does not remove the actual LinkedIn post.
+- Every bulk delete requires the administrator to type exactly `DELETE`; dependency-blocked or failed records remain selected and are reported by safe grouped messages.
+
+Audit Logs:
+- RSS Source: `rss_source_hard_deleted`
+- Collected Article: `article_hard_deleted`
+- TrendCard: `trend_card_hard_deleted` (audit count measures only used → relevant transitions)
+- Founder Experience: `founder_experience_hard_deleted`
+- Content Idea: `content_idea_hard_deleted`
+- Post: `post_hard_deleted` (audit metadata reports Idea restoration status)
+- Complete article summaries, post bodies, founder experience texts, prompts, and secrets are excluded from audit metadata.
+- Verification checks: Every direct delete confirms exactly one deleted row was returned from database before writing the audit log.
+- Raw RPC and database errors are never returned to the browser.
+- The canonical Collected Article delete route is under `/api/client/[client_id]/market-items/[item_id]`; the duplicate `collected-articles` route was removed.
+- State cleanup is an automatic workflow-state action: deleted records remain deleted (no Trash screen, no Undo action, and no restore-deleted-record feature).
+
+---
+
+## Current Product Priority
+
+- **Private MVP Complete**: Core private-MVP functionality is fully implemented.
+- **UI Refresh**: The next active work is a UI visual polish.
+- **Constraints**: Visual polish must preserve all current workflows, permissions, API data contracts, and security rules. Do not mix new backend features or filters into UI-refresh commits. Refresh one screen or coherent component system at a time. No mock metrics, fake posts, fake proof, or hardcoded workspaces.
 
 ---
 
@@ -1125,6 +1212,7 @@ Server-only:
 SUPABASE_SERVICE_ROLE_KEY=
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=
+OPENROUTER_RESEARCH_MODEL=
 WORKER_SECRET=
 RSS_COLLECTOR_ENABLED=true
 RSS_COLLECTOR_INTERVAL_HOURS=6
@@ -1133,6 +1221,7 @@ RESEARCH_PIPELINE_FULL=false
 
 Rules:
 
+- OPENROUTER_RESEARCH_MODEL is used for article classification and TrendCard synthesis, falling back to OPENROUTER_MODEL if unset.
 - Store production secrets in Railway.
 - Never commit `.env.local`.
 - Never expose service role or OpenRouter keys to the browser.
@@ -1188,7 +1277,7 @@ The MVP is done when:
 - User can manually run research.
 - App classifies collected articles.
 - App generates TrendCards.
-- User can add founder_take.
+- User can add a Trend Reaction (one per TrendCard); Founder Take is no longer addable from the Research UI.
 - User can approve TrendCards for ideas.
 - Planning Agent generates ideas from:
   - founder_experience
@@ -1203,3 +1292,4 @@ The MVP is done when:
 - LLM logs store metadata only.
 - No visual generation exists.
 - No LinkedIn API publishing exists.
+

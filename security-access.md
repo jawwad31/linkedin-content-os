@@ -1,5 +1,7 @@
 # security-access.md — AIXelerate Content OS
 
+Updated 2026-10-06. Existing security rules are retained from the live repository. The final section defines security requirements for planned features; it does not claim they are implemented.
+
 ## Purpose
 
 This file defines authentication, authorization, RLS, secrets, worker safety, audit logging, delete behavior, and error-handling rules.
@@ -20,7 +22,7 @@ Every client-owned record must be protected by:
 
 No route should:
 
-- expose raw LLM prompts
+- expose assembled internal LLM prompts
 - expose stack traces
 - expose API keys
 - allow cross-client access
@@ -352,7 +354,7 @@ The worker can perform privileged server-side operations, but must:
 - use run guard
 - write safe research logs
 - avoid raw prompt logs
-- never generate ideas/posts/publishing actions automatically
+- research schedules never initiate Ideas, post drafts, or publication actions; separately authorized user-triggered batch jobs may execute already requested draft assignments under P06
 
 ---
 
@@ -387,7 +389,7 @@ Research is already running for this client. Please wait for it to finish.
 
 LLM routes must:
 
-- use OpenRouter server-side only
+- use configured AI provider adapters server-side only; keep existing OpenRouter behavior until the assigned provider phase is implemented
 - apply timeouts
 - handle retries safely
 - return safe errors
@@ -427,7 +429,7 @@ Content safety rules:
 - at most one gated idea may be generated in a batch, and gating is unavailable
   when any of the five most recent active, non-rejected posts already used it
 - do not use generic P.S. engagement bait
-- write for the ICP
+- write for the selected approved reader; the reader may be broader than the business buyer ICP
 
 ---
 
@@ -612,7 +614,7 @@ Never show:
 - stack traces
 - SQL errors
 - raw LLM errors
-- prompt text
+- internal assembled prompt text
 - environment variables
 
 ---
@@ -681,3 +683,66 @@ Use secure cookie/session defaults through Supabase SSR helpers.
 - [ ] TrendCard-to-Article state cleanup verified.
 - [ ] No silent cascade deletion exists.
 - [ ] Production Railway env vars are configured.
+
+
+
+## Planned feature security requirements — 2026-10-06
+
+These extend the existing policies; they do not replace manual provisioning, capability controls, or the six-entity hard-delete policy above. Use current shared access helpers rather than duplicating authorization.
+
+### Proposed mapping of new operations to existing capabilities
+
+| Operation | Authorization |
+|---|---|
+| Edit business/personal profiles, supporting profile documents, account calendar defaults | Scoped Agency/Account Admin only |
+| Create/edit experience-style Content Bank entries and their private attachments | Existing founder_experience_manage capability or scoped admin |
+| Add a reaction tied to research | Existing research_contribute capability or scoped admin |
+| Manage lead magnets, delivery details, public-download eligibility, resource approval | Scoped admin only; preserve existing resource restrictions |
+| Select already approved sources; edit monthly draft plan and reservations | Existing ideas_manage capability or scoped admin |
+| Generate a post from a new assignment | Both assignment/ideas permission and posts_draft; do not treat one as the other |
+| Edit/draft newsletter text | posts_draft; source selection requires ideas_manage where it creates an assignment |
+| Approve/reject posts or newsletter editions | posts_review capability or scoped admin |
+| Mark manually published | posts_publish capability or scoped admin; exact approved version required |
+| Edit/run/pause research configuration, manage monitored URLs | Scoped admin only |
+| View saved research prompt | Scoped admin by default; derived findings follow existing workspace read access |
+
+This mapping is an implementation recommendation consistent with the existing capability model. P00 must confirm exact service/RLS correspondence before enabling routes. Never restore blanket client_user approval/publication denial from the outdated attachments, and never grant those permissions to all Account Users. New capabilities, if essential, require an explicit recorded decision rather than silent expansion.
+
+### Files, retrieval, and external sources
+
+- Protect original objects, metadata, document versions, provider IDs, and returned excerpts by client_id and current access. Use a private bucket and authorized short-lived download links.
+- Backend code derives account-owned object paths and vector-store/file IDs. Do not accept arbitrary provider IDs, URLs, or another account's document ID as authority.
+- For hosted retrieval, use an account-isolated store (recommended initial design), and intersect returned files with the current authorized document/version list. Application RLS does not automatically protect external vector storage.
+- Archive/replacement excludes the old version from retrieval immediately at the application boundary; asynchronously remove old provider indexes with idempotent cleanup. Do not rely on instantaneous provider deletion.
+- Validate actual file type, UTF-8 decoding, size, and processing limits. Sanitize preview HTML/Markdown; disable active scripts. Keep code fences as text. Index only successful, permitted versions.
+- Treat uploads, articles, web results, and imported examples as untrusted data. They cannot override system instructions, grant permissions, select another account, authorize publication, or reveal secrets.
+- Separate private evidence from reader downloads. Linking a private file to a post never makes it public. An explicit admin-approved delivery URL/method is required for an offer; do not implement public sharing merely to satisfy a CTA.
+- URL import/monitoring must reject private, loopback, link-local, metadata-service, and unsupported-scheme targets, recheck DNS/redirect destinations, and bound response size, redirects, content type, and time. Do not fetch authenticated pages with app/service credentials.
+
+### Prompt storage and logs
+
+The user's saved research prompt is intentional, authorized application content in a protected configuration/version record. Admins may edit it on the frontend. This is distinct from assembled internal prompts, which remain hidden and must never appear in ordinary logs.
+
+Store only safe metadata in LLM/audit logs: IDs, versions, statuses, timing, token/cost figures, field names/counts, error categories. Do not put raw excerpts, research prompts, draft copy, credentials, or personal examples in logs. Evidence manifests in protected content records may record references and hashes without duplicating full prompts.
+
+### Jobs, approvals, and migration integrity
+
+- Research and user-requested draft batches use durable, account-scoped job identity and idempotency. Recheck authorization/cancellation before sensitive commits; background work does not gain unlimited scope from a service-role client.
+- A worker lease must be acquired atomically and renewed/recovered safely. A check-then-insert race is not a distributed lock.
+- Reservations and successful source-use commits are transactional. A failed draft must not consume an entry. Retries cannot duplicate posts, charges intentionally initiated by the app, or use rows.
+- Approval checks compare current output version and approved version server-side. A stale browser cannot approve/publish a later revision accidentally.
+- New tables need RLS, deliberate grants, restrictive write policies, correct composite account/record references, and tests for cross-account IDs. A view must not accidentally bypass RLS. Prefer SECURITY INVOKER for RPCs.
+- Add calendar, newsletter, file, and usage dependencies to existing deletion checks before enabling their workflows. Never use CASCADE to erase downstream content. Keep a minimal non-content published-use tombstone when permitted deletion removes a post, so deletion cannot reset reuse history.
+- New entity types default to archive/soft deletion. Do not widen the six existing admin hard-delete entity types as part of renaming Resources or Founder Experiences.
+- New migrations/backfills are additive and rerunnable. Never execute destructive production changes without explicit user authorization. Preserve backup and rollback plans.
+
+### Required new security checks
+
+- [ ] Two accounts and two agencies cannot read each other's document content, search excerpts, sources, calendar jobs, or newsletter records.
+- [ ] Revoked/unselected capabilities fail on direct API, Server Action, RLS, and background paths.
+- [ ] Private evidence cannot become a public reader download through generation.
+- [ ] Source text cannot instruct the AI/application to change access or disclose secrets.
+- [ ] Concurrent selection cannot reserve a single-use entry twice.
+- [ ] Approval invalidates after edit; stale versions cannot be published.
+- [ ] URL import rejects internal/private redirects and oversized responses.
+- [ ] Research settings are visible to authorized editors while internal prompts/logs remain private.

@@ -1197,3 +1197,4 @@ For screens, layout components, and system states without a direct approved PNG 
 
 ### 20.8 Permission-Restricted States
 - UI actions (such as "Delete", "Add Client", or "Run Research Agent") are hidden or completely disabled based on the authenticated user's role (e.g. `client_user` role cannot view or execute delete/run actions), maintaining structured layout grid alignment.
+
