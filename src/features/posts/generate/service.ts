@@ -778,10 +778,10 @@ async function loadTrendReactionSource(
   };
 }
 
-async function loadSourceContext(
+export async function loadSourceContext(
   admin: AdminClient,
   clientId: string,
-  idea: ContentIdeaRow,
+  idea: Pick<ContentIdeaRow, "source_type" | "source_ids_json" | "source_context">,
 ): Promise<SourceLoadResult> {
   const sourceIds = idsFromJson(idea.source_ids_json);
 
@@ -793,7 +793,54 @@ async function loadSourceContext(
     return loadTrendCardSource(admin, clientId, sourceIds);
   }
 
-  return loadTrendReactionSource(admin, clientId, sourceIds);
+  if (idea.source_type === "trend_reaction") {
+    return loadTrendReactionSource(admin, clientId, sourceIds);
+  }
+
+  if (idea.source_type === "content_resource") {
+    if (!sourceIds[0]) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    const { data, error } = await admin.from("content_resources").select("*")
+      .eq("id", sourceIds[0]).eq("client_id", clientId)
+      .eq("active", true).is("deleted_at", null).maybeSingle();
+    if (error || !data) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    return { ok: true, sourceContext: {
+      sourceType: "content_resource", sourceIds, sourceTitle: data.title,
+      source: data, selectedResource: data, sourceArticles: [],
+    } };
+  }
+
+  if (idea.source_type === "profile_led") {
+    const context = await getBusinessContext(admin, clientId);
+    if (!context) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    return { ok: true, sourceContext: {
+      sourceType: "profile_led", sourceIds: [], sourceTitle: "Profile Principles & Frameworks",
+      source: { principles: context.principles, personalPositioning: context.personalPositioning,
+        contentPillars: context.contentPillars, roleAndWork: context.roleAndWork },
+      sourceArticles: [],
+    } };
+  }
+
+  if (idea.source_type === "custom_upload" || idea.source_type === "research_brief") {
+    const saved = z.object({ customNotes: z.string().max(4000).optional(),
+      notes: z.string().max(4000).optional() }).safeParse(idea.source_context);
+    let source: Record<string, unknown> = saved.success ? saved.data : {};
+    if (idea.source_type === "custom_upload" && sourceIds[0]) {
+      const { data, error } = await admin.from("client_documents")
+        .select("id, filename, content_text, content_hash, version, status")
+        .eq("id", sourceIds[0]).eq("client_id", clientId)
+        .eq("status", "ready").is("deleted_at", null).maybeSingle();
+      if (error || !data) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+      source = { ...source, document: data };
+    }
+    if (!Object.values(source).some(Boolean)) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    return { ok: true, sourceContext: {
+      sourceType: idea.source_type, sourceIds,
+      sourceTitle: idea.source_type === "custom_upload" ? "Custom Supporting Document" : "External Research & Signal",
+      source, sourceArticles: [],
+    } };
+  }
+
+  return { ok: false, failure: IDEA_NOT_AVAILABLE };
 }
 
 type ReviewedPostValues = {

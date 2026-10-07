@@ -31,9 +31,9 @@ import {
   getBusinessContext,
   getApprovedPlanningResources,
   isCommentGateEligible,
+  loadSourceContext,
   type ContentIdeaRow,
 } from "./service";
-import type { ContentAgentSourceContext } from "@/features/posts/agents/content-agent";
 
 export const standaloneDraftInputSchema = z.object({
   sourceType: z.enum(SOURCE_MODES).default("founder_experience"),
@@ -115,121 +115,30 @@ export async function generateStandalonePost(
 
   if (!businessContext) return NO_ACCESS;
 
-  // 1. Source Resolution & Reservation
+  // Reserve only a selected Content Bank record; other modes use scoped data.
   let reservationId: string | null = null;
-  let sourceContext: ContentAgentSourceContext;
   const angle = input.angle ?? "Strategic insight for operators";
-
-  if (input.sourceType === "founder_experience" && input.sourceId) {
-    const reservation = await reserveSourceEntry(
-      {
-        clientId: verifiedClientId,
-        sourceId: input.sourceId,
-        sourceType: "founder_experience",
-        channel: "linkedin_post",
-        angle,
-        takeaway: input.primaryTakeaway,
-      },
-      admin,
-    );
-
-    if (!reservation.ok) {
-      return {
-        ok: false,
-        code: reservation.code,
-        message: reservation.error,
-      };
-    }
+  if ((input.sourceType === "founder_experience" || input.sourceType === "content_resource") && input.sourceId) {
+    const reservation = await reserveSourceEntry({
+      clientId: verifiedClientId, sourceId: input.sourceId, sourceType: input.sourceType,
+      channel: "linkedin_post", angle, takeaway: input.primaryTakeaway,
+    }, admin);
+    if (!reservation.ok) return { ok: false, code: reservation.code, message: reservation.error };
     reservationId = reservation.usageId;
-
-    const { data: exp } = await admin
-      .from("founder_experiences")
-      .select("*")
-      .eq("id", input.sourceId)
-      .eq("client_id", verifiedClientId)
-      .single();
-
-    sourceContext = {
-      sourceType: "founder_experience",
-      sourceIds: [input.sourceId],
-      sourceTitle: exp?.title ?? "Founder Experience",
-      source: exp ?? {},
-      sourceArticles: [],
-    };
-  } else if (input.sourceType === "content_resource" && input.sourceId) {
-    const reservation = await reserveSourceEntry(
-      {
-        clientId: verifiedClientId,
-        sourceId: input.sourceId,
-        sourceType: "content_resource",
-        channel: "linkedin_post",
-        angle,
-        takeaway: input.primaryTakeaway,
-      },
-      admin,
-    );
-
-    if (!reservation.ok) {
-      return {
-        ok: false,
-        code: reservation.code,
-        message: reservation.error,
-      };
-    }
-    reservationId = reservation.usageId;
-
-    const { data: res } = await admin
-      .from("content_resources")
-      .select("*")
-      .eq("id", input.sourceId)
-      .eq("client_id", verifiedClientId)
-      .single();
-
-    sourceContext = {
-      sourceType: "content_resource",
-      sourceIds: [input.sourceId],
-      sourceTitle: res?.title ?? "Resource",
-      source: res ?? {},
-      sourceArticles: [],
-      selectedResource: res ?? null,
-    };
-  } else if (input.sourceType === "profile_led") {
-    // Strictly educational draft derived from personal & business profile context
-    sourceContext = {
-      sourceType: "profile_led",
-      sourceIds: [],
-      sourceTitle: "Profile Principles & Frameworks",
-      source: {
-        principles: businessContext.principles,
-        personalPositioning: businessContext.personalPositioning,
-        contentPillars: businessContext.contentPillars,
-        roleAndWork: businessContext.roleAndWork,
-      },
-      sourceArticles: [],
-    };
-  } else if (input.sourceType === "custom_upload") {
-    // Uploaded supporting notes or document
-    sourceContext = {
-      sourceType: "custom_upload",
-      sourceIds: input.sourceId ? [input.sourceId] : [],
-      sourceTitle: "Custom Supporting Document",
-      source: {
-        customNotes: input.customNotes ?? "",
-      },
-      sourceArticles: [],
-    };
-  } else {
-    // Trend card / research brief or generic
-    sourceContext = {
-      sourceType: input.sourceType,
-      sourceIds: input.sourceId ? [input.sourceId] : [],
-      sourceTitle: "External Research & Signal",
-      source: {
-        notes: input.customNotes ?? "",
-      },
-      sourceArticles: [],
-    };
   }
+
+  // Resolve records through the same scoped path used by redrafting. Inline notes
+  // are protected application data and must survive the initial draft.
+  const resolved = await loadSourceContext(admin, verifiedClientId, {
+    source_type: input.sourceType,
+    source_ids_json: input.sourceId ? [input.sourceId] : [],
+    source_context: { customNotes: input.customNotes ?? "", notes: input.customNotes ?? "" },
+  });
+  if (!resolved.ok) {
+    if (reservationId) await releaseSourceReservation({ clientId: verifiedClientId, usageId: reservationId }, admin);
+    return resolved.failure;
+  }
+  const sourceContext = resolved.sourceContext;
 
   // 2. Build GenerationPlanV2 with Editorial Controls
   const basePlan: GenerationPlanV2 = {
@@ -289,6 +198,7 @@ export async function generateStandalonePost(
       client_id: verifiedClientId,
       source_type: input.sourceType,
       source_ids_json: input.sourceId ? [input.sourceId] : [],
+      source_context: { customNotes: input.customNotes ?? "", notes: input.customNotes ?? "" },
       angle,
       buyer_pain: input.intendedReader ? `Friction experienced by ${input.intendedReader}` : null,
       commercial_relevance: input.primaryTakeaway ?? null,

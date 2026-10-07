@@ -44,11 +44,11 @@ Key files: `supabase/migrations/20261006190000_monthly_calendar_allocation.sql`;
 - No calendar (grid) view: slots have no dates yet. Standalone posts join a calendar only when assigned to a slot; that assignment (`calendar_slots.post_id`) arrives with P06.
 - Pre-existing deletion paths and tombstones, one-active-post-per-idea, approval invalidation, and the capability model are unchanged.
 
-## Unresolved defect found, not fixed (must be handled before or at the start of P06)
+## P04 source-type correction (2026-10-07)
 
-**P04's standalone writer cannot create ideas for most source types.** `content_ideas.source_type` has a CHECK allowing only `founder_experience`, `trend_card`, `trend_reaction` (migration `20260707140000`). `src/features/posts/generate/standalone-service.ts` inserts `input.sourceType`, which may be `content_resource`, `profile_led`, `custom_upload` or `research_brief`, so those inserts would be rejected and surface as "Could not generate this post". Only the founder-experience path works. Also, `loadSourceContext` in `src/features/posts/generate/service.ts` handles only `founder_experience`, `trend_card`, and otherwise falls through to the trend-reaction loader, so redrafting a post from a new source mode is probably wrong too. Not yet reproduced on real Postgres.
+The source-type constraint failure was reproduced on PostgreSQL via PGlite before fixing it. Forward migration `20261007060000_standalone_source_modes.sql` preserves legacy ideas and accepts all seven `SOURCE_MODES`. Initial drafting and redrafting now share scoped source resolution: assets must be active and account-owned, selected documents must be ready/account-owned, profile-led drafts use current profile context, and supplied inline notes are retained in protected `source_context` records. Missing sources fail closed.
 
-Suggested approach: first reproduce it with a PGlite test, then add a forward migration that drops and re-adds `content_ideas_source_type_check` with all `SOURCE_MODES` (`src/lib/ai/playbooks/taxonomies.ts`), and extend `loadSourceContext` for the new modes. Commit this separately before P06. It also means the P04 post-deploy checks (lead-magnet teaching post, evergreen explainer) have not truly passed.
+Validation: 26 files / 222 tests pass; lint and production build pass. Production migration and connected source-path manual checks remain unverified. No production database connection is configured in this cloud task. Baseline for the correction is `498edb1`; Codex is the active editor. P06 is authorized next, and later phases remain outside this task.
 
 ## P06 design notes (nothing is implemented)
 
@@ -68,9 +68,9 @@ Findings from reading the code, to avoid repeating the investigation:
 ## Next step
 
 1. Jawad decides when to start P06 (one prompt at a time).
-2. Recommended first: fix the P04 `source_type` defect above as its own commit.
+2. Apply the P04 corrective migration and verify connected source-path drafting/redrafting.
 3. Then P06: `feat: add resumable calendar drafting`. P07 to P10 remain planned and must not be started until their predecessors meet their gates.
 
 ## Blockers
 
-None for starting P06 other than the P04 defect, which should be fixed first.
+P04 correction is implemented; its production migration/manual checks are pending.
