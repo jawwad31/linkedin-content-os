@@ -14,7 +14,7 @@ Repository read access and selected source files were verified. This package has
 | P03 | Markdown documents and scoped retrieval | P01–P02 | Complete |
 | P04 | Shared standalone drafting and editorial controls | P01–P03 | Complete |
 | P05 | Monthly allocation/defaults/source selection | P02/P04 | Complete (commit 4160ec1; migrations applied and manual checks reported passed 2026-10-07) |
-| P06 | Resumable calendar draft batches | P05 | In progress |
+| P06 | Resumable calendar draft batches | P05 | Not started (fix the P04 content_ideas source_type defect first; see docs/handoffs/CURRENT.md) |
 | P07 | Saved prompt and manual web research | P00/P04 | Planned |
 | P08 | Schedules, source monitoring, notifications | P07 | Planned |
 | P09 | Newsletter editions | P02–P04/P07 | Planned |
