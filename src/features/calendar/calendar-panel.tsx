@@ -197,8 +197,8 @@ function CalendarWorkspace({
     calendar && defaults ? settingsEqual(calendar.settings, defaults.settings) : null;
 
   const requested = savedSettings ? computeTargetCounts(savedSettings) : null;
-  const lockedSlots = slots.filter((slot) => slot.postId);
-  const replannableSlots = slots.filter((slot) => !slot.postId);
+  const lockedSlots = slots.filter((slot) => slot.postId || slot.status === "queued" || slot.status === "drafting");
+  const replannableSlots = slots.filter((slot) => !lockedSlots.includes(slot));
 
   const titleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -583,7 +583,7 @@ function CalendarWorkspace({
                     {preview.replannableSlots === 1 ? "slot" : "slots"} and releases their
                     reservations.{" "}
                     {preview.preservedSlots > 0
-                      ? `${preview.preservedSlots} ${preview.preservedSlots === 1 ? "slot that already has" : "slots that already have"} a post stay${preview.preservedSlots === 1 ? "s" : ""} untouched.`
+                      ? `${preview.preservedSlots} slots with saved or pending drafts stay untouched.`
                       : "No slot has a post yet."}
                   </p>
                 ) : null}
@@ -665,7 +665,7 @@ function CalendarWorkspace({
                     )}
                     {lockedSlots.length > 0 ? (
                       <Badge variant="info">
-                        {lockedSlots.length} with posts are kept
+                        {lockedSlots.length} with saved or pending drafts are kept
                       </Badge>
                     ) : null}
                   </div>

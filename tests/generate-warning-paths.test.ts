@@ -48,7 +48,8 @@ import { runContentAgent } from "@/features/posts/agents/content-agent";
 import { runReviewAgent } from "@/features/posts/agents/review-agent";
 import { runDeterministicPostChecks } from "@/lib/ai/playbooks/deterministic-checks";
 import { writeAuditLog } from "@/lib/audit/log";
-import { generatePostFromIdea } from "@/features/posts/generate/service";
+import { generatePostFromIdea, getBusinessContext, loadSourceContext, produceReviewedPost, type ContentIdeaRow } from "@/features/posts/generate/service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const CLIENT_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -145,6 +146,7 @@ const trendCardRow = {
 
 /** Records every table operation so tests can assert no post was inserted. */
 let dbOps: Array<{ table: string; ops: string[] }> = [];
+let calendarSlotRow: { id: string } | null = null;
 
 function makeSupabaseClient() {
   return {
@@ -159,6 +161,7 @@ function makeSupabaseClient() {
         const isList = ops.includes("returns");
 
         if (table === "clients") return { data: clientRow, error: null };
+        if (table === "calendar_slots") return { data: calendarSlotRow, error: null };
         if (table === "content_ideas") {
           if (isUpdate) return { data: { id: IDEA_ID }, error: null };
           return { data: ideaRow, error: null };
@@ -280,6 +283,7 @@ const UNSUPPORTED_NUMBER: DeterministicCheckIssue = {
 
 beforeEach(() => {
   dbOps = [];
+  calendarSlotRow = null;
   // vi.fn() factory mocks are not auto-restored, so call history and any
   // queued mockResolvedValueOnce values would otherwise leak between tests.
   vi.mocked(writeAuditLog).mockClear();
@@ -452,5 +456,32 @@ describe("post generation warning paths", () => {
     ]) {
       expect(auditPayload).not.toContain(secret);
     }
+  });
+});
+
+describe("Calendar writer cancellation gates", () => {
+  async function produce(shouldContinue: () => Promise<boolean>) {
+    const admin = createAdminClient();
+    const businessContext = await getBusinessContext(admin,CLIENT_ID);
+    const source = await loadSourceContext(admin,CLIENT_ID,ideaRow as ContentIdeaRow);
+    if (!businessContext || !source.ok) throw new Error("Fixture source is unavailable");
+    return produceReviewedPost({clientId:CLIENT_ID,userId:USER_ID,businessContext,
+      idea:ideaRow as ContentIdeaRow,sourceContext:source.sourceContext,resources:[],commentGateEligible:true,shouldContinue});
+  }
+  it("does not call the writer when its lease is already lost",async () => {
+    expect((await produce(async () => false)).ok).toBe(false);
+    expect(runContentAgent).not.toHaveBeenCalled(); expect(runReviewAgent).not.toHaveBeenCalled();
+  });
+  it("does not call QA after cancellation between provider stages",async () => {
+    queueDeterministic([[]]);
+    const gate=vi.fn().mockResolvedValueOnce(true).mockResolvedValue(false);
+    expect((await produce(gate)).ok).toBe(false);
+    expect(runContentAgent).toHaveBeenCalledTimes(1); expect(runReviewAgent).not.toHaveBeenCalled();
+  });
+  it("routes unfinished calendar backing ideas through the batch before any paid work",async () => {
+    calendarSlotRow={id:"slot"};
+    const result=await generate();
+    expect(!result.ok && result.code).toBe("CALENDAR_ASSIGNMENT");
+    expect(runContentAgent).not.toHaveBeenCalled(); expect(postWasInserted()).toBe(false);
   });
 });

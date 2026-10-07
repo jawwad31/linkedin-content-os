@@ -218,7 +218,7 @@ describe("CalendarPanel", () => {
     expect(html).toContain("Post: approved");
     // A slot that already has a post cannot be cancelled from the plan.
     expect(html.match(/Cancel slot \d/g)?.length ?? 0).toBe(3);
-    expect(html).toContain("1 with posts are kept");
+    expect(html).toContain("1 with saved or pending drafts are kept");
   });
 
   it("labels every input and exposes the month navigation context", () => {

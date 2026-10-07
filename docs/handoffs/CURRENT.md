@@ -2,75 +2,84 @@
 
 Updated: 2026-10-07
 
-- Active editor: none (Claude Sonnet 5.5 finished P05 and stopped at the user's request). Next editor: any tool; read the five canonical files first, one phase at a time.
-- Current phase: **P05 complete. P06 not started.** The user works one prompt at a time and starts P06 only when they say so.
-- Repository: jawwad31/linkedin-content-os, main.
-- Current commit: `fb7f67f` (pushed). P05 feature commit: `4160ec1`. Migration fix commit: `e9fd7b1`. Previous phase baseline: `01ff201`.
-- Product name: Virel.
+- Active editor: Codex completing this delivery; no other coding tool edited the checkout.
+- Phase: **P05 complete. P04 source-mode correction and P06 implemented, awaiting production migration, deployment verification, and manual acceptance.** P07 and later are not started.
+- Repository: jawwad31/linkedin-content-os, main. Baseline: `498edb1`.
+- P04 correction: `b958580` (`fix: support standalone source modes and scoped redrafting`), pushed to main.
+- P06 feature commit includes this handoff: `feat: add resumable calendar drafting`. Use `git log -1` and the final delivery report for its exact SHA/push result.
+- Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
-## Commit history of this session
+## Database and deployment state
 
-1. `e9fd7b1` fix: correct permission array checks and resource backfill in P02/P03 migrations
-2. `4160ec1` feat: add monthly calendar allocation and defaults (P05)
-3. `fb7f67f` docs: record P05 completion
-4. (this handoff correction, if committed after `fb7f67f`)
+Jawad applied migrations `20261006150000` through `20261006190000` to production and reported the P05 manual checks passed. Their individual results were not itemised. P05 commits: `e9fd7b1`, `4160ec1`, `fb7f67f`; handoff correction `498edb1`.
 
-## Database state
+This delivery adds two forward, rerunnable migrations:
 
-All migrations `20261006150000` to `20261006190000` were applied to production by Jawad on 2026-10-07 using a combined single-transaction script (since deleted). Jawad reported the P05 manual checks as passed; the individual results, including the two-browser contention check, were not itemised.
+1. `supabase/migrations/20261007060000_standalone_source_modes.sql`
+2. `supabase/migrations/20261007070000_resumable_calendar_drafting.sql`
 
-Why that was needed: the P02 and P03 migrations as first committed could not apply (`text[] ? text` is not a Postgres operator; a backfill read non-existent `posts` columns). Fixed in `e9fd7b1`. Nothing after them had ever been applied.
+No production database changes were executed by Codex. No live Supabase/OpenRouter configuration is available in this cloud machine. Railway deployment and connected manual tests are unverified. The required rollout and manual checks are in `docs/p06-deployment.md`. The environment has Node 22.19.0 and lockfile-installed dependencies; activate `export PATH=/workspace/.onboarding/node22/node_modules/.bin:$PATH` for each shell.
 
-## P05 summary
+`CALENDAR_DRAFTING_ENABLED` defaults false. Apply schema before enabling web code. Enable it only in a configured validation environment until the manual gates pass, then confirm production schema/deployment before production activation. Existing OpenRouter/Supabase variable names remain unchanged; no new secret is required. No RSS worker changes or new scheduler were introduced.
 
-- Two save scopes: *Save for this month* writes only that month's snapshot (`content_calendars`); *Save as default* (admin only) writes only `calendar_defaults` and bumps its version. New months copy the defaults and record `defaults_version`; reset-to-defaults is a separate explicit action; stale revisions are rejected.
-- Allocation (`src/features/calendar/allocation.ts`): integer-exact largest-remainder, ties experience, asset, evergreen, news; news clamped to `floor(postCount x cap / 100)`; shortages become evergreen slots with a reason; news slots are placeholders.
-- SQL functions (SECURITY INVOKER): `reserve_content_bank_source`, `commit_calendar_plan`, `cancel_calendar_slots`. A per-entry transaction advisory lock serialises reservations across calendar and standalone drafting; a plan commit writes nothing unless every selected entry is available. Replan only touches slots with no post attached.
-- UI: Calendar nav item and `/client/[client_id]/calendar`. Shows "Calendar is not available yet" if the migration is missing.
-- Permissions: defaults are admin only; month settings, selection, replan, cancel need `ideas_manage` or scoped admin; any accepted member can view.
-- Deleting a founder experience that an active slot plans is blocked (`DEPENDENCY_CONFLICT`); a missing calendar table does not block deletion.
+## P04 correction
 
-Key files: `supabase/migrations/20261006190000_monthly_calendar_allocation.sql`; `src/features/calendar/*`; `src/app/client/[client_id]/calendar/page.tsx`; `src/features/content-bank/usage-service.ts` (reserve via RPC, with a fallback to the old non-atomic path until the migration is confirmed everywhere; remove `reserveSourceEntryWithoutLock` once it is); `tests/support/pg-harness.ts`.
+Reproduced the source-type CHECK failure on PostgreSQL via PGlite before fixing it. The forward constraint accepts all seven `SOURCE_MODES` and still rejects unknown modes. Initial drafting/redrafting now share scoped loaders for assets, current profile context, ready account-owned documents, supplied upload notes, and research briefs. Inline notes persist in protected `content_ideas.source_context`, never ordinary logs. Legacy experience/trend/reaction loaders stay intact. Missing sources fail closed.
 
-## Validation at P05 completion
+Correction validation: 26 files / 222 tests, lint, build, and diff checks passed. Its production source-path checks remain pending.
 
-`npm test`: 24 files, 216 tests (baseline 18 files, 115). `npm run lint` clean. `npm run build` succeeds. The SQL tests run every migration on PostgreSQL 18 via PGlite (devDependency `@electric-sql/pglite`), so a migration that cannot apply fails `npm test`. Mutation checks confirmed the contention and admin-gate tests fail when the logic is weakened.
+## P06 implementation
 
-## Known limits and gotchas
+- Explicit batches of up to ten selected unfinished slots; topic, pillar, post type, funnel stage, reader, and takeaway are saved as each slot's brief. News placeholders are not draftable until timely material has a supported selection flow.
+- One active job per calendar, caller-stable request key, one backing idea per slot, a 15-minute lease/token, renewals before paid stages and commit, and three attempts per slot across retries/restarts.
+- A user-triggered web pump executes one slot per request using the same scoped source loader, planner, writer, deterministic checks, and independent QA as standalone drafting. Resume starts the next request; closing the page stops new requests, while an in-flight request may complete.
+- Every sensitive database transition rechecks account/password state and both `ideas_manage` and `posts_draft` (or scoped administrator access). Only the initiating user resumes a job; its owner or a scoped administrator with drafting permission can cancel it.
+- Atomic completion inserts the post in review, commits source usage, marks the idea used, and links the slot. Failed inserts roll back all of these. A stale lease/cancelled job cannot commit; retries reuse the idea/reservation, and completed slots never regenerate.
+- Cancellation retains successful drafts and invalidates unfinished leases/releases their reservations. Failed attempts keep a reservation available for deliberate retry or cancellation; they do not mark the source used.
+- Queued/running slots are preserved by P05 replan/cancel and excluded from its selectable source inventory. Generic idea generation cannot bypass the Calendar lease/commit path. New job reads use RLS, and direct API writes cannot forge draft state, leases, or backing posts.
+- QA is advisory and retained as warnings; all drafts still need human review. The UI reports saved/failed/pending counts and attempts, without promising a fixed provider cost. Already-sent provider calls cannot be refunded by cancellation.
 
-- PGlite is single-connection: true simultaneous transactions were not tested in CI; sequential contention and advisory-lock acquisition/release are.
-- **postgrest-js turns a failed HEAD request with an empty body into `error: null`.** Do not use `head: true` for existence or dependency checks whose error matters; use a GET with `limit(1)`. Existing code (for example the `content_ideas` check in `deleteFounderExperience`, and P02 queries) still uses `head: true`; not changed.
-- `tsc --noEmit` reports one pre-existing error in `tests/profiles.test.ts` (`archetypes` not in `StrategyCompatibility`, from P01). `next build` still succeeds.
-- No calendar (grid) view: slots have no dates yet. Standalone posts join a calendar only when assigned to a slot; that assignment (`calendar_slots.post_id`) arrives with P06.
-- Pre-existing deletion paths and tombstones, one-active-post-per-idea, approval invalidation, and the capability model are unchanged.
+## Exact P06 files
 
-## P04 source-type correction (2026-10-07)
+- `.env.example`
+- `src/app/client/[client_id]/calendar/page.tsx`
+- `src/features/calendar/actions.ts`
+- `src/features/calendar/calendar-panel.tsx`
+- `src/features/calendar/calendar-plan-view.tsx`
+- `src/features/calendar/queries.ts`
+- `src/features/calendar/calendar-drafting-panel.tsx`
+- `src/features/calendar/draft-executor.ts`
+- `src/features/calendar/drafting-contracts.ts`
+- `src/features/calendar/drafting-service.ts`
+- `src/features/posts/generate/service.ts`
+- `supabase/migrations/20261007070000_resumable_calendar_drafting.sql`
+- `tests/calendar-panel.test.ts`
+- `tests/calendar-draft-executor.test.ts`
+- `tests/calendar-drafting-service.test.ts`
+- `tests/calendar-drafting-sql.test.ts`
+- `tests/generate-warning-paths.test.ts`
+- `feature-checklist.md`
+- `docs/p06-deployment.md`
+- `docs/handoffs/CURRENT.md`
 
-The source-type constraint failure was reproduced on PostgreSQL via PGlite before fixing it. Forward migration `20261007060000_standalone_source_modes.sql` preserves legacy ideas and accepts all seven `SOURCE_MODES`. Initial drafting and redrafting now share scoped source resolution: assets must be active and account-owned, selected documents must be ready/account-owned, profile-led drafts use current profile context, and supplied inline notes are retained in protected `source_context` records. Missing sources fail closed.
+## Final validation
 
-Validation: 26 files / 222 tests pass; lint and production build pass. Production migration and connected source-path manual checks remain unverified. No production database connection is configured in this cloud task. Baseline for the correction is `498edb1`; Codex is the active editor. P06 is authorized next, and later phases remain outside this task.
+- `npm test`: **29 files, 255 tests passed** (P05 baseline 24 / 216).
+- `npm run lint`: passed.
+- `npm run build`: passed using standard Next.js production build; Google Fonts access worked during this implementation.
+- `npx tsc --noEmit`: the sole pre-existing error in `tests/profiles.test.ts:121` (`archetypes` is not in `StrategyCompatibility`) remains; no new type errors.
+- Diff/working-tree review: performed before committing; only this delivery's files changed.
+- Every migration applies on PostgreSQL 18 via PGlite. P06 reapplication retains an active batch. The combined P04/P06 single-transaction deployment script also re-applies successfully to the migrated test instance.
+- Tests cover duplicate requests/claims, expiry/recovery, mixed success, atomic rollback, cancelled/stale results, retained ideas/reservations, source/idea substitution, attempt limits, strict brief validation, permission revocation, password/account state, cross-account reads, anonymous denial, API write forgery, optional editorial controls, and cancellation before/between real writer stages.
+- Connected UI/provider/production manual checks were **not run**. PGlite is single-connection: true simultaneous transactions/two-window contention remain a manual gate. Responsive/keyboard manual acceptance is also pending.
 
-## P06 design notes (nothing is implemented)
+## Preserved behavior and gotchas
 
-Findings from reading the code, to avoid repeating the investigation:
+- Manual provisioning, temporary-password gate, agency/account isolation, capability model, independent QA, one active post per idea, human review, approval invalidation, and manual publishing remain in place.
+- PostgREST HEAD failures may return `error: null`; use GET with `limit(1)` when the error matters.
+- `reserveSourceEntryWithoutLock` remains the pre-P05 fallback in `usage-service.ts`. Its removal needs confirmation of migration coverage in every environment; P06 itself uses the committed slot's SQL reservation and never calls that fallback.
+- Existing internal hard-delete paths must respect new Calendar references. Do not remove dependencies or source-usage history to make a delete pass.
 
-- The existing worker (`src/worker/scheduler.ts`) is an hours-interval RSS loop. It cannot import the writer: `produceReviewedPost` calls `createClient()` (Next request cookies), and the worker's own comments say importing `next/headers`-dependent modules breaks its module graph. So executing the writer in the worker needs a larger refactor.
-- Proposed design: user-triggered pump in the web process. SQL functions with leases (`FOR UPDATE SKIP LOCKED`, lease token, attempts cap), a job table with idempotency key and one active job per calendar, slot columns for draft state and a small brief (topic, pillar, post type, funnel stage), executor written against injectable ports so interruption, cancellation, lease loss and mixed success are unit-testable, and a Calendar UI that drafts a bounded batch and shows per-slot state with retry.
-- Extract the drafting core out of `generateStandalonePost` so slots reuse an existing reservation (do not reserve again). Reuse a per-slot backing `content_ideas` row so a retry after a crash cannot create a second post (the unique active-post-per-idea index guards it).
-- P05's `commit_calendar_plan` and `cancel_calendar_slots` treat `post_id is not null` as locked; P06 must also lock slots in `drafting` state (forward migration with `create or replace`).
-- QA is advisory in this codebase: a draft is always created with warnings, so a "QA-blocked" slot does not exist; failures are generation or configuration failures. Posts need both `ideas_manage` and `posts_draft` to be drafted from an assignment (`security-access.md`).
-- The in-memory rate limiter works on `Request`s only, so it does not apply to server actions; bound jobs structurally in the database.
+## Next action
 
-## Deployment state
-
-`4160ec1` and `fb7f67f` pushed to main; web deployment of these was not verified by me. No environment variables were added.
-
-## Next step
-
-1. Jawad decides when to start P06 (one prompt at a time).
-2. Apply the P04 corrective migration and verify connected source-path drafting/redrafting.
-3. Then P06: `feat: add resumable calendar drafting`. P07 to P10 remain planned and must not be started until their predecessors meet their gates.
-
-## Blockers
-
-P04 correction is implemented; its production migration/manual checks are pending.
+Apply both new migrations in order and follow `docs/p06-deployment.md` to verify web deployment, enable the validation flag, and complete the connected manual checks. Mark P06 complete only after those gates pass. Do not begin P07 until Jawad requests it.

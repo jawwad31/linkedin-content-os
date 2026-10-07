@@ -133,6 +133,10 @@ const STATUS_BADGE: Record<
   reserved: { label: "Source reserved", variant: "accent-purple" },
   planned: { label: "Planned", variant: "neutral" },
   placeholder: { label: "Needs material", variant: "warning" },
+  queued: { label: "Queued for drafting", variant: "accent-purple" },
+  drafting: { label: "Drafting", variant: "accent-purple" },
+  drafted: { label: "Draft saved", variant: "neutral" },
+  failed: { label: "Draft failed", variant: "warning" },
 };
 
 export function SlotCard({
@@ -195,7 +199,9 @@ export function SlotCard({
         </p>
       ) : null}
 
-      {canCancel && !hasPost ? (
+      {slot.draftBrief ? <p className="text-small text-near-black">{slot.draftBrief.topic} · {slot.draftBrief.postType.replaceAll("_", " ")} · {slot.draftBrief.funnelStage}</p> : null}
+
+      {canCancel && !hasPost && slot.status !== "queued" && slot.status !== "drafting" ? (
         <div>
           <Button
             type="button"

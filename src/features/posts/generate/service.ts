@@ -42,6 +42,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
+import { isMissingTableError } from "@/lib/supabase/schema-errors";
 
 import { generatePostRequestSchema } from "./schemas";
 import {
@@ -60,7 +61,7 @@ export type GeneratePostData = {
   alreadyGenerated?: boolean;
 };
 
-import type { SourceMode } from "@/lib/ai/playbooks/taxonomies";
+import type { SourceMode, AllocationBucket } from "@/lib/ai/playbooks/taxonomies";
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -116,6 +117,7 @@ export type ContentIdeaRow = {
   strategy_overrides: unknown;
   selected_resource_id: string | null;
   status: ContentIdeaStatus;
+  allocation_bucket?: AllocationBucket;
 };
 
 type PlanningResourceRow = {
@@ -843,7 +845,7 @@ export async function loadSourceContext(
   return { ok: false, failure: IDEA_NOT_AVAILABLE };
 }
 
-type ReviewedPostValues = {
+export type ReviewedPostValues = {
   finalPost: string;
   buyerBeliefShift: string;
   proofNotes: string;
@@ -863,6 +865,8 @@ export async function produceReviewedPost(input: {
   resources: PlanningResource[];
   commentGateEligible: boolean;
   editNote?: string | null;
+  /** Calendar jobs recheck their current lease/permissions before paid stages. */
+  shouldContinue?: () => Promise<boolean>;
 }): Promise<
   | { ok: true; values: ReviewedPostValues }
   | { ok: false; failure: ServiceResult<never> }
@@ -912,6 +916,7 @@ export async function produceReviewedPost(input: {
   ) {
     generationPlan = planDecision.plan;
   } else {
+    if (input.shouldContinue && !(await input.shouldContinue())) return { ok: false, failure: GENERIC_FAILURE };
     const replanResult = await replanContentIdea({
       clientId: input.clientId,
       userId: input.userId,
@@ -957,6 +962,13 @@ export async function produceReviewedPost(input: {
       return { ok: false, failure: GENERIC_FAILURE };
     }
 
+    // An assignment's allocation is separate from its source-record mode.
+    if (input.idea.allocation_bucket && generationPlan.editorial) {
+      generationPlan = { ...generationPlan, editorial: {
+        ...generationPlan.editorial, allocationBucket: input.idea.allocation_bucket,
+      } };
+    }
+
     const { data: updatedIdea, error: planUpdateError } = await supabase
       .from("content_ideas")
       .update({
@@ -998,6 +1010,7 @@ export async function produceReviewedPost(input: {
     ...input.sourceContext,
     selectedResource,
   };
+  if (input.shouldContinue && !(await input.shouldContinue())) return { ok: false, failure: GENERIC_FAILURE };
   const agentResult = await runContentAgent({
     clientId: input.clientId,
     userId: input.userId,
@@ -1028,6 +1041,7 @@ export async function produceReviewedPost(input: {
     primaryIcp: input.businessContext.primaryIcp,
   });
 
+  if (input.shouldContinue && !(await input.shouldContinue())) return { ok: false, failure: GENERIC_FAILURE };
   const reviewResult = await runReviewAgent({
     clientId: input.clientId,
     userId: input.userId,
@@ -1077,6 +1091,7 @@ export async function produceReviewedPost(input: {
   // One bounded corrective pass. It no longer gatekeeps — it is only an
   // attempt to improve the draft before it reaches the human reviewer.
   if (finalDeterministicIssues.length > 0 && qa.finalPost) {
+    if (input.shouldContinue && !(await input.shouldContinue())) return { ok: false, failure: GENERIC_FAILURE };
     const priorQa = qa;
     const reviewedDraft: GeneratedPostDraft = {
       hook: "",
@@ -1176,6 +1191,16 @@ export async function produceReviewedPost(input: {
   };
 }
 
+async function getCalendarSlotForIdea(admin: AdminClient, clientId: string, ideaId: string) {
+  const result = await admin.from("calendar_slots").select("id")
+    .eq("client_id", clientId).eq("content_idea_id", ideaId).limit(1).maybeSingle();
+  // The new column is absent before the P06 migration; legacy drafting still works.
+  if (isMissingTableError(result.error) || result.error?.code === "42703" || result.error?.code === "PGRST204") {
+    return { data: null, error: null };
+  }
+  return result;
+}
+
 export async function generatePostFromIdea(
   clientId: string,
   ideaId: string,
@@ -1239,6 +1264,10 @@ export async function generatePostFromIdea(
       data: { postId: existingPostId, alreadyGenerated: true },
     };
   }
+
+  // A calendar backing idea must use its fenced batch commit, not this route.
+  const { data: calendarSlot, error: calendarError } = await getCalendarSlotForIdea(admin, clientIdResult.data, idea.id);
+  if (calendarError || calendarSlot) return { ok: false, code: "CALENDAR_ASSIGNMENT", message: "Draft this assignment from its Calendar batch." };
 
   if (idea.status !== "ready") return IDEA_NOT_AVAILABLE;
 

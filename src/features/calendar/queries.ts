@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isMissingTableError } from "@/lib/supabase/schema-errors";
 import type { AllocationBucket } from "@/lib/ai/playbooks/taxonomies";
+import { draftBriefSchema, type DraftBrief } from "./drafting-contracts";
 
 import {
   emptyCounts,
@@ -68,7 +69,7 @@ export type CalendarRecord = {
   plannedAt: string | null;
 };
 
-export type CalendarSlotStatus = "placeholder" | "planned" | "reserved";
+export type CalendarSlotStatus = "placeholder" | "planned" | "reserved" | "queued" | "drafting" | "drafted" | "failed";
 
 export type CalendarSlotRecord = {
   id: string;
@@ -82,6 +83,9 @@ export type CalendarSlotRecord = {
   sourceTitle: string | null;
   postId: string | null;
   postStatus: string | null;
+  draftBrief?: DraftBrief | null;
+  draftAttempts?: number;
+  draftErrorCode?: string | null;
 };
 
 export type CandidateEntry = {
@@ -187,6 +191,9 @@ type SlotRow = {
   source_id: string | null;
   source_type: SourceKind | null;
   post_id: string | null;
+  draft_brief?: unknown;
+  draft_attempts?: number;
+  draft_error_code?: string | null;
 };
 
 /** Active (non-cancelled) slots, with entry titles and post status attached. */
@@ -195,16 +202,25 @@ export async function getCalendarSlots(
   calendarId: string,
 ): Promise<CalendarSlotRecord[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("calendar_slots")
     .select(
-      "id, slot_index, bucket, requested_bucket, shortage_reason, status, source_id, source_type, post_id",
+      "id, slot_index, bucket, requested_bucket, shortage_reason, status, source_id, source_type, post_id, draft_brief, draft_attempts, draft_error_code",
     )
     .eq("client_id", clientId)
     .eq("calendar_id", calendarId)
     .neq("status", "cancelled")
     .order("slot_index", { ascending: true })
     .returns<SlotRow[]>();
+
+  // Keep P05 available during the additive schema-first rollout.
+  if (error?.code === "42703" || error?.code === "PGRST204") {
+    const legacy = await supabase.from("calendar_slots")
+      .select("id, slot_index, bucket, requested_bucket, shortage_reason, status, source_id, source_type, post_id")
+      .eq("client_id", clientId).eq("calendar_id", calendarId).neq("status", "cancelled")
+      .order("slot_index", { ascending: true }).returns<SlotRow[]>();
+    data = legacy.data; error = legacy.error;
+  }
 
   if (error || !data) return [];
 
@@ -261,6 +277,9 @@ export async function getCalendarSlots(
     sourceTitle: slot.source_id ? (titles.get(slot.source_id) ?? null) : null,
     postId: slot.post_id,
     postStatus: slot.post_id ? (postStatuses.get(slot.post_id) ?? null) : null,
+    draftBrief: draftBriefSchema.safeParse(slot.draft_brief).success ? draftBriefSchema.parse(slot.draft_brief) : null,
+    draftAttempts: slot.draft_attempts ?? 0,
+    draftErrorCode: slot.draft_error_code ?? null,
   }));
 }
 
@@ -275,7 +294,7 @@ export function splitSlots(slots: CalendarSlotRecord[]): {
   const locked: CalendarSlotRecord[] = [];
 
   for (const slot of slots) {
-    if (slot.postId) {
+    if (slot.postId || slot.status === "queued" || slot.status === "drafting") {
       preserved[slot.bucket] += 1;
       locked.push(slot);
     } else {
@@ -353,10 +372,10 @@ export async function getCandidateInventory(
   }
 
   const lockedSources = new Set(
-    slots.filter((slot) => slot.postId && slot.sourceId).map((slot) => slot.sourceId as string),
+    splitSlots(slots).locked.filter(slot => slot.sourceId).map(slot => slot.sourceId as string),
   );
   const inPlanSources = new Set(
-    slots.filter((slot) => !slot.postId && slot.sourceId).map((slot) => slot.sourceId as string),
+    splitSlots(slots).replannable.filter(slot => slot.sourceId).map(slot => slot.sourceId as string),
   );
 
   const toEntry = (
@@ -442,15 +461,16 @@ export async function getReplannableUsageIds(
   calendarId: string,
 ): Promise<Set<string>> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("calendar_slots")
     .select("source_usage_id")
     .eq("client_id", clientId)
     .eq("calendar_id", calendarId)
     .neq("status", "cancelled")
+    .not("status", "in", "(queued,drafting)")
     .is("post_id", null)
     .not("source_usage_id", "is", null)
     .returns<{ source_usage_id: string }[]>();
 
-  return new Set((data ?? []).map((row) => row.source_usage_id));
+  return new Set((error ? [] : data ?? []).map((row) => row.source_usage_id));
 }

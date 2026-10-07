@@ -10,6 +10,7 @@ import {
   type CalendarServiceResult,
   type PlanPreview,
 } from "./service";
+import { startCalendarDraftBatch, pumpCalendarDraftBatch, cancelCalendarDraftBatch } from "./drafting-service";
 
 /** Server actions return plain serialisable results; the service owns all checks. */
 export type CalendarActionResult<T = null> = CalendarServiceResult<T>;
@@ -68,4 +69,16 @@ export async function cancelCalendarSlotsAction(
   slotIds?: string[],
 ) {
   return cancelCalendarSlots(clientId, monthKey, { slotIds });
+}
+
+export async function startCalendarDraftBatchAction(clientId: string, calendarId: string, input: unknown) {
+  return startCalendarDraftBatch(clientId, calendarId, input);
+}
+
+export async function pumpCalendarDraftBatchAction(clientId: string, jobId: string) {
+  return pumpCalendarDraftBatch(clientId, jobId);
+}
+
+export async function cancelCalendarDraftBatchAction(clientId: string, jobId: string) {
+  return cancelCalendarDraftBatch(clientId, jobId);
 }

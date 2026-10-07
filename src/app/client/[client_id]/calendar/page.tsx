@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarPanel } from "@/features/calendar/calendar-panel";
+import { CalendarDraftingPanel } from "@/features/calendar/calendar-drafting-panel";
+import { calendarDraftingEnabled, getLatestDraftJob, isCalendarDraftingAvailable } from "@/features/calendar/drafting-service";
 import {
   currentMonthKey,
   formatMonthLabel,
@@ -74,6 +76,10 @@ export default async function CalendarPage({
 
   const canPlan = hasClientPermission(access.role, access.permissions, "ideas_manage");
   const canEditDefaults = canRoleManageClientSetup(access.role);
+  const canDraft = canPlan && hasClientPermission(access.role, access.permissions, "posts_draft");
+  const draftJob = calendar && canDraft ? await getLatestDraftJob(clientId, calendar.id, user.id) : null;
+  const draftingAvailable = calendar && canDraft && calendarDraftingEnabled()
+    ? await isCalendarDraftingAvailable(clientId) : false;
 
   const monthHref = (key: string) => `/client/${clientId}/calendar?month=${key}`;
   const navClass = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -121,6 +127,9 @@ export default async function CalendarPage({
         slots={slots}
         candidates={candidates}
       />
+      {calendar && canDraft ? <CalendarDraftingPanel key={calendar.id}
+        clientId={clientId} calendarId={calendar.id} slots={slots} initialJob={draftJob}
+        enabled={draftingAvailable} canCancelOthers={canEditDefaults} /> : null}
     </div>
   );
 }
