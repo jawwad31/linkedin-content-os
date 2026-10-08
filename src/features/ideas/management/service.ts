@@ -337,6 +337,10 @@ export async function deleteContentIdea(
     .maybeSingle<{ id: string }>();
 
   if (deleteError || !deleted) {
+    if (deleteError?.code === "23503") return {
+      ok: false, code: "DEPENDENCY_CONFLICT",
+      message: "This Content Idea is still linked to another record and cannot be deleted.",
+    };
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this Content Idea. Please try again." };
   }
 

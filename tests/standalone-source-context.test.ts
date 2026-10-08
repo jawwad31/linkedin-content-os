@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadSourceContext, type AdminClient, type ContentIdeaRow } from "@/features/posts/generate/service";
+import { researchFinding } from "./fixtures/web-research";
 
 function client(row: Record<string, unknown> | null) {
   const query = { select: vi.fn(), eq: vi.fn(), is: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }) };
@@ -11,6 +12,14 @@ const idea = (mode: ContentIdeaRow["source_type"], ids: string[] = [], context: 
   ({ source_type: mode, source_ids_json: ids, source_context: context }) as ContentIdeaRow;
 
 describe("standalone redraft source resolution", () => {
+  it("loads an approved web finding directly with all evidence and account scope",async () => {
+    const { admin,query }=client({ id,payload: { ...researchFinding,fingerprint: "verified" },approval_status: "approved" });
+    const result=await loadSourceContext(admin,"account",idea("research_brief",[id]));
+    expect(result.ok && result.sourceContext.sourceArticles).toEqual(researchFinding.sources);
+    expect(query.eq).toHaveBeenCalledWith("client_id","account");
+    expect(query.eq).toHaveBeenCalledWith("approval_status","approved");
+    expect((await loadSourceContext(client(null).admin,"other",idea("research_brief",[id]))).ok).toBe(false);
+  });
   it("loads assets by account and excludes inactive/deleted records", async () => {
     const { admin, query } = client({ id, title: "Guide", description: "Supplied evidence" });
     const result = await loadSourceContext(admin, "account", idea("content_resource", [id]));

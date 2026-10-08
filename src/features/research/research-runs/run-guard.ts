@@ -210,10 +210,11 @@ export async function withResearchRunGuard<T>(
   clientId: string,
   lockKey: string,
   triggerType: ResearchRunTriggerType,
-  fn: () => Promise<T>,
+  fn: (runId: string) => Promise<T>,
   toSummary: (result: T) => ResearchRunSummary,
   triggeredByUserId: string | null = null,
   finalStage?: string,
+  isFailure?: (result: T) => boolean,
 ): Promise<RunGuardResult<T>> {
   const start = await startResearchRun(clientId, lockKey, triggerType, triggeredByUserId);
 
@@ -238,8 +239,9 @@ export async function withResearchRunGuard<T>(
   }
 
   try {
-    const result = await fn();
-    await completeResearchRun(start.runId, toSummary(result), finalStage);
+    const result = await fn(start.runId);
+    if (isFailure?.(result)) await failResearchRun(start.runId, RUN_FAILURE_ERROR);
+    else await completeResearchRun(start.runId, toSummary(result), finalStage);
     return { ok: true, status: "completed", result };
   } catch {
     await failResearchRun(start.runId, RUN_FAILURE_ERROR);

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export const RESEARCH_TABS = [
-  { id: "focus", label: "Focus & Sources" },
+  { id: "briefings", label: "Web Briefings" },
+  { id: "focus", label: "RSS Focus & Sources" },
   { id: "articles", label: "Collected Articles" },
   { id: "trendcards", label: "TrendCards" },
   { id: "runs", label: "Runs" },
@@ -14,7 +15,7 @@ export type ResearchTabId = (typeof RESEARCH_TABS)[number]["id"];
 export function parseResearchTab(value: string | undefined): ResearchTabId {
   return RESEARCH_TABS.some((tab) => tab.id === value)
     ? (value as ResearchTabId)
-    : "focus";
+    : "briefings";
 }
 
 /**

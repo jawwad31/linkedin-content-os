@@ -1,5 +1,7 @@
 import "server-only";
 
+import { storedFindingSchema } from "@/features/research/web-research/contracts";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -819,6 +821,18 @@ export async function loadSourceContext(
       source: { principles: context.principles, personalPositioning: context.personalPositioning,
         contentPillars: context.contentPillars, roleAndWork: context.roleAndWork },
       sourceArticles: [],
+    } };
+  }
+
+  if (idea.source_type === "research_brief" && sourceIds[0]) {
+    const { data, error } = await admin.from("research_findings")
+      .select("id,payload,approval_status").eq("client_id",clientId).eq("id",sourceIds[0])
+      .eq("approval_status","approved").maybeSingle();
+    const checked = storedFindingSchema.safeParse(data?.payload);
+    if (error || !data || !checked.success) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    return { ok: true, sourceContext: {
+      sourceType: "research_brief", sourceIds: [data.id], sourceTitle: checked.data.title,
+      source: { ...checked.data, findingId: data.id }, sourceArticles: checked.data.sources.map(source => ({ ...source })),
     } };
   }
 

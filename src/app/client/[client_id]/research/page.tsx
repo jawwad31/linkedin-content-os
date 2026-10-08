@@ -30,7 +30,16 @@ import { getServerUser } from "@/lib/supabase/session";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import { getResearchKeywords } from "@/features/research/research-keywords/queries";
 import { ResearchKeywordsForm } from "@/features/research/research-keywords/research-keywords-form";
-import { parseResearchTab, ResearchTabs } from "@/features/research/research-tabs";
+import {
+  parseResearchTab,
+  ResearchTabs,
+} from "@/features/research/research-tabs";
+import {
+  getResearchSettings,
+  getWebBriefings,
+} from "@/features/research/web-research/queries";
+import { ResearchWorkbench } from "@/features/research/web-research/research-workbench";
+import { canDraftPosts, canManageIdeas } from "@/lib/access/client-access";
 
 export default async function ResearchPage({
   params,
@@ -79,14 +88,26 @@ export default async function ResearchPage({
     : null;
   const cardsResult = role ? await getRecentTrendCards(clientId) : null;
   const keywordsResult = role ? await getResearchKeywords(clientId) : null;
+  const canManage = !!role && canRoleRunResearchAgent(role);
+  const webResult =
+    activeTab === "briefings" && role
+      ? await Promise.allSettled([
+          canManage ? getResearchSettings(clientId) : Promise.resolve(null),
+          getWebBriefings(clientId),
+          Promise.all([
+            canDraftPosts(user.id, clientId),
+            canManageIdeas(user.id, clientId),
+          ]),
+        ])
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Research"
-        description="Collect and process market signals for this Client Workspace."
+        description="Research your saved prompt, review evidence, and select findings for content."
         action={
-          role && canRoleRunResearchAgent(role) ? (
+          activeTab === "focus" && role && canRoleRunResearchAgent(role) ? (
             <RunResearchAgentButton clientId={clientId} />
           ) : undefined
         }
@@ -104,6 +125,32 @@ export default async function ResearchPage({
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {activeTab === "briefings" && webResult ? (
+          <div className="lg:col-span-2">
+            {webResult[0].status === "fulfilled" &&
+            webResult[1].status === "fulfilled" &&
+            webResult[2].status === "fulfilled" ? (
+              <ResearchWorkbench
+                key={`${clientId}:${webResult[0].value?.revision ?? "member"}`}
+                clientId={clientId}
+                settings={webResult[0].value}
+                briefings={webResult[1].value}
+                canManage={canManage}
+                canCreatePosts={webResult[2].value.every(Boolean)}
+                providerConfigured={
+                  !!process.env.OPENAI_API_KEY?.trim() &&
+                  !!process.env.OPENAI_RESEARCH_MODEL?.trim()
+                }
+              />
+            ) : (
+              <p role="alert" className="text-small text-danger-strong">
+                Web research could not be loaded. Refresh and try again; if this
+                persists, ask an administrator to check the P07 migration.
+                Existing RSS tabs remain available.
+              </p>
+            )}
+          </div>
+        ) : null}
         {activeTab === "focus" ? (
           <>
             <Card className="lg:col-span-2">
@@ -170,7 +217,9 @@ export default async function ResearchPage({
                     activeStatus={articleStatus}
                     pagination={articlesResult.pagination}
                     counts={
-                      articleCountsResult?.ok ? articleCountsResult.counts : null
+                      articleCountsResult?.ok
+                        ? articleCountsResult.counts
+                        : null
                     }
                   />
                 ) : (

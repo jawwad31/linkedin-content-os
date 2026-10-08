@@ -1,6 +1,8 @@
 # P04 correction and P06 deployment
 
-Read AGENTS.md, security-access.md, design.md, feature-checklist.md, and CONTRIBUTING.md in that order. P06 is implemented, awaiting deployment and manual acceptance. P07 and later are outside this delivery.
+Read AGENTS.md, security-access.md, design.md, feature-checklist.md, and CONTRIBUTING.md in that order. P06 is implemented and deployed; manual acceptance is deferred. P07 and later are outside this delivery.
+
+Current rollout status (2026-10-07): Railway web deployment at `e0acab0` and its login response are verified; migration application is reported by Jawad and earlier schema checks corroborate it. Jawad confirmed Railway uses the locally configured Supabase project. He has deferred the remaining manual checks below, plus P05 revalidation, to an extensive testing round after implementation. Preserve this checklist for that round. P06 is not manually accepted or complete; `CALENDAR_DRAFTING_ENABLED` remains absent/off in production. Supplied-note/document manual source checking is **not testable: no entry point** in the current UI/routes.
 
 ## Rollout order
 

@@ -29,6 +29,7 @@ export type ResearchRunSummary = {
 };
 
 const STAGE_LABELS: Record<string, string> = {
+  web_research: "Web research",
   rss_collect: "Collecting articles",
   classify: "Classifying articles",
   synthesize: "Synthesizing TrendCards",
