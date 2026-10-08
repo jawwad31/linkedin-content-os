@@ -1,6 +1,6 @@
 # Virel AI tasks and OpenRouter settings
 
-Updated 2026-10-09. Jawad selected OpenRouter for all six current AI roles, superseding the earlier direct-provider request. The role configuration and web-search adapter are implemented and validated on main, based on `022ec87`. Jawad's instruction to move to the next step is being followed by releasing this update; actual commit/deployment results are recorded in CURRENT.md. No live paid model calls were made.
+Updated 2026-10-09. Jawad selected OpenRouter for all six current AI roles, superseding the earlier direct-provider request. The role configuration and web-search adapter are implemented, validated, pushed and deployed as `e2525e6`, based on `022ec87`; both Railway services reported SUCCESS. Exact deployment results are in CURRENT.md. No live paid model calls were made. Provider value/quality and deferred manual acceptance remain unverified.
 
 ## Six current AI roles and selected models
 
@@ -40,7 +40,7 @@ Provider names are trimmed/case-normalized, so OpenRouter also works; use lowerc
 
 ## Complete Railway/local comparison and replacement list
 
-Live Railway names were rechecked on 2026-10-08. OAuth returns names only: key/model/URL/flag values cannot be compared. Local comparison records presence, never secret values. W = web, R = rss-worker. No Railway variables were changed by Codex.
+The table records the 2026-10-08 comparison before Jawad changed the Railway variables. On 2026-10-09, web names were rechecked: all twelve LLM role variables and OPENROUTER_API_KEY are now present; old model variables are absent. Worker still has its original eight names with no AI key/pairs. OAuth returns names only: key/model/URL/flag values cannot be compared. Local comparison records presence, never secret values. W = web, R = rss-worker. No Railway variables were changed by Codex.
 
 | Current variable | Railway presence | Local presence before this slice | Action |
 |---|---|---|---|
@@ -65,7 +65,7 @@ Live Railway names were rechecked on 2026-10-08. OAuth returns names only: key/m
 | RSS_COLLECTOR_BATCH_DELAY_MS | Absent | Absent | Optional; retain default 0 unless deliberately changed. |
 | RAILWAY_* | Managed variables on W + R | Absent | Leave Railway's generated variables unchanged. |
 
-All twelve new LLM role variables were absent on both Railway services during this audit. Local now has all twelve, with existing credentials and legacy settings preserved. `.env.local` is not committed and Railway does not synchronize it automatically.
+All twelve new LLM role variables were absent on both Railway services during the original 2026-10-08 audit. The 2026-10-09 web audit confirms Jawad added them; worker remains unchanged. Local has all twelve, with existing credentials and legacy settings preserved. `.env.local` is not committed and Railway does not synchronize it automatically.
 
 For **rss-worker**, only the two classifier/synthesis pairs and `OPENROUTER_API_KEY` are needed when `RESEARCH_PIPELINE_FULL=true`. Collection-only mode needs no AI key. P08 scheduled web research is not implemented yet; record its worker web-role settings when that phase starts.
 

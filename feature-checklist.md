@@ -15,8 +15,8 @@ Repository read access and selected source files were verified. This package has
 | P04 | Shared standalone drafting and editorial controls | P01–P03 | Source-mode correction implemented (`b958580`); corrective migration/manual checks pending |
 | P05 | Monthly allocation/defaults/source selection | P02/P04 | Implemented (4160ec1); migrations reported applied; fresh manual revalidation deferred to extensive testing at Jawad's request. |
 | P06 | Resumable calendar draft batches | P05 | Implemented; migrations reported applied; Railway web e0acab0/login verified and database target user-confirmed. Manual acceptance deferred to extensive testing at Jawad's request, 2026-10-07. Production flag absent/off. |
-| P07 | Saved prompt and manual web research | P00/P04 | Feature commit adf3693 deployed. OpenRouter role/configuration follow-up validated; release approved/in progress 2026-10-09. See CURRENT.md for actual deployment. Provider value verification, full migration verification and deferred manual acceptance remain pending; not complete. |
-| P08 | Schedules, source monitoring, notifications | P07 | Planned |
+| P07 | Saved prompt and manual web research | P00/P04 | Feature adf3693 and OpenRouter follow-up e2525e6 deployed; both Railway services SUCCESS verified 2026-10-09. Lint/build and 34 files / 296 tests pass. Hidden provider values/live quality, full migration verification and deferred manual acceptance remain pending; not complete. |
+| P08 | Schedules, source monitoring, notifications | P07 | Next implementation brief ready in docs/p08-next-step.md; existing worker to be extended; code not started. |
 | P09 | Newsletter editions | P02–P04/P07 | Planned |
 | P10 | Release validation and compatibility closure | Shipped slices | Planned |
 
