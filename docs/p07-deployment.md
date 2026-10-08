@@ -1,6 +1,6 @@
 # P07 — saved prompt and manual web research
 
-Status: implemented; Jawad approved commit/push on 2026-10-08, release in progress. Production migration/provider setup and manual acceptance remain pending. Manual acceptance is deferred to Jawad's extensive testing round. P07 is not complete. Baseline: main `e0acab005984da85b1dc178744b80d2d816796de`. Calendar batch drafting remains off.
+Status: application deployed from feature commit `adf3693c9fe2713f86d613324c071d0818f2b13c`, pushed to main after Jawad's approval on 2026-10-08. Railway web `9431d57e-2d2e-4d17-8c47-2fbfdd4e640f` and worker `b8711468-3d0c-4b41-92f4-a6aa69d93a60` both report SUCCESS. Production migration/provider setup and manual acceptance remain pending. Manual acceptance is deferred to Jawad's extensive testing round. P07 is not complete. Baseline: main `e0acab005984da85b1dc178744b80d2d816796de`. Calendar batch drafting remains off. A documentation-only release-status commit follows the feature commit; it carries the same application code.
 
 ## Changes and preserved behavior
 
