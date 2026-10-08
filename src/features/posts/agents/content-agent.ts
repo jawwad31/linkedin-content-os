@@ -1,4 +1,5 @@
 import "server-only";
+import { getLlmModel } from "@/lib/llm/config";
 
 import { z } from "zod";
 
@@ -194,17 +195,14 @@ export async function runContentAgent(input: {
   idea: ContentAgentIdeaContext;
   sourceContext: ContentAgentSourceContext;
 }): Promise<ContentAgentResult> {
-  const config = getOpenRouterConfig("OPENROUTER_CONTENT_MODEL");
+  const config = getOpenRouterConfig("LLM_CONTENT_MODEL");
 
   if (!config) {
     await writeLlmLog({
       clientId: input.clientId,
       userId: input.userId,
       provider: CONTENT_AGENT_PROVIDER,
-      model:
-        process.env.OPENROUTER_CONTENT_MODEL ??
-        process.env.OPENROUTER_MODEL ??
-        "unconfigured",
+      model: getLlmModel("content"),
       feature: CONTENT_AGENT_FEATURE,
       status: "error",
       errorType: "not_configured",

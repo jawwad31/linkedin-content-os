@@ -1,4 +1,5 @@
 import "server-only";
+import { getLlmModel } from "@/lib/llm/config";
 
 import {
   qaResultSchema,
@@ -152,17 +153,14 @@ export async function runReviewAgent(input: {
   | { ok: true; qa: QaResult }
   | { ok: false; reason: "not_configured" | "error" }
 > {
-  const config = getOpenRouterConfig("OPENROUTER_REVIEW_MODEL");
+  const config = getOpenRouterConfig("LLM_REVIEW_MODEL");
 
   if (!config) {
     await writeLlmLog({
       clientId: input.clientId,
       userId: input.userId,
       provider: "openrouter",
-      model:
-        process.env.OPENROUTER_REVIEW_MODEL ??
-        process.env.OPENROUTER_MODEL ??
-        "unconfigured",
+      model: getLlmModel("review"),
       feature: REVIEW_AGENT_FEATURE,
       status: "error",
       errorType: "not_configured",

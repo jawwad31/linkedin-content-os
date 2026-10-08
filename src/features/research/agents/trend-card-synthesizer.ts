@@ -265,7 +265,7 @@ export async function synthesizeTrendCardsForClient(
   clientId: string,
   userId: string | null = null,
 ): Promise<SynthesizeForClientResult> {
-  const config = getOpenRouterConfig("OPENROUTER_RESEARCH_MODEL");
+  const config = getOpenRouterConfig("LLM_RSS_SYNTHESIS_MODEL");
   if (!config) {
     return { ok: false, reason: "not_configured", message: NOT_CONFIGURED_ERROR };
   }

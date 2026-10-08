@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getLlmConfig } from "@/lib/llm/config";
 
 import {
   Card,
@@ -138,8 +139,7 @@ export default async function ResearchPage({
                 canManage={canManage}
                 canCreatePosts={webResult[2].value.every(Boolean)}
                 providerConfigured={
-                  !!process.env.OPENAI_API_KEY?.trim() &&
-                  !!process.env.OPENAI_RESEARCH_MODEL?.trim()
+                  !!getLlmConfig("webResearch")
                 }
               />
             ) : (

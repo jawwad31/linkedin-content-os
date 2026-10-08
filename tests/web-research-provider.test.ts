@@ -8,6 +8,7 @@ import {
   RESEARCH_BUDGET,
 } from "@/features/research/web-research/contracts";
 import { researchFinding, webResponse } from "./fixtures/web-research";
+import { writeLlmLog } from "@/lib/llm/log";
 
 vi.mock("@/lib/llm/log", () => ({ writeLlmLog: vi.fn() }));
 afterEach(() => {
@@ -134,6 +135,91 @@ describe("P07 bounded search and evidence mapping", () => {
       previous: [],
     });
     expect(result.outcome).toBe("not_configured");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("sends OpenRouter a bounded server search and maps its sources without double-counting usage", async () => {
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "OpenRouter");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
+    vi.stubEnv("OPENROUTER_API_KEY", "router-test-key");
+    vi.stubEnv("OPENAI_API_KEY", "unused-openai-key");
+    const raw = webResponse();
+    raw.output[0].type = "openrouter:web_search";
+    const response = {
+      ...raw,
+      usage: { ...raw.usage, server_tool_use_details: { web_search_requests: 1 } },
+    };
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(response)));
+    vi.stubGlobal("fetch", fetcher);
+    const result = await researchWeb({
+      clientId: "account", userId: "actor",
+      settings: { revision: 1, prompt: "Research astronomy releases", lookbackDays: 7, useProfileContext: false },
+      profile: { private: "excluded-profile" }, previous: [],
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0][0]).toBe("https://openrouter.ai/api/v1/responses");
+    const request = fetcher.mock.calls[0][1];
+    expect(request.headers.Authorization).toBe("Bearer router-test-key");
+    const body = JSON.parse(request.body);
+    expect(body).toMatchObject({
+      model: "anthropic/claude-haiku-5.5", store: false, truncation: "disabled",
+      max_tool_calls: RESEARCH_BUDGET.maxToolCalls,
+      max_output_tokens: RESEARCH_BUDGET.maxOutputTokens,
+      tool_choice: "auto", provider: { require_parameters: true },
+      tools: [{ type: "openrouter:web_search", parameters: {
+        engine: "exa", max_uses: RESEARCH_BUDGET.maxToolCalls,
+        max_results: 5, max_total_results: 30, max_characters: 4000,
+      } }],
+      text: { format: { type: "json_schema", strict: true } },
+    });
+    expect(JSON.parse(body.input).savedPrompt).toBe("Research astronomy releases");
+    expect(body.input).not.toContain("excluded-profile");
+    expect(result).toMatchObject({ outcome: "success", toolCalls: 1 });
+    expect(result.candidates).toHaveLength(1);
+    expect(writeLlmLog).toHaveBeenLastCalledWith(expect.objectContaining({
+      provider: "openrouter", model: "anthropic/claude-haiku-5.5", tokenInputCount: 100,
+    }));
+  });
+  it("accepts Router citation metadata with reported searches, but never a generated URL alone", () => {
+    const raw = webResponse();
+    const message = raw.output[1];
+    const citation = { type: "url_citation", url: researchFinding.sources[0].url, title: "Release" };
+    const response = {
+      status: "completed",
+      output: [{ ...message, content: [{ ...message.content![0], annotations: [citation] }] }],
+      usage: { server_tool_use: { web_search_requests: 2 } },
+    };
+    expect(mapWebResponse(response, [], now)).toMatchObject({ outcome: "success", toolCalls: 2 });
+    expect(mapWebResponse({ ...response, output: [message], usage: undefined }, [], now))
+      .toMatchObject({ outcome: "failed", errorCode: "NO_SEARCH_EVIDENCE", findings: [] });
+    expect(mapWebResponse({ ...response, usage: undefined }, [], now).outcome).toBe("partial");
+    expect(mapWebResponse({ ...response, usage: { server_tool_use: { web_search_requests: 6 } } }, [], now).outcome)
+      .toBe("partial");
+  });
+  it("retains Router candidates after failed search/synthesis and incomplete generation", () => {
+    const raw = webResponse();
+    raw.output[0].type = "openrouter:web_search";
+    raw.output[0].status = "failed";
+    expect(mapWebResponse(raw, [], now)).toMatchObject({ outcome: "partial", toolCalls: 1 });
+    raw.output[1].content![0].text = "invalid JSON";
+    expect(mapWebResponse(raw, [], now)).toMatchObject({ outcome: "partial", errorCode: "INVALID_RESPONSE" });
+    expect(mapWebResponse(raw, [], now).candidates).toHaveLength(1);
+    const incomplete = webResponse();
+    incomplete.output[0].type = "openrouter:web_search";
+    incomplete.status = "incomplete";
+    expect(mapWebResponse(incomplete, [], now).outcome).toBe("partial");
+  });
+  it("does not call a legacy provider when Router is selected without its key", async () => {
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "unused-openai-key");
+    vi.stubEnv("OPENAI_RESEARCH_MODEL", "legacy-model");
+    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+    expect(await researchWeb({
+      clientId: "account", userId: "actor",
+      settings: { revision: 1, prompt: INITIAL_RESEARCH_PROMPT, lookbackDays: 7, useProfileContext: false },
+      profile: null, previous: [],
+    })).toMatchObject({ outcome: "not_configured", errorCode: "NOT_CONFIGURED" });
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("sends the exact saved unrelated prompt, excludes profile when off, and bounds the paid call", async () => {

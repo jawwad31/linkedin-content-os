@@ -262,7 +262,7 @@ export async function classifyForClient(
   clientId: string,
   userId: string | null = null,
 ): Promise<ClassifyForClientResult> {
-  const config = getOpenRouterConfig("OPENROUTER_RESEARCH_MODEL");
+  const config = getOpenRouterConfig("LLM_RSS_CLASSIFIER_MODEL");
   if (!config) {
     return { ok: false, reason: "not_configured", message: NOT_CONFIGURED_ERROR };
   }

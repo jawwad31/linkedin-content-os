@@ -57,7 +57,7 @@ export async function startCalendarDraftBatch(clientId: string, calendarId: stri
   const user = await authorize(clientId);
   if (!user) return fail("FORBIDDEN");
   if (!calendarDraftingEnabled()) return { ok: false, code: "DISABLED", message: "Calendar drafting is not enabled yet." };
-  if (!getOpenRouterConfig("OPENROUTER_CONTENT_MODEL")) return fail("NOT_CONFIGURED");
+  if (!getOpenRouterConfig("LLM_CONTENT_MODEL")) return fail("NOT_CONFIGURED");
   const parsed = startDraftBatchSchema.safeParse(input);
   if (!parsed.success || !z.string().uuid().safeParse(calendarId).success) return fail("VALIDATION_ERROR");
   const client = await createClient();

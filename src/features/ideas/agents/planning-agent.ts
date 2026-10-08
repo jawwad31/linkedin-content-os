@@ -1,4 +1,5 @@
 import "server-only";
+import { getLlmModel } from "@/lib/llm/config";
 
 import { z } from "zod";
 
@@ -267,16 +268,13 @@ export async function runPlanningAgent(input: {
   compatibility: StrategyCompatibility;
   resources: PlanningResource[];
 }): Promise<PlanningAgentResult> {
-  const config = getOpenRouterConfig("OPENROUTER_PLANNING_MODEL");
+  const config = getOpenRouterConfig("LLM_PLANNING_MODEL");
 
   if (!config) {
     await logNotConfigured({
       clientId: input.clientId,
       userId: input.userId,
-      model:
-        process.env.OPENROUTER_PLANNING_MODEL ??
-        process.env.OPENROUTER_MODEL ??
-        "unconfigured",
+      model: getLlmModel("planning"),
     });
     return { ok: false, reason: "not_configured" };
   }
@@ -349,15 +347,12 @@ export async function replanContentIdea(input: {
   compatibility: StrategyCompatibility;
   resources: PlanningResource[];
 }): Promise<ReplanningAgentResult> {
-  const config = getOpenRouterConfig("OPENROUTER_PLANNING_MODEL");
+  const config = getOpenRouterConfig("LLM_PLANNING_MODEL");
   if (!config) {
     await logNotConfigured({
       clientId: input.clientId,
       userId: input.userId,
-      model:
-        process.env.OPENROUTER_PLANNING_MODEL ??
-        process.env.OPENROUTER_MODEL ??
-        "unconfigured",
+      model: getLlmModel("planning"),
     });
     return { ok: false, reason: "not_configured" };
   }

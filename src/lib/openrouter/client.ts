@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { writeLlmLog } from "@/lib/llm/log";
+import { getLlmConfig, LLM_ROLES, type LlmRole } from "@/lib/llm/config";
 
 import type {
   OpenRouterChatMessage,
@@ -14,18 +15,25 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_TIMEOUT_MS = 30_000;
 
 /**
- * Reads OPENROUTER_API_KEY / custom modelEnvKey from the environment.
- * If modelEnvKey is not specified or resolved value is missing, falls back
- * to OPENROUTER_MODEL. Returns null if either key or resolved model is
- * missing.
+ * Resolves a new LLM role pair, or the legacy model/default settings for callers
+ * without a role key. Never sends a direct-provider assignment to OpenRouter.
  */
 export function getOpenRouterConfig(modelEnvKey?: string): OpenRouterConfig | null {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const role = (Object.keys(LLM_ROLES) as LlmRole[]).find(
+    (role) => `${LLM_ROLES[role].prefix}_MODEL` === modelEnvKey,
+  );
+  if (role) {
+    const config = getLlmConfig(role);
+    return config?.provider === "openrouter"
+      ? { apiKey: config.apiKey, model: config.model }
+      : null;
+  }
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) return null;
 
-  let model = modelEnvKey ? process.env[modelEnvKey] : undefined;
+  let model = modelEnvKey ? process.env[modelEnvKey]?.trim() : undefined;
   if (!model) {
-    model = process.env.OPENROUTER_MODEL;
+    model = process.env.OPENROUTER_MODEL?.trim();
   }
 
   if (!model) return null;
