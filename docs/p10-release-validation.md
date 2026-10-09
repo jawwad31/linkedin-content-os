@@ -47,7 +47,7 @@ Security advisors retain the previous baseline: deny-all newsletter_attempts RLS
 |---|---|---|
 | Profiles and context | Serialization/retrieval tests; five Settings sections | Real save/reload and model adherence with permitted sources |
 | Standalone posts | Source/plan/service/QA tests; old records/routes load | Paid source-to-draft-to-exact-approval-to-manual-publication workflow |
-| Fresh supplied note/upload | Internal source modes support it | No standalone UI entry point; remains an implementation gap |
+| Fresh supplied note/upload | Internal source modes support it; subsequent focused completion adds Posts Create post for notes/saved documents/new uploads | Entry implemented after this P10 snapshot; deployment/testing recorded in docs/standalone-note-document-entry.md and CURRENT.md. No acceptance pass inferred. |
 | Content Bank and lead magnets | Scoped source/reuse tests; old entry/management routes | Populated delivery/approval/edit/reuse parity before retiring legacy navigation |
 | Monthly planning | SQL/default/allocation/concurrency tests; Calendar loads | Two months, immutable defaults, shortages and two-window contention |
 | Calendar batch drafting | Lease/retry/cancellation/revocation tests | Deliberate activation and interrupted/retried live batch; flag stays off |

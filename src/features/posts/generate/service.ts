@@ -1,5 +1,8 @@
 import "server-only";
 
+import { computeContentHash } from "@/features/documents/retrieval-service";
+import { STANDALONE_SOURCE_MAX_BYTES } from "./standalone-brief-schema";
+
 import { storedFindingSchema } from "@/features/research/web-research/contracts";
 
 import { revalidatePath } from "next/cache";
@@ -301,9 +304,22 @@ function toPlanningBusinessContext(
     industry: context.industry,
     businessDescription: context.businessDescription,
     primaryIcp: context.primaryIcp,
+    audienceUnderstanding: context.audienceUnderstanding,
+    painPoints: context.painPoints,
     mainOffer: context.mainOffer,
+    commercialDetails: context.commercialDetails,
+    deliveryApproach: context.deliveryApproach,
+    businessPositioning: context.businessPositioning,
+    questionsAndDoubts: context.questionsAndDoubts,
     approvedProof: context.approvedProof,
     bannedTopics: context.bannedTopics,
+    founderName: context.founderName,
+    roleAndWork: context.roleAndWork,
+    personalPositioning: context.personalPositioning,
+    personalReaders: context.personalReaders,
+    contentPillars: context.contentPillars,
+    principles: context.principles,
+    profileRevision: context.profileRevision,
   };
 }
 
@@ -839,13 +855,24 @@ export async function loadSourceContext(
   if (idea.source_type === "custom_upload" || idea.source_type === "research_brief") {
     const saved = z.object({ customNotes: z.string().max(4000).optional(),
       notes: z.string().max(4000).optional() }).safeParse(idea.source_context);
+    const selectedDocument = z.object({ selectedDocument: z.object({
+      id: z.string().uuid(), contentHash: z.string().length(64), version: z.number().int().positive(),
+    }).optional() }).safeParse(idea.source_context && typeof idea.source_context === "object" && !Array.isArray(idea.source_context) ? idea.source_context : {});
     let source: Record<string, unknown> = saved.success ? saved.data : {};
     if (idea.source_type === "custom_upload" && sourceIds[0]) {
       const { data, error } = await admin.from("client_documents")
-        .select("id, filename, content_text, content_hash, version, status")
+        .select("id, filename, content_text, content_hash, version, status, purpose")
         .eq("id", sourceIds[0]).eq("client_id", clientId)
         .eq("status", "ready").is("deleted_at", null).maybeSingle();
       if (error || !data) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+      if (!selectedDocument.success || (selectedDocument.data.selectedDocument && (
+        selectedDocument.data.selectedDocument.id !== data.id ||
+        selectedDocument.data.selectedDocument.contentHash !== data.content_hash ||
+        selectedDocument.data.selectedDocument.contentHash !== computeContentHash(data.content_text) ||
+        selectedDocument.data.selectedDocument.version !== data.version ||
+        data.purpose !== "source_material" ||
+        Buffer.byteLength(data.content_text, "utf8") > STANDALONE_SOURCE_MAX_BYTES
+      ))) return { ok: false, failure: IDEA_NOT_AVAILABLE };
       source = { ...source, document: data };
     }
     if (!Object.values(source).some(Boolean)) return { ok: false, failure: IDEA_NOT_AVAILABLE };
@@ -860,6 +887,7 @@ export async function loadSourceContext(
 }
 
 export type ReviewedPostValues = {
+  editorial?: GenerationPlanV2["editorial"];
   finalPost: string;
   buyerBeliefShift: string;
   proofNotes: string;
@@ -1166,9 +1194,12 @@ export async function produceReviewedPost(input: {
     });
   }
 
+  const selectedDocumentRecord = sourceContext.sourceType === "custom_upload"
+    ? sourceContext.source.document as Record<string, unknown> | undefined : undefined;
   return {
     ok: true,
     values: {
+      editorial: generationPlan.editorial,
       finalPost,
       buyerBeliefShift: `${generationPlan.strategy.currentBelief} -> ${generationPlan.strategy.desiredBelief}`,
       proofNotes: qa.proofNotes,
@@ -1200,6 +1231,11 @@ export async function produceReviewedPost(input: {
         cta_type: generationPlan.execution.ctaType,
         target_icp: generationPlan.strategy.targetIcp,
         selected_resource_id: generationPlan.execution.resourceId,
+        editorial: generationPlan.editorial ?? null,
+        ...(selectedDocumentRecord ? {
+          document: { id: selectedDocumentRecord.id, filename: selectedDocumentRecord.filename,
+            content_hash: selectedDocumentRecord.content_hash, version: selectedDocumentRecord.version },
+        } : {}),
       },
     },
   };
@@ -1314,6 +1350,15 @@ export async function generatePostFromIdea(
       qa_result: generated.values.qaResult,
       format_recommendation: generated.values.formatRecommendation,
       source_context_used: generated.values.sourceContextUsed,
+      ...(generated.values.editorial ? {
+        allocation_bucket: generated.values.editorial.allocationBucket,
+        post_type: generated.values.editorial.postType,
+        funnel_stage: generated.values.editorial.funnelStage,
+        intended_reader: generated.values.editorial.intendedReader ?? null,
+        primary_takeaway: generated.values.editorial.primaryTakeaway ?? null,
+        content_pillar: generated.values.editorial.contentPillar ?? null,
+      } : {}),
+      brief_overrides: idea.strategy_overrides ?? {},
       status: "review",
     })
     .select("id")
@@ -1455,6 +1500,15 @@ export async function redraftPostFromReview(
       source_context_used: generated.values.sourceContextUsed,
       status: "review",
       edit_note: null,
+      ...(generated.values.editorial ? {
+        allocation_bucket: generated.values.editorial.allocationBucket,
+        post_type: generated.values.editorial.postType,
+        funnel_stage: generated.values.editorial.funnelStage,
+        intended_reader: generated.values.editorial.intendedReader ?? null,
+        primary_takeaway: generated.values.editorial.primaryTakeaway ?? null,
+        content_pillar: generated.values.editorial.contentPillar ?? null,
+      } : {}),
+      brief_overrides: idea.strategy_overrides ?? {},
     })
     .eq("id", post.id)
     .eq("client_id", clientIdResult.data)
