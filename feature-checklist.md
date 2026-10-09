@@ -12,7 +12,7 @@ Repository read access and selected source files were verified. This package has
 | P01 | Business/personal profiles | P00 | Complete |
 | P02 | Content Bank and explicit reuse | P01 | Complete |
 | P03 | Markdown documents and scoped retrieval | P01–P02 | Complete |
-| P04 | Shared standalone drafting and editorial controls | P01–P03 | Source-mode correction b958580 deployed. Note/document Create post entry now implemented, awaiting deployment and all deferred testing. See docs/standalone-note-document-entry.md. |
+| P04 | Shared standalone drafting and editorial controls | P01–P03 | Source-mode correction b958580 deployed. Note/document Create post entry deployed at 4e13b5f; exact-SHA web/worker SUCCESS. All new testing deferred at Jawad's request. See docs/standalone-note-document-entry.md. |
 | P05 | Monthly allocation/defaults/source selection | P02/P04 | Implemented (4160ec1); migrations reported applied; fresh manual revalidation deferred to extensive testing at Jawad's request. |
 | P06 | Resumable calendar draft batches | P05 | Implemented; migrations reported applied; Railway web e0acab0/login verified and database target user-confirmed. Manual acceptance deferred to extensive testing at Jawad's request, 2026-10-07. Production flag absent/off. |
 | P07 | Saved prompt and manual web research | P00/P04 | Feature adf3693 and OpenRouter follow-up e2525e6 deployed; both Railway services SUCCESS verified 2026-10-09. Lint/build and 34 files / 296 tests pass. Hidden provider values/live quality, full migration verification and deferred manual acceptance remain pending; not complete. |
@@ -40,7 +40,7 @@ Repository read access and selected source files were verified. This package has
 
 For each phase also record: lint, build, relevant test evidence, diff review, focused commit hash, push result, affected migrations, web/worker deployment, and manual post-deploy checks. Use “implemented, awaiting deployment” or “deployed, awaiting manual tests” when appropriate. Never substitute “complete” for unavailable validation.
 
-Latest testing decision, 2026-10-09: Jawad requested no testing from now until all prompts are implemented. Defer automated tests, local lint/build/type checks, browser/API/database/manual acceptance and paid trial calls; source/diff review and ordinary deployment status are not test passes. New implementation is untested. Keep previous evidence as historical only. The P04 standalone note/document entry is now implemented, awaiting deployment and the deferred testing round; remaining Content Bank/compatibility gaps and unchecked gates remain pending. Calendar drafting stays off and schedules remain paused.
+Latest testing decision, 2026-10-09: Jawad requested no testing from now until all prompts are implemented. Defer automated tests, local lint/build/type checks, browser/API/database/manual acceptance and paid trial calls; source/diff review and ordinary deployment status are not test passes. New implementation is untested. Keep previous evidence as historical only. The P04 standalone note/document entry is now deployed, awaiting the deferred testing round; remaining Content Bank/compatibility gaps and unchecked gates remain pending. Calendar drafting stays off and schedules remain paused.
 
 Earlier decision, 2026-10-07: Jawad deferred remaining manual checks until after implementation. The supplied-note/document entry was missing at that time. P07 subsequently added research-finding-to-post creation. No manual pass or phase completion was inferred from these deferrals.
 
