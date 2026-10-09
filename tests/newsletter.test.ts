@@ -69,6 +69,45 @@ const input: NewsletterAgentInput = {
   excerpts: [],
 };
 describe("newsletter agent and export", () => {
+  it("recognizes approved public delivery links while keeping signed evidence private", () => {
+    const source: NewsletterSource = {
+      source_id: id,
+      source_type: "content_resource",
+      snapshot: {
+        title: "Approved guide",
+        deliveryUrl: "https://example.com/guide",
+      },
+      content_hash: "hash",
+      usage_id: null,
+    };
+    const withLink = {
+      ...edition,
+      sections: [
+        {
+          ...edition.sections[0],
+          commentary: "My supplied commentary",
+          body: "Use the approved guide: https://example.com/guide",
+        },
+      ],
+    };
+    expect(newsletterChecks(withLink, [source])).toEqual([]);
+    const signedUrl =
+      "https://example.supabase.co/storage/v1/object/sign/private?token=secret";
+    expect(
+      newsletterChecks(
+        {
+          ...withLink,
+          sections: [{ ...withLink.sections[0], body: signedUrl }],
+        },
+        [
+          {
+            ...source,
+            snapshot: { ...source.snapshot, deliveryUrl: signedUrl },
+          },
+        ],
+      ).join(" "),
+    ).toContain("private evidence");
+  });
   it("exports edition text without evidence or a post length quota", () => {
     expect(exportEdition(edition)).toBe(
       "Useful developments\n\nA dated reference\n\nEvidence-backed draft",

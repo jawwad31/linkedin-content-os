@@ -34,6 +34,8 @@ Signed-in read-only UI smoke: new Newsletter route/nav/form/source picker load i
 
 ## Deferred extensive acceptance
 
+Final link correction: approved public lead-magnet delivery URLs are accepted as verified links alongside research citations. Storage/signed/private links remain blocked, and automatic delivery is not promised. This changes only the playbook/link checker plus its regression test; no SQL, UI, secret or worker change. Final lint/build and full **38 files / 328 tests** pass, with 19 focused newsletter/playbook checks. Documentation closeout `551ef4e` also deployed successfully (web `7fd79e8d-a1c0-43c5-a3bb-ea0ca0450157`, worker `04a7c928-1945-405b-94cb-f1844da57062`). Verify the correction's actual triggered deployments in the completion report; the signed-in screenshot/UI appearance remains applicable.
+
 Jawad deferred guided manual checks until implementation is finished. Do not mark these passed:
 
 - Two approved findings plus a permitted experience: create, combine/separate/order sections, add commentary, confirm outline, draft, inspect source/date/voice accuracy and every QA warning.

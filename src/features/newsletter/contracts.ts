@@ -128,16 +128,23 @@ export function newsletterChecks(
   const issues: string[] = [];
   const text = exportEdition(input);
   const publicLinks = new Set(
-    sources
-      .filter((s) => s.source_type === "research_finding")
-      .flatMap((s) => {
-        const links = s.snapshot.sources;
-        return Array.isArray(links)
-          ? links.flatMap((link) =>
-              typeof link?.url === "string" ? [link.url] : [],
-            )
+    sources.flatMap((s) => {
+      if (s.source_type === "content_resource") {
+        const url = s.snapshot.deliveryUrl;
+        return typeof url === "string" &&
+          isPublicWebUrl(url) &&
+          !hasPrivateEvidenceLink(url)
+          ? [url]
           : [];
-      }),
+      }
+      if (s.source_type !== "research_finding") return [];
+      const links = s.snapshot.sources;
+      return Array.isArray(links)
+        ? links.flatMap((link) =>
+            typeof link?.url === "string" ? [link.url] : [],
+          )
+        : [];
+    }),
   );
   for (const url of text.match(/https?:\/\/[^\s)\]>]+/g) ?? []) {
     if (!isPublicWebUrl(url) || !publicLinks.has(url))
