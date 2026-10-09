@@ -143,6 +143,7 @@ export async function createContentResource(
     },
   });
   revalidatePath(`/client/${auth.clientId}/resources`);
+  revalidatePath(`/client/${auth.clientId}/content-bank`);
   revalidatePath(`/client/${auth.clientId}/ideas`);
   return { ok: true, data };
 }
@@ -185,6 +186,7 @@ export async function updateContentResource(
     },
   });
   revalidatePath(`/client/${auth.clientId}/resources`);
+  revalidatePath(`/client/${auth.clientId}/content-bank`);
   revalidatePath(`/client/${auth.clientId}/ideas`);
   return { ok: true, data };
 }
@@ -224,6 +226,7 @@ export async function archiveContentResource(
     metadata: { resource_id: data.id },
   });
   revalidatePath(`/client/${auth.clientId}/resources`);
+  revalidatePath(`/client/${auth.clientId}/content-bank`);
   revalidatePath(`/client/${auth.clientId}/ideas`);
   return { ok: true, data: {} };
 }

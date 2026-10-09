@@ -380,6 +380,7 @@ export async function addTrendReaction(
   });
 
   revalidatePath(`/client/${auth.clientId}/research`);
+  revalidatePath(`/client/${auth.clientId}/content-bank`);
 
   return { ok: true, data: { id: inserted.id } };
 }

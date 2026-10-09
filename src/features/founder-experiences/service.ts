@@ -117,6 +117,7 @@ export async function deleteFounderExperience(
   });
 
   revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
+  revalidatePath(`/client/${clientIdResult.data}/content-bank`);
   revalidatePath(`/client/${clientIdResult.data}/ideas`);
   revalidatePath(`/client/${clientIdResult.data}/dashboard`);
 

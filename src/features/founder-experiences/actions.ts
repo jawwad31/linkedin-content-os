@@ -105,6 +105,7 @@ export async function createFounderExperienceAction(
   });
 
   revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
+  revalidatePath(`/client/${clientIdResult.data}/content-bank`);
 
   return { error: null, success: "Founder experience added." };
 }
@@ -180,6 +181,7 @@ export async function updateFounderExperienceAction(
   }
 
   revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
+  revalidatePath(`/client/${clientIdResult.data}/content-bank`);
 
   return { error: null, success: "Founder experience updated." };
 }
@@ -227,6 +229,7 @@ export async function archiveFounderExperienceAction(
   });
 
   revalidatePath(`/client/${clientIdResult.data}/founder-experiences`);
+  revalidatePath(`/client/${clientIdResult.data}/content-bank`);
 
   return { error: null };
 }

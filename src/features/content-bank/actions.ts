@@ -5,8 +5,9 @@ import {
   updateContentBankEntry,
   toggleAllowReuse,
   archiveContentBankEntry,
+  loadContentBankUsage,
 } from "./service";
-import type { CreateContentBankEntryInput } from "./schemas";
+import type { CreateContentBankEntryInput, UpdateContentBankEntryInput } from "./schemas";
 
 export type ActionState = {
   error: string | null;
@@ -28,7 +29,7 @@ export async function updateContentBankEntryAction(
   clientId: string,
   entryId: string,
   sourceType: "founder_experience" | "content_resource",
-  input: Partial<CreateContentBankEntryInput>,
+  input: UpdateContentBankEntryInput,
 ) {
   const result = await updateContentBankEntry(clientId, entryId, sourceType, input);
   if (!result.ok) {
@@ -60,4 +61,12 @@ export async function archiveContentBankEntryAction(
     return { error: result.message, success: null };
   }
   return { error: null, success: "Entry archived." };
+}
+
+export async function loadContentBankUsageAction(
+  clientId: string,
+  entryId: string,
+  sourceType: "founder_experience" | "content_resource",
+) {
+  return loadContentBankUsage(clientId, entryId, sourceType);
 }

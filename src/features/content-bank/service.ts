@@ -1,364 +1,214 @@
 import "server-only";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
+import { contentResourceInputSchema } from "@/features/resources/schemas";
+import { trendReactionInputSchema } from "@/features/research/trend-cards/schemas";
 import {
-  canManageClientSetup,
-  canManageFounderExperiences,
+  canAccessClient, canContributeResearch, canManageClientSetup, canManageFounderExperiences,
 } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
 import {
-  createContentBankEntrySchema,
-  type CreateContentBankEntryInput,
+  createContentBankEntrySchema, updateContentBankEntrySchema,
+  type ContentBankEntry, type CreateContentBankEntryInput, type UpdateContentBankEntryInput,
 } from "./schemas";
-import { getContentBankEntry } from "./queries";
+import { getContentBankEntry, getContentBankUsageHistory } from "./queries";
 
 export type ServiceResult<T> =
   | { ok: true; data: T }
   | { ok: false; code: string; message: string };
 
-const AUTH_REQUIRED = {
-  ok: false as const,
-  code: "AUTH_REQUIRED",
-  message: "You must be signed in to continue.",
-};
+const identitySchema = z.object({
+  clientId: z.string().uuid(), entryId: z.string().uuid(),
+  sourceType: z.enum(["founder_experience", "content_resource"]),
+});
+const AUTH_REQUIRED = { ok: false as const, code: "AUTH_REQUIRED", message: "You must be signed in to continue." };
+const FORBIDDEN = { ok: false as const, code: "FORBIDDEN", message: "You do not have permission to manage this entry." };
+const INVALID_INPUT = { ok: false as const, code: "VALIDATION_ERROR", message: "Check the entry details and try again." };
+const NOT_FOUND = { ok: false as const, code: "NOT_FOUND", message: "This Content Bank entry is not available." };
+const GENERIC_FAILURE = { ok: false as const, code: "SERVER_ERROR", message: "Could not save this entry. Refresh and try again." };
 
-const FORBIDDEN = {
-  ok: false as const,
-  code: "FORBIDDEN",
-  message: "You do not have permission to perform this action.",
-};
+const sharedFields = ["category", "title", "rawNotes", "readiness", "allowReuse"];
+const experienceFields = [...sharedFields, "takeaway", "whatHappened", "whatWasLearned", "whatChanged", "whyItMatters"];
+const resourceFields = [...sharedFields, "resourceType", "description", "problemSolved", "targetUseCase", "keyword", "deliveryUrl", "deliveryInstructions", "active", "commentGateApproved"];
 
-const ADMIN_REQUIRED_FOR_LEAD_MAGNET = {
-  ok: false as const,
-  code: "ADMIN_REQUIRED",
-  message: "Only Client and Agency Admins can manage Lead Magnets and Resources.",
-};
+function acceptsFields(input: object, isResource: boolean, isReaction = false) {
+  const allowed = new Set(isResource ? resourceFields : [...experienceFields, ...(isReaction ? ["reactionType"] : [])]);
+  return Object.keys(input).every((key) => allowed.has(key));
+}
 
-const NOT_FOUND = {
-  ok: false as const,
-  code: "NOT_FOUND",
-  message: "Content bank entry was not found.",
-};
-
-const GENERIC_FAILURE = {
-  ok: false as const,
-  code: "SERVER_ERROR",
-  message: "Could not save content bank entry. Please try again.",
-};
-
-export async function createContentBankEntry(
-  clientId: string,
-  input: CreateContentBankEntryInput,
-): Promise<ServiceResult<{ id: string; sourceType: "founder_experience" | "content_resource" }>> {
-  const { user } = await getServerUser();
-  if (!user) return AUTH_REQUIRED;
-
-  const parsed = createContentBankEntrySchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      code: "VALIDATION_ERROR",
-      message: parsed.error.issues[0]?.message ?? "Invalid content bank entry.",
-    };
-  }
-
-  const data = parsed.data;
-  const isLeadMagnet = data.category === "lead_magnet";
-
-  // Enforce role gates
-  if (isLeadMagnet) {
-    const isAdmin = await canManageClientSetup(user.id, clientId);
-    if (!isAdmin) return ADMIN_REQUIRED_FOR_LEAD_MAGNET;
-  } else {
-    const canManage = await canManageFounderExperiences(user.id, clientId);
-    if (!canManage) return FORBIDDEN;
-  }
-
-  const supabase = await createClient();
-
-  if (isLeadMagnet) {
-    // Insert into content_resources
-    const { data: inserted, error } = await supabase
-      .from("content_resources")
-      .insert({
-        client_id: clientId,
-        category: "lead_magnet",
-        title: data.title,
-        resource_type: data.resourceType ?? "guide",
-        description: data.rawNotes ?? null,
-        problem_solved: data.takeaway ?? null,
-        target_use_case: data.whatHappened ?? null,
-        keyword: data.keyword ?? "",
-        delivery_url: data.deliveryUrl || null,
-        delivery_instructions: data.deliveryInstructions || null,
-        comment_gate_approved: data.commentGateApproved ?? false,
-        active: data.readiness !== "archived",
-        readiness: data.readiness ?? "ready",
-        allow_reuse: data.allowReuse ?? false,
-        raw_notes: data.rawNotes ?? null,
-      })
-      .select("id")
-      .single<{ id: string }>();
-
-    if (error || !inserted) {
-      return GENERIC_FAILURE;
-    }
-
-    await writeAuditLog({
-      clientId,
-      userId: user.id,
-      action: "content_bank_entry_created",
-      metadata: {
-        sourceType: "content_resource",
-        category: "lead_magnet",
-        entryId: inserted.id,
-      },
-    });
-
-    revalidatePath(`/client/${clientId}/content-bank`);
-    revalidatePath(`/client/${clientId}/resources`);
-
-    return { ok: true, data: { id: inserted.id, sourceType: "content_resource" } };
-  } else {
-    // Insert into founder_experiences
-    const { data: inserted, error } = await supabase
-      .from("founder_experiences")
-      .insert({
-        client_id: clientId,
-        category: data.category,
-        title: data.title,
-        what_happened: data.whatHappened ?? data.title,
-        what_was_learned: data.whatWasLearned ?? null,
-        what_changed: data.whatChanged ?? null,
-        why_it_matters: data.whyItMatters ?? null,
-        raw_notes: data.rawNotes ?? null,
-        takeaway: data.takeaway ?? null,
-        readiness: data.readiness ?? "ready",
-        allow_reuse: data.allowReuse ?? false,
-      })
-      .select("id")
-      .single<{ id: string }>();
-
-    if (error || !inserted) {
-      return GENERIC_FAILURE;
-    }
-
-    await writeAuditLog({
-      clientId,
-      userId: user.id,
-      action: "content_bank_entry_created",
-      metadata: {
-        sourceType: "founder_experience",
-        category: data.category,
-        entryId: inserted.id,
-      },
-    });
-
-    revalidatePath(`/client/${clientId}/content-bank`);
-    revalidatePath(`/client/${clientId}/founder-experiences`);
-
-    return { ok: true, data: { id: inserted.id, sourceType: "founder_experience" } };
+function refreshSources(clientId: string) {
+  for (const page of ["content-bank", "founder-experiences", "resources", "ideas", "research", "calendar", "newsletter"]) {
+    revalidatePath(`/client/${clientId}/${page}`);
   }
 }
 
-export async function updateContentBankEntry(
-  clientId: string,
-  entryId: string,
-  sourceType: "founder_experience" | "content_resource",
-  input: Partial<CreateContentBankEntryInput>,
-): Promise<ServiceResult<{ id: string }>> {
+async function loadEntry(
+  clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"], requireManagement = true,
+): Promise<ServiceResult<{ userId: string; entry: ContentBankEntry }>> {
   const { user } = await getServerUser();
   if (!user) return AUTH_REQUIRED;
-
-  // Retrieve current entry
+  if (!identitySchema.safeParse({ clientId, entryId, sourceType }).success) return INVALID_INPUT;
+  if (!(await canAccessClient(user.id, clientId))) return FORBIDDEN;
   const existing = await getContentBankEntry(clientId, entryId, sourceType);
   if (!existing) return NOT_FOUND;
-
-  const currentEntry = existing.entry;
-  const targetCategory = input.category ?? currentEntry.category;
-
-  // Permission checks:
-  // If either current or target is lead_magnet, require admin
-  const involvesLeadMagnet =
-    currentEntry.category === "lead_magnet" || targetCategory === "lead_magnet";
-
-  if (involvesLeadMagnet) {
-    const isAdmin = await canManageClientSetup(user.id, clientId);
-    if (!isAdmin) return ADMIN_REQUIRED_FOR_LEAD_MAGNET;
-  } else {
-    const canManage = await canManageFounderExperiences(user.id, clientId);
-    if (!canManage) return FORBIDDEN;
+  const entry = existing.entry;
+  if (requireManagement) {
+    const allowed = entry.sourceType === "content_resource"
+      ? await canManageClientSetup(user.id, clientId)
+      : entry.entryType === "trend_reaction"
+        ? await canContributeResearch(user.id, clientId)
+        : await canManageFounderExperiences(user.id, clientId);
+    if (!allowed) return FORBIDDEN;
   }
-
-  const supabase = await createClient();
-
-  if (sourceType === "content_resource") {
-    const { error } = await supabase
-      .from("content_resources")
-      .update({
-        title: input.title ?? currentEntry.title,
-        description: input.rawNotes !== undefined ? input.rawNotes : currentEntry.rawNotes,
-        problem_solved: input.takeaway !== undefined ? input.takeaway : currentEntry.takeaway,
-        target_use_case: input.whatHappened !== undefined ? input.whatHappened : currentEntry.whatHappened,
-        resource_type: input.resourceType ?? currentEntry.resourceType ?? "guide",
-        keyword: input.keyword !== undefined ? input.keyword : currentEntry.keyword,
-        delivery_url: input.deliveryUrl !== undefined ? input.deliveryUrl || null : currentEntry.deliveryUrl,
-        delivery_instructions: input.deliveryInstructions !== undefined ? input.deliveryInstructions : currentEntry.deliveryInstructions,
-        comment_gate_approved: input.commentGateApproved !== undefined ? input.commentGateApproved : currentEntry.commentGateApproved,
-        readiness: input.readiness ?? currentEntry.readiness,
-        active: (input.readiness ?? currentEntry.readiness) !== "archived",
-        allow_reuse: input.allowReuse !== undefined ? input.allowReuse : currentEntry.allowReuse,
-        raw_notes: input.rawNotes !== undefined ? input.rawNotes : currentEntry.rawNotes,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", entryId)
-      .eq("client_id", clientId);
-
-    if (error) return GENERIC_FAILURE;
-  } else {
-    const { error } = await supabase
-      .from("founder_experiences")
-      .update({
-        title: input.title ?? currentEntry.title,
-        category: targetCategory,
-        what_happened: input.whatHappened !== undefined ? input.whatHappened : currentEntry.whatHappened,
-        what_was_learned: input.whatWasLearned !== undefined ? input.whatWasLearned : currentEntry.whatWasLearned,
-        what_changed: input.whatChanged !== undefined ? input.whatChanged : currentEntry.whatChanged,
-        why_it_matters: input.whyItMatters !== undefined ? input.whyItMatters : currentEntry.whyItMatters,
-        takeaway: input.takeaway !== undefined ? input.takeaway : currentEntry.takeaway,
-        raw_notes: input.rawNotes !== undefined ? input.rawNotes : currentEntry.rawNotes,
-        readiness: input.readiness ?? currentEntry.readiness,
-        allow_reuse: input.allowReuse !== undefined ? input.allowReuse : currentEntry.allowReuse,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", entryId)
-      .eq("client_id", clientId);
-
-    if (error) return GENERIC_FAILURE;
-  }
-
-  await writeAuditLog({
-    clientId,
-    userId: user.id,
-    action: "content_bank_entry_updated",
-    metadata: {
-      entryId,
-      sourceType,
-      updatedFields: Object.keys(input),
-    },
-  });
-
-  revalidatePath(`/client/${clientId}/content-bank`);
-  revalidatePath(`/client/${clientId}/founder-experiences`);
-  revalidatePath(`/client/${clientId}/resources`);
-
-  return { ok: true, data: { id: entryId } };
+  return { ok: true, data: { userId: user.id, entry } };
 }
 
-export async function toggleAllowReuse(
-  clientId: string,
-  entryId: string,
-  sourceType: "founder_experience" | "content_resource",
-  allowReuse: boolean,
-): Promise<ServiceResult<{ allowReuse: boolean }>> {
+export async function createContentBankEntry(
+  clientId: string, input: CreateContentBankEntryInput,
+): Promise<ServiceResult<{ id: string; sourceType: ContentBankEntry["sourceType"] }>> {
   const { user } = await getServerUser();
   if (!user) return AUTH_REQUIRED;
+  if (!z.string().uuid().safeParse(clientId).success) return INVALID_INPUT;
+  const parsed = createContentBankEntrySchema.safeParse(input);
+  if (!parsed.success) return { ...INVALID_INPUT, message: parsed.error.issues[0]?.message ?? INVALID_INPUT.message };
+  const data = parsed.data;
+  const isResource = data.category === "lead_magnet";
+  if (!acceptsFields(data, isResource)) return INVALID_INPUT;
+  const allowed = isResource
+    ? await canManageClientSetup(user.id, clientId)
+    : await canManageFounderExperiences(user.id, clientId);
+  if (!allowed) return FORBIDDEN;
 
-  if (sourceType === "content_resource") {
-    const isAdmin = await canManageClientSetup(user.id, clientId);
-    if (!isAdmin) return ADMIN_REQUIRED_FOR_LEAD_MAGNET;
+  let row: Record<string, unknown>;
+  if (isResource) {
+    const resource = contentResourceInputSchema.safeParse({
+      title: data.title, resourceType: data.resourceType ?? "guide",
+      description: data.description, problemSolved: data.problemSolved,
+      targetUseCase: data.targetUseCase, keyword: data.keyword ?? "",
+      deliveryUrl: data.deliveryUrl, deliveryInstructions: data.deliveryInstructions,
+      active: data.readiness === "archived" ? false : data.active ?? true,
+      commentGateApproved: data.commentGateApproved ?? false,
+    });
+    if (!resource.success) return { ...INVALID_INPUT, message: resource.error.issues[0]?.message ?? INVALID_INPUT.message };
+    const value = resource.data;
+    row = {
+      category: "lead_magnet", created_by_user_id: user.id,
+      title: value.title, resource_type: value.resourceType,
+      description: value.description || null, problem_solved: value.problemSolved || null,
+      target_use_case: value.targetUseCase || null, keyword: value.keyword,
+      delivery_url: value.deliveryUrl, delivery_instructions: value.deliveryInstructions || null,
+      active: value.active, comment_gate_approved: value.commentGateApproved,
+    };
   } else {
-    const canManage = await canManageFounderExperiences(user.id, clientId);
-    if (!canManage) return FORBIDDEN;
+    row = {
+      category: data.category, entry_type: "work_log", title: data.title,
+      what_happened: data.whatHappened || data.rawNotes || data.title,
+      what_was_learned: data.whatWasLearned || null,
+      what_changed: data.whatChanged || null, why_it_matters: data.whyItMatters || null,
+      takeaway: data.takeaway || null,
+    };
   }
-
+  const sourceType = isResource ? "content_resource" : "founder_experience";
   const supabase = await createClient();
-  const table =
-    sourceType === "content_resource"
-      ? "content_resources"
-      : "founder_experiences";
-
-  const { error } = await supabase
-    .from(table)
-    .update({
-      allow_reuse: allowReuse,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", entryId)
-    .eq("client_id", clientId);
-
-  if (error) return GENERIC_FAILURE;
-
-  await writeAuditLog({
-    clientId,
-    userId: user.id,
-    action: "content_bank_reuse_toggled",
-    metadata: {
-      entryId,
-      sourceType,
-      allowReuse,
-    },
-  });
-
-  revalidatePath(`/client/${clientId}/content-bank`);
-
-  return { ok: true, data: { allowReuse } };
+  const { data: inserted, error } = await supabase
+    .from(isResource ? "content_resources" : "founder_experiences")
+    .insert({ ...row, client_id: clientId, raw_notes: data.rawNotes || null, readiness: data.readiness, allow_reuse: data.allowReuse })
+    .select("id").maybeSingle<{ id: string }>();
+  if (error || !inserted) return GENERIC_FAILURE;
+  await writeAuditLog({ clientId, userId: user.id, action: "content_bank_entry_created", entityType: sourceType, entityId: inserted.id,
+    metadata: { sourceType, category: data.category, entryId: inserted.id } });
+  refreshSources(clientId);
+  return { ok: true, data: { id: inserted.id, sourceType } };
 }
 
-export async function archiveContentBankEntry(
-  clientId: string,
-  entryId: string,
-  sourceType: "founder_experience" | "content_resource",
+async function saveEntry(
+  clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"],
+  input: UpdateContentBankEntryInput, action: string,
 ): Promise<ServiceResult<{ id: string }>> {
-  const { user } = await getServerUser();
-  if (!user) return AUTH_REQUIRED;
-
-  if (sourceType === "content_resource") {
-    const isAdmin = await canManageClientSetup(user.id, clientId);
-    if (!isAdmin) return ADMIN_REQUIRED_FOR_LEAD_MAGNET;
-  } else {
-    const canManage = await canManageFounderExperiences(user.id, clientId);
-    if (!canManage) return FORBIDDEN;
+  const parsed = updateContentBankEntrySchema.safeParse(input);
+  if (!parsed.success) return { ...INVALID_INPUT, message: parsed.error.issues[0]?.message ?? INVALID_INPUT.message };
+  const loaded = await loadEntry(clientId, entryId, sourceType);
+  if (!loaded.ok) return loaded;
+  const { entry, userId } = loaded.data;
+  const { expectedUpdatedAt, ...data } = parsed.data;
+  if (expectedUpdatedAt && expectedUpdatedAt !== entry.updatedAt) {
+    return { ...GENERIC_FAILURE, message: "This entry changed while you were editing. Refresh and reopen it before saving." };
+  }
+  const isResource = sourceType === "content_resource";
+  if (!acceptsFields(data, isResource, entry.entryType === "trend_reaction")) return INVALID_INPUT;
+  if (entry.entryType === "trend_reaction" && ["reactionType", "whatWasLearned", "whatHappened"].some((field) => field in data)) {
+    const reaction = trendReactionInputSchema.safeParse({
+      reactionType: data.reactionType ?? entry.reactionType,
+      take: data.whatWasLearned ?? entry.whatWasLearned,
+      proofOrExample: data.whatHappened ?? entry.whatHappened ?? "",
+    });
+    if (!reaction.success) return { ...INVALID_INPUT, message: reaction.error.issues[0]?.message ?? INVALID_INPUT.message };
+  }
+  const targetCategory = data.category ?? entry.category;
+  if ((targetCategory === "lead_magnet") !== isResource) {
+    return { ...INVALID_INPUT, message: "Experiences and resources keep their original record type. Create a separate entry to change types." };
   }
 
-  const supabase = await createClient();
-  const table =
-    sourceType === "content_resource"
-      ? "content_resources"
-      : "founder_experiences";
-
-  const updates: Record<string, unknown> = {
-    readiness: "archived",
-    updated_at: new Date().toISOString(),
+  // Only provided fields are written. Editing delivery or readiness cannot replace raw notes.
+  const columns: Record<string, string> = {
+    title: "title", category: "category", rawNotes: "raw_notes", takeaway: "takeaway",
+    whatHappened: "what_happened", whatWasLearned: "what_was_learned", whatChanged: "what_changed", whyItMatters: "why_it_matters",
+    description: "description", problemSolved: "problem_solved", targetUseCase: "target_use_case",
+    resourceType: "resource_type", keyword: "keyword", deliveryUrl: "delivery_url", deliveryInstructions: "delivery_instructions",
+    active: "active", commentGateApproved: "comment_gate_approved", reactionType: "reaction_type",
+    readiness: "readiness", allowReuse: "allow_reuse",
   };
-
-  if (sourceType === "content_resource") {
-    updates.active = false;
+  const updates: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(data)) {
+    if (value !== undefined) updates[columns[field]] = value === "" ? null : value;
   }
+  // Reuse/archive alone must also work for old resources with incomplete fields.
+  const resourceDetailChanged = isResource && Object.keys(data).some((key) =>
+    ["title", "resourceType", "description", "problemSolved", "targetUseCase", "keyword", "deliveryUrl", "deliveryInstructions", "active", "commentGateApproved"].includes(key));
+  if (resourceDetailChanged) {
+    const resource = contentResourceInputSchema.safeParse({
+      title: data.title ?? entry.title, resourceType: data.resourceType ?? entry.resourceType,
+      description: data.description ?? entry.description, problemSolved: data.problemSolved ?? entry.problemSolved,
+      targetUseCase: data.targetUseCase ?? entry.targetUseCase, keyword: data.keyword ?? entry.keyword,
+      deliveryUrl: data.deliveryUrl ?? entry.deliveryUrl, deliveryInstructions: data.deliveryInstructions ?? entry.deliveryInstructions,
+      active: data.active ?? entry.active, commentGateApproved: data.commentGateApproved ?? entry.commentGateApproved,
+    });
+    if (!resource.success) return { ...INVALID_INPUT, message: resource.error.issues[0]?.message ?? INVALID_INPUT.message };
+    if (data.keyword !== undefined) updates.keyword = resource.data.keyword;
+  }
+  if (Object.keys(updates).length === 0) return { ok: true, data: { id: entryId } };
+  if (isResource && (data.readiness ?? entry.readiness) === "archived") updates.active = false;
+  updates.updated_at = new Date().toISOString();
+  const supabase = await createClient();
+  const { data: saved, error } = await supabase.from(isResource ? "content_resources" : "founder_experiences")
+    .update(updates).eq("id", entryId).eq("client_id", clientId).eq("updated_at", entry.updatedAt).is("deleted_at", null)
+    .select("id").maybeSingle<{ id: string }>();
+  if (error || !saved) return GENERIC_FAILURE;
+  await writeAuditLog({ clientId, userId, action, entityType: sourceType, entityId: entryId,
+    metadata: { entryId, sourceType, updatedFields: Object.keys(updates).filter((field) => field !== "updated_at") } });
+  refreshSources(clientId);
+  return { ok: true, data: saved };
+}
 
-  const { error } = await supabase
-    .from(table)
-    .update(updates)
-    .eq("id", entryId)
-    .eq("client_id", clientId);
+export async function updateContentBankEntry(clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"], input: UpdateContentBankEntryInput) {
+  return saveEntry(clientId, entryId, sourceType, input, "content_bank_entry_updated");
+}
 
-  if (error) return GENERIC_FAILURE;
+export async function toggleAllowReuse(clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"], allowReuse: boolean) {
+  return saveEntry(clientId, entryId, sourceType, { allowReuse }, "content_bank_reuse_toggled");
+}
 
-  await writeAuditLog({
-    clientId,
-    userId: user.id,
-    action: "content_bank_entry_archived",
-    metadata: {
-      entryId,
-      sourceType,
-    },
-  });
+export async function archiveContentBankEntry(clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"]) {
+  return saveEntry(clientId, entryId, sourceType, { readiness: "archived" }, "content_bank_entry_archived");
+}
 
-  revalidatePath(`/client/${clientId}/content-bank`);
-
-  return { ok: true, data: { id: entryId } };
+export async function loadContentBankUsage(clientId: string, entryId: string, sourceType: ContentBankEntry["sourceType"]) {
+  const loaded = await loadEntry(clientId, entryId, sourceType, false);
+  if (!loaded.ok) return { ok: false as const, error: loaded.message };
+  return getContentBankUsageHistory(clientId, entryId, sourceType);
 }

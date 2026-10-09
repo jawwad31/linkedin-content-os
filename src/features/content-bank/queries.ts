@@ -8,7 +8,8 @@ import type {
   LeadMagnetType,
   UsageStatus,
 } from "./schemas";
-import { getSourceUsageHistory } from "./usage-service";
+import type { ReactionType } from "@/features/research/trend-cards/schemas";
+import type { SourceUsageRecord } from "./schemas";
 
 export type ContentBankListFilter = {
   category?: ContentBankCategory;
@@ -25,6 +26,9 @@ type FounderExperienceDbRow = {
   id: string;
   client_id: string;
   title: string;
+  entry_type: "work_log" | "trend_reaction";
+  source_trend_card_id: string | null;
+  reaction_type: ReactionType | null;
   category: ContentBankCategory | null;
   readiness: ContentBankReadiness | null;
   allow_reuse: boolean | null;
@@ -61,8 +65,27 @@ type ContentResourceDbRow = {
 
 type SourceUsageDbRow = {
   source_id: string;
+  source_type: "founder_experience" | "content_resource";
   status: string;
 };
+
+async function loadSourceRows<T>(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: "founder_experiences" | "content_resources",
+  columns: string,
+  clientId: string,
+): Promise<T[] | null> {
+  const rows: T[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from(table).select(columns)
+      .eq("client_id", clientId).is("deleted_at", null).order("id")
+      .range(offset, offset + pageSize - 1).returns<T[]>();
+    if (error || !data) return null;
+    rows.push(...data);
+    if (data.length < pageSize) return rows;
+  }
+}
 
 export async function getContentBankEntries(
   clientId: string,
@@ -71,45 +94,37 @@ export async function getContentBankEntries(
   const supabase = await createClient();
 
   // 1. Fetch founder_experiences
-  const { data: feRows, error: feError } = await supabase
-    .from("founder_experiences")
-    .select(
-      "id, client_id, title, category, readiness, allow_reuse, raw_notes, takeaway, what_happened, what_was_learned, what_changed, why_it_matters, created_at, updated_at",
-    )
-    .eq("client_id", clientId)
-    .is("deleted_at", null)
-    .returns<FounderExperienceDbRow[]>();
-
-  if (feError) {
+  const feRows = await loadSourceRows<FounderExperienceDbRow>(supabase, "founder_experiences",
+    "id, client_id, title, entry_type, source_trend_card_id, reaction_type, category, readiness, allow_reuse, raw_notes, takeaway, what_happened, what_was_learned, what_changed, why_it_matters, created_at, updated_at", clientId);
+  if (!feRows) {
     return { ok: false, error: "Failed to load founder experiences." };
   }
 
   // 2. Fetch content_resources
-  const { data: crRows, error: crError } = await supabase
-    .from("content_resources")
-    .select(
-      "id, client_id, title, category, readiness, allow_reuse, raw_notes, resource_type, description, problem_solved, target_use_case, keyword, delivery_url, delivery_instructions, active, comment_gate_approved, created_at, updated_at",
-    )
-    .eq("client_id", clientId)
-    .is("deleted_at", null)
-    .returns<ContentResourceDbRow[]>();
-
-  if (crError) {
+  const crRows = await loadSourceRows<ContentResourceDbRow>(supabase, "content_resources",
+    "id, client_id, title, category, readiness, allow_reuse, raw_notes, resource_type, description, problem_solved, target_use_case, keyword, delivery_url, delivery_instructions, active, comment_gate_approved, created_at, updated_at", clientId);
+  if (!crRows) {
     return { ok: false, error: "Failed to load content resources." };
   }
 
   // 3. Fetch source_usage for this client to derive usage statuses
-  const { data: usageRows, error: usageError } = await supabase
-    .from("source_usage")
-    .select("source_id, status")
-    .eq("client_id", clientId)
-    .returns<SourceUsageDbRow[]>();
-
+  const usageRows: SourceUsageDbRow[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from("source_usage")
+      .select("source_id, source_type, status").eq("client_id", clientId)
+      .order("id").range(offset, offset + pageSize - 1)
+      .returns<SourceUsageDbRow[]>();
+    if (error || !data) {
+      return { ok: false, error: "Could not load source usage. Refresh to try again." };
+    }
+    usageRows.push(...data);
+    if (data.length < pageSize) break;
+  }
   const usageMap = new Map<string, { status: UsageStatus; count: number }>();
-
-  if (!usageError && usageRows) {
-    for (const u of usageRows) {
-      const existing = usageMap.get(u.source_id) ?? {
+  for (const u of usageRows) {
+      const key = `${u.source_type}:${u.source_id}`;
+      const existing = usageMap.get(key) ?? {
         status: "unused",
         count: 0,
       };
@@ -131,15 +146,14 @@ export async function getContentBankEntries(
         existing.status = "reserved";
       }
 
-      usageMap.set(u.source_id, existing);
-    }
+      usageMap.set(key, existing);
   }
 
   const entries: ContentBankEntry[] = [];
 
   // Map founder experiences
   for (const row of feRows ?? []) {
-    const usage = usageMap.get(row.id) ?? { status: "unused", count: 0 };
+    const usage = usageMap.get(`founder_experience:${row.id}`) ?? { status: "unused", count: 0 };
     const category: ContentBankCategory = row.category ?? "observation";
     const readiness: ContentBankReadiness = row.readiness ?? "ready";
 
@@ -147,6 +161,9 @@ export async function getContentBankEntries(
       id: row.id,
       clientId: row.client_id,
       sourceType: "founder_experience",
+      entryType: row.entry_type,
+      sourceTrendCardId: row.source_trend_card_id,
+      reactionType: row.reaction_type,
       category,
       title: row.title,
       rawNotes: row.raw_notes ?? null,
@@ -171,7 +188,7 @@ export async function getContentBankEntries(
 
   // Map content resources
   for (const row of crRows ?? []) {
-    const usage = usageMap.get(row.id) ?? { status: "unused", count: 0 };
+    const usage = usageMap.get(`content_resource:${row.id}`) ?? { status: "unused", count: 0 };
     const readiness: ContentBankReadiness =
       row.readiness ?? (row.active ? "ready" : "archived");
 
@@ -181,13 +198,17 @@ export async function getContentBankEntries(
       sourceType: "content_resource",
       category: "lead_magnet",
       title: row.title,
-      rawNotes: row.raw_notes ?? row.description ?? null,
+      rawNotes: row.raw_notes ?? null,
       takeaway: row.problem_solved ?? null,
       whatHappened: row.target_use_case ?? null,
       whatWasLearned: null,
       whatChanged: null,
       whyItMatters: null,
       resourceType: (row.resource_type as LeadMagnetType | null) ?? "other",
+      description: row.description,
+      problemSolved: row.problem_solved,
+      targetUseCase: row.target_use_case,
+      active: Boolean(row.active),
       keyword: row.keyword ?? null,
       deliveryUrl: row.delivery_url ?? null,
       deliveryInstructions: row.delivery_instructions ?? null,
@@ -248,10 +269,32 @@ export async function getContentBankEntry(
   );
   if (!entry) return null;
 
-  const usageHistory = await getSourceUsageHistory(clientId, sourceId);
+  return { entry };
+}
 
-  return {
-    entry,
-    usageHistory,
-  };
+export async function getContentBankUsageHistory(
+  clientId: string,
+  sourceId: string,
+  sourceType: ContentBankEntry["sourceType"],
+): Promise<{ ok: true; history: SourceUsageRecord[] } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const history: SourceUsageRecord[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from("source_usage")
+      .select("id, client_id, source_id, source_type, channel, status, content_idea_id, post_id, newsletter_id, angle, takeaway, created_at, updated_at")
+      .eq("client_id", clientId).eq("source_id", sourceId).eq("source_type", sourceType)
+      .order("created_at", { ascending: false }).order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error || !data) return { ok: false, error: "Could not load usage history. Try again." };
+    history.push(...data.map((row) => ({
+      id: row.id, clientId: row.client_id, sourceId: row.source_id,
+      sourceType: row.source_type, channel: row.channel, status: row.status,
+      contentIdeaId: row.content_idea_id, postId: row.post_id,
+      newsletterId: row.newsletter_id,
+      angle: row.angle, takeaway: row.takeaway,
+      createdAt: row.created_at, updatedAt: row.updated_at,
+    })));
+    if (data.length < pageSize) return { ok: true, history };
+  }
 }

@@ -48,7 +48,7 @@ Security advisors retain the previous baseline: deny-all newsletter_attempts RLS
 | Profiles and context | Serialization/retrieval tests; five Settings sections | Real save/reload and model adherence with permitted sources |
 | Standalone posts | Source/plan/service/QA tests; old records/routes load | Paid source-to-draft-to-exact-approval-to-manual-publication workflow |
 | Fresh supplied note/upload | Internal source modes support it; subsequent focused completion adds Posts Create post for notes/saved documents/new uploads | Entry implemented after this P10 snapshot; deployment/testing recorded in docs/standalone-note-document-entry.md and CURRENT.md. No acceptance pass inferred. |
-| Content Bank and lead magnets | Scoped source/reuse tests; old entry/management routes | Populated delivery/approval/edit/reuse parity before retiring legacy navigation |
+| Content Bank and lead magnets | Historical scoped source/reuse tests; subsequent management completion adds full edit/details/history without new testing (docs/content-bank-management-parity.md) | Populated delivery/approval/edit/reuse/permission and legacy parity before retiring navigation; direct Bank post/calendar actions and Framework resource support still pending |
 | Monthly planning | SQL/default/allocation/concurrency tests; Calendar loads | Two months, immutable defaults, shortages and two-window contention |
 | Calendar batch drafting | Lease/retry/cancellation/revocation tests | Deliberate activation and interrupted/retried live batch; flag stays off |
 | Research and deduplication | Combined-source regression, grants and read-only UI | Paid source/date/key/material-update quality with real publishers; three older feed failures remain |

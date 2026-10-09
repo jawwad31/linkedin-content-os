@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { REACTION_TYPES } from "@/features/research/trend-cards/schemas";
+
 export const CONTENT_BANK_CATEGORIES = [
   "problem_solved",
   "case_study",
@@ -53,6 +55,9 @@ export const contentBankEntrySchema = z.object({
   id: z.string().uuid(),
   clientId: z.string().uuid(),
   sourceType: z.enum(["founder_experience", "content_resource"]),
+  entryType: z.enum(["work_log", "trend_reaction"]).optional(),
+  sourceTrendCardId: z.string().uuid().nullable().optional(),
+  reactionType: z.enum(REACTION_TYPES).nullable().optional(),
   category: z.enum(CONTENT_BANK_CATEGORIES),
   title: z.string().trim().min(1).max(200),
   rawNotes: z.string().nullable(),
@@ -64,6 +69,10 @@ export const contentBankEntrySchema = z.object({
 
   // Resource specifics (for lead_magnet category)
   resourceType: z.enum(LEAD_MAGNET_TYPES).nullable(),
+  description: z.string().nullable().optional(),
+  problemSolved: z.string().nullable().optional(),
+  targetUseCase: z.string().nullable().optional(),
+  active: z.boolean().optional(),
   keyword: z.string().nullable(),
   deliveryUrl: z.string().url().nullable().or(z.literal("")),
   deliveryInstructions: z.string().nullable(),
@@ -82,8 +91,8 @@ export const contentBankEntrySchema = z.object({
 
 export type ContentBankEntry = z.infer<typeof contentBankEntrySchema>;
 
-export const createContentBankEntrySchema = z.object({
-  category: z.enum(CONTENT_BANK_CATEGORIES).default("observation"),
+const contentBankFieldsSchema = z.object({
+  category: z.enum(CONTENT_BANK_CATEGORIES),
   title: z.string().trim().min(1, "Title is required.").max(200),
   rawNotes: z.string().trim().max(10_000).optional(),
   takeaway: z.string().trim().max(2_000).optional(),
@@ -94,16 +103,33 @@ export const createContentBankEntrySchema = z.object({
 
   // Resource fields (mandatory if category is lead_magnet)
   resourceType: z.enum(LEAD_MAGNET_TYPES).optional(),
+  description: z.string().trim().max(2_000).optional(),
+  problemSolved: z.string().trim().max(1_500).optional(),
+  targetUseCase: z.string().trim().max(1_500).optional(),
+  active: z.boolean().optional(),
   keyword: z.string().trim().max(40).optional(),
   deliveryUrl: z.string().trim().url().max(2_000).optional().or(z.literal("")),
   deliveryInstructions: z.string().trim().max(2_000).optional(),
-  commentGateApproved: z.boolean().optional().default(false),
+  commentGateApproved: z.boolean().optional(),
+  reactionType: z.enum(REACTION_TYPES).optional(),
 
-  readiness: z.enum(CONTENT_BANK_READINESS).optional().default("ready"),
-  allowReuse: z.boolean().optional().default(false),
+  readiness: z.enum(CONTENT_BANK_READINESS).optional(),
+  allowReuse: z.boolean().optional(),
+}).strict();
+
+export const createContentBankEntrySchema = contentBankFieldsSchema.extend({
+  category: z.enum(CONTENT_BANK_CATEGORIES).default("observation"),
+  readiness: z.enum(CONTENT_BANK_READINESS).default("ready"),
+  allowReuse: z.boolean().default(false),
+});
+
+// Updates have no defaults: an omitted field must retain its stored value.
+export const updateContentBankEntrySchema = contentBankFieldsSchema.partial().extend({
+  expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export type CreateContentBankEntryInput = z.input<typeof createContentBankEntrySchema>;
+export type UpdateContentBankEntryInput = z.input<typeof updateContentBankEntrySchema>;
 
 export const sourceUsageRecordSchema = z.object({
   id: z.string().uuid(),
@@ -114,6 +140,7 @@ export const sourceUsageRecordSchema = z.object({
   status: z.enum(["reserved", "used", "published", "cancelled"]),
   contentIdeaId: z.string().uuid().nullable(),
   postId: z.string().uuid().nullable(),
+  newsletterId: z.string().uuid().nullable().optional(),
   angle: z.string().nullable(),
   takeaway: z.string().nullable(),
   createdAt: z.string(),
