@@ -1,0 +1,39 @@
+# P09 newsletter editions
+
+Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in that order; then P09 in IMPLEMENTATION-PLAN.md, the product specification and CURRENT.md. Work on main, one editor, no branch or PR. Baseline: `204803c`.
+
+## Delivered workflow
+
+Independent weekly edition list/editor at `/client/[client_id]/newsletter`. Select up to eight ready Content Bank entries and approved research findings, arrange/combine/separate sections, supply optional commentary, save and explicitly confirm an outline. Draft with the configured content role, independently check with the review role, edit into a new version, approve that exact saved version, copy/export its text, and record the real LinkedIn edition URL/date after manual publication. Editions never create calendar slots or operational Ideas and never change monthly allocation counts. No news quota or arbitrary single-post length is applied. Missing commentary is reported, not fabricated.
+
+Content Bank and Research offer deliberate newsletter entry points. Sources are fixed for an edition, snapshotted with hashes and client-scoped foreign keys. A different selection creates another edition; editing/reordering/grouping the current selection creates a new version. Evidence and context provenance remain protected application content and are excluded from copy/export. Export checks current approved version atomically and rejects storage/signed evidence links. Raw text previews do not execute HTML/Markdown.
+
+Source locks use the same key as standalone/calendar reservations. Content Bank reuse needs both stored permission and a new deliberate confirmation. Failure cancels only unused reservations; success commits one use for the edition; redrafting never adds another use. Manual text commits use on human approval after QA. Publication marks that use published. Archive preserves used/published history and retained references; it does not make a used entry unused. Research findings remain reusable dated references, and duplicate development fingerprints are rejected within an edition. Existing source deletion is blocked by composite references, with a safe dependency error for founder experiences.
+
+Paid operations have durable request IDs and a ten-minute lease. Only trusted server code can start/finish an attempt. Actors, access, account/password state, lease and version are checked again on commit. Concurrent requests cannot generate twice, replayed request IDs do not call the provider again, stale results cannot replace an edited edition, and user changes cannot forge QA/approval/use. An expired attempt can be deliberately retried. An already sent model request can incur cost even if its result cannot commit. AI QA is advisory: if unavailable, a visible warning remains for explicit human review. QA never approves or publishes.
+
+## Schema and configuration
+
+Migration: `supabase/migrations/20261009131721_newsletter_editions.sql`, created by Supabase CLI 2.120.0. Four RLS tables (editions, versions, sources, attempts), `source_usage.newsletter_id`, one founder composite unique index, narrowly granted authenticated save/transition/read RPCs and service-only generation RPCs. New private helpers have fixed search paths. The migration can be reapplied without resetting editions. No legacy rows are rewritten/deleted, and no dependency uses CASCADE to erase downstream records.
+
+No new secret, scheduler, worker or model assignment is needed. Reuse `OPENROUTER_API_KEY`, `LLM_CONTENT_PROVIDER/MODEL` and `LLM_REVIEW_PROVIDER/MODEL` from the existing web service. Newsletter composition uses Sonnet through the content role, QA uses Haiku through the review role according to Jawad's selected configuration. The worker continues research/RSS only. `CALENDAR_DRAFTING_ENABLED` stays off. Apply schema before deploying this code. Application rollback retains additive schema and source-use history; use a validated forward fix for schema changes. Database restore capability remains unverified; no backup is claimed.
+
+Primary database guidance reviewed: [RLS, grants and scoped policies](https://supabase.com/docs/guides/database/postgres/row-level-security), [current changelog](https://supabase.com/changelog). New objects explicitly revoke anonymous/direct writes; authenticated RPC bodies recheck permission and scope, and generation functions are service-only. Existing security-advisor warnings are tracked in P08's deployment guide; do not silently widen access or fix unrelated warnings in this slice.
+
+## Validation and release record
+
+Final lint (zero warnings), production build and diff review/check passed. Full suite `npm test -- --maxWorkers=2` passes **38 files / 327 tests**. After the last SQL reuse/publication guard correction, focused newsletter SQL/agent/calendar coverage passes **36 tests**. A standalone `tsc --noEmit` still reports only the pre-existing `tests/profiles.test.ts:121` archetypes error; Next production build passes its application type check. SQL tests run the complete migration chain on fresh PostgreSQL via PGlite, including allow/deny, mixed sources, duplicate development rollback, failures/retries, deliberate reuse, approval/copy version invalidation, publication and deletion dependencies. Provider tests use mocks; no paid call is inferred from these results. Production project identity/health and all prerequisite tables verified read-only. Migration and deployment are the next release steps.
+
+## Deferred extensive acceptance
+
+Jawad deferred guided manual checks until implementation is finished. Do not mark these passed:
+
+- Two approved findings plus a permitted experience: create, combine/separate/order sections, add commentary, confirm outline, draft, inspect source/date/voice accuracy and every QA warning.
+- Missing commentary is not transformed into invented personal beliefs/experience. Duplicate development is blocked. Old news stays a dated reference.
+- Private evidence is useful in review but absent from clipboard/export; signed/private links fail export.
+- Real provider failure releases the reservation; explicit retry creates one use. Two windows cannot generate twice. Access/password revocation and expired attempts reject late results.
+- Edit an approved edition: new version needs QA/human review; a stale copy/publication action fails. Copy/export the current approved text, publish manually in LinkedIn, and record URL/date. Usage is linked to the edition without altering calendar counts.
+- Draft-only, review-only, publish-only and two-account/two-agency access checks. Existing provisioning/password/delete/manual post workflows remain usable.
+- Responsive layout, keyboard/focus, labels, clipboard/download and actual LinkedIn editing. Live read-only smoke is not acceptance of the paid workflow.
+
+Phase status remains deployed, awaiting manual tests when the release succeeds. P10 is the extensive release/compatibility validation phase and needs a new explicit instruction.

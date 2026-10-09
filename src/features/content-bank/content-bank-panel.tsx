@@ -569,6 +569,9 @@ export function ContentBankPanel({
                   )}
 
                   {/* Reuse switch & usage controls */}
+                  {entry.readiness === "ready" && (isAdmin || permissions.includes("ideas_manage") && permissions.includes("posts_draft")) ? (
+                    <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small font-medium text-brand-purple underline">Use in newsletter</a>
+                  ) : null}
                   <div className="mt-2 flex items-center justify-between border-t border-border-grey pt-3">
                     <div className="flex items-center gap-2">
                       <button

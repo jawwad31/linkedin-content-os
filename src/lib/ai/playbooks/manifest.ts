@@ -4,11 +4,16 @@ export const PLAYBOOK_STAGES = [
   "planning",
   "content",
   "review",
+  "newsletter",
 ] as const;
 
 export type PlaybookStage = (typeof PLAYBOOK_STAGES)[number];
 
 export const PLAYBOOK_MANIFEST: Record<PlaybookStage, readonly string[]> = {
+  newsletter: [
+    "resources/principles/source-proof-safety.md",
+    "resources/craft/newsletter-editions.md",
+  ],
   "research-classification": [
     ".agents/skills/research/SKILL.md",
     "resources/context/business-context.md",

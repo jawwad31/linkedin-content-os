@@ -340,6 +340,7 @@ export function ResearchWorkbench({
             Select up to three approved findings. Each becomes its own post;
             repeat selections reuse its idea.
           </p>
+          {selected.length ? <Link className="text-small font-medium text-brand-purple underline" href={`/client/${clientId}/newsletter?new=true&sources=${selected.join(",")}`}>Add selected findings to newsletter</Link> : null}
         </div>
       ) : null}
       {created.length ? (

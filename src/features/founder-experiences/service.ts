@@ -98,6 +98,9 @@ export async function deleteFounderExperience(
     .maybeSingle<{ id: string }>();
 
   if (deleteError || !deleted) {
+    if (deleteError?.code === "23503") {
+      return { ok: false, code: "DEPENDENCY_CONFLICT", message: "This entry is referenced by saved content or a newsletter edition and cannot be deleted." };
+    }
     return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this entry. Please try again." };
   }
 

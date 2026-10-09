@@ -83,6 +83,12 @@ export function getNavItems(clientId: string): NavItem[] {
       accent: "purple",
     },
     {
+      label: "Newsletter",
+      href: `/client/${clientId}/newsletter`,
+      icon: FileText,
+      accent: "purple",
+    },
+    {
       label: "Settings",
       href: `/client/${clientId}/settings`,
       icon: Settings,

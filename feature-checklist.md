@@ -17,7 +17,7 @@ Repository read access and selected source files were verified. This package has
 | P06 | Resumable calendar draft batches | P05 | Implemented; migrations reported applied; Railway web e0acab0/login verified and database target user-confirmed. Manual acceptance deferred to extensive testing at Jawad's request, 2026-10-07. Production flag absent/off. |
 | P07 | Saved prompt and manual web research | P00/P04 | Feature adf3693 and OpenRouter follow-up e2525e6 deployed; both Railway services SUCCESS verified 2026-10-09. Lint/build and 34 files / 296 tests pass. Hidden provider values/live quality, full migration verification and deferred manual acceptance remain pending; not complete. |
 | P08 | Schedules, source monitoring, notifications | P07 | Deployed and enabled 2026-10-09: code dd1ddfe, additive schema applied, RLS/RPC grants/REST denial verified, both Railway services SUCCESS, worker minute polling and signed-in UI smoke observed. Lint/build, 36 files / 313 tests plus final focused 16-test pass. Jawad waived backup prerequisite; account schedules initially off; extensive manual acceptance deferred. See docs/p08-deployment.md. |
-| P09 | Newsletter editions | P02–P04/P07 | Planned |
+| P09 | Newsletter editions | P02–P04/P07 | Implemented locally; lint/build and 38 files / 327 tests pass, final focused SQL/agent/calendar 36-test pass. Additive migration and release verification next; extensive manual acceptance deferred. See docs/p09-deployment.md. |
 | P10 | Release validation and compatibility closure | Shipped slices | Planned |
 
 ## Acceptance gates
