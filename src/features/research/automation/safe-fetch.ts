@@ -84,11 +84,12 @@ export type FetchDependencies = {
 };
 // Connect using the vetted address, while retaining hostname for TLS and Host.
 // agent:false prevents reusing a connection resolved outside this validation.
-export const requestSourcePage: FetchDependencies["request"] = (
-  url,
-  address,
-  signal,
-) =>
+const requestPublicTextPage = (
+  url: URL,
+  address: Address,
+  signal: AbortSignal,
+  maxBytes: number,
+): ReturnType<FetchDependencies["request"]> =>
   new Promise((resolve, reject) => {
     const req = (url.protocol === "https:" ? https : http).get(
       url,
@@ -129,7 +130,7 @@ export const requestSourcePage: FetchDependencies["request"] = (
             res.headers["content-encoding"] !== "identity") ||
           (/charset=/i.test(type) &&
             !/charset\s*=\s*["']?(utf-8|utf8|us-ascii)/i.test(type)) ||
-          Number(res.headers["content-length"] ?? 0) > SOURCE_LIMITS.bytes
+          Number(res.headers["content-length"] ?? 0) > maxBytes
         ) {
           res.destroy();
           reject(new Error("SOURCE_UNAVAILABLE"));
@@ -139,7 +140,7 @@ export const requestSourcePage: FetchDependencies["request"] = (
         let size = 0;
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
-          if (size > SOURCE_LIMITS.bytes) {
+          if (size > maxBytes) {
             res.destroy();
             reject(new Error("SOURCE_TOO_LARGE"));
           } else chunks.push(chunk);
@@ -152,6 +153,11 @@ export const requestSourcePage: FetchDependencies["request"] = (
     );
     req.on("error", () => reject(new Error("SOURCE_UNAVAILABLE")));
   });
+export const requestSourcePage: FetchDependencies["request"] = (
+  url,
+  address,
+  signal,
+) => requestPublicTextPage(url, address, signal, SOURCE_LIMITS.bytes);
 const defaults: FetchDependencies = {
   resolve: (host) => lookup(host, { all: true, verbatim: true }),
   request: requestSourcePage,
@@ -232,9 +238,17 @@ export function extractPage(original: string, url: URL): SourcePage {
 }
 export async function fetchPublicText(
   value: string,
-  deps: FetchDependencies = defaults,
+  deps?: FetchDependencies,
   timeoutMs: number = SOURCE_LIMITS.timeoutMs,
+  maxBytes: number = SOURCE_LIMITS.bytes,
 ): Promise<{ url: string; original: string }> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 2_000_000)
+    throw new Error("SOURCE_TOO_LARGE");
+  const network = deps ?? {
+    ...defaults,
+    request: (url: URL, address: Address, signal: AbortSignal) =>
+      requestPublicTextPage(url, address, signal, maxBytes),
+  };
   const signal = AbortSignal.timeout(
     Math.min(timeoutMs, SOURCE_LIMITS.timeoutMs),
   );
@@ -243,7 +257,7 @@ export async function fetchPublicText(
     if (signal.aborted) throw new Error("SOURCE_UNAVAILABLE");
     // DNS is also subject to the total deadline; aborting must not await it forever.
     const addresses = await Promise.race([
-      deps.resolve(url.hostname.replace(/^\[|\]$/g, "")),
+      network.resolve(url.hostname.replace(/^\[|\]$/g, "")),
       new Promise<never>((_, reject) =>
         signal.addEventListener(
           "abort",
@@ -255,14 +269,14 @@ export async function fetchPublicText(
     if (!addresses.length || addresses.some((a) => !isPublicAddress(a.address)))
       throw new Error("SOURCE_BLOCKED");
     if (signal.aborted) throw new Error("SOURCE_UNAVAILABLE");
-    const response = await deps.request(url, addresses[0], signal);
+    const response = await network.request(url, addresses[0], signal);
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (!response.location || redirects === SOURCE_LIMITS.redirects)
         throw new Error("SOURCE_UNAVAILABLE");
       url = sourceUrl(new URL(response.location, url).href);
       continue;
     }
-    if (response.status !== 200 || response.body.length > SOURCE_LIMITS.bytes)
+    if (response.status !== 200 || response.body.length > maxBytes)
       throw new Error("SOURCE_UNAVAILABLE");
     return {
       original: new TextDecoder("utf-8", { fatal: true }).decode(response.body),

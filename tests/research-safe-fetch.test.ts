@@ -16,6 +16,7 @@ import { researchTick } from "@/worker/research-tick";
 import { fetchFeed } from "@/features/research/rss-collector/feed-fetch";
 import { parseFeedEntries } from "@/features/research/rss-collector/feed-parser";
 import { SAFE_FEED_ERROR } from "@/features/research/rss-collector/constants";
+import { MAX_FEED_BYTES } from "@/features/research/rss-collector/constants";
 const address = { address: "93.184.216.34", family: 4 };
 function deps(): FetchDependencies {
   return {
@@ -30,6 +31,31 @@ function deps(): FetchDependencies {
   };
 }
 describe("bounded source fetching and independent worker gates", () => {
+  it("allows bounded multi-article RSS XML without widening individual article limits", async () => {
+    const d = deps();
+    const xml =
+      "<rss><channel><item><title>Release</title><link>https://example.com/release</link><description>" +
+      "x".repeat(1_350_000) +
+      "</description></item></channel></rss>";
+    d.request = vi.fn(async () => ({
+      status: 200,
+      type: "application/rss+xml",
+      body: Buffer.from(xml),
+    }));
+    expect((await fetchFeed("https://example.com/feed", 20000, d)).ok).toBe(
+      true,
+    );
+    await expect(fetchSource("https://example.com/feed", d)).rejects.toThrow();
+    d.request = vi.fn(async () => ({
+      status: 200,
+      type: "application/rss+xml",
+      body: Buffer.alloc(MAX_FEED_BYTES + 1),
+    }));
+    expect(await fetchFeed("https://example.com/feed", 20000, d)).toEqual({
+      ok: false,
+      error: SAFE_FEED_ERROR,
+    });
+  });
   it("reads RSS/Atom using pinned safe fetching, rejects private redirects and ordinary HTML", async () => {
     const d = deps();
     const xml =

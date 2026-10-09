@@ -1,6 +1,10 @@
 import "server-only";
 
-import { FEED_FETCH_TIMEOUT_MS, SAFE_FEED_ERROR } from "./constants";
+import {
+  FEED_FETCH_TIMEOUT_MS,
+  MAX_FEED_BYTES,
+  SAFE_FEED_ERROR,
+} from "./constants";
 import {
   fetchPublicText,
   type FetchDependencies,
@@ -20,7 +24,12 @@ export async function fetchFeed(
   deps?: FetchDependencies,
 ): Promise<FeedFetchResult> {
   try {
-    const response = await fetchPublicText(url, deps, timeoutMs);
+    const response = await fetchPublicText(
+      url,
+      deps,
+      timeoutMs,
+      MAX_FEED_BYTES,
+    );
     return { ok: true, body: response.original };
   } catch {
     return { ok: false, error: SAFE_FEED_ERROR };

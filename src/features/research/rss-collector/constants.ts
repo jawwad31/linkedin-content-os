@@ -1,4 +1,6 @@
 export const FEED_FETCH_TIMEOUT_MS = 20_000;
+// Feeds often embed many full articles; keep a separate raw XML budget.
+export const MAX_FEED_BYTES = 2_000_000;
 export const MAX_ENTRIES_PER_FEED = 50;
 export const MAX_SUMMARY_LENGTH = 1200;
 
