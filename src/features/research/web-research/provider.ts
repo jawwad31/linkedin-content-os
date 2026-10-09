@@ -59,8 +59,9 @@ type Envelope = {
 
 function normalized(value: string) {
   return value
+    .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, " ")
     .trim();
 }
 export function normalizeEvidenceUrl(value: string): string {

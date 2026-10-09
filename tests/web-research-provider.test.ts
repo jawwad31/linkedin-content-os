@@ -118,6 +118,178 @@ describe("P07 bounded search and evidence mapping", () => {
     expect(grouped.findings[0].sources).toHaveLength(2);
     expect(grouped.findings[0].whatChanged).toContain(follow.whatChanged);
   });
+  it("deduplicates an RSS article also found by web search while retaining its citation and collection time", () => {
+    const source = researchFinding.sources[0];
+    const feed = {
+      id: "85284621-181c-41ac-bf9b-a489feef4c63",
+      url: `${source.url}?utm_source=rss#article`,
+      title: source.title,
+      text: researchFinding.whatChanged,
+      contentHash: "feed-url-hash",
+      fetchedAt: "2026-10-07T08:00:00Z",
+      kind: "rss" as const,
+      feedUrl: "https://example.com/feed.xml",
+      feedPublishedAt: "2026-10-06T00:00:00Z",
+    };
+    const rssFinding = {
+      ...researchFinding,
+      sources: [{ ...source, url: feed.url }],
+    };
+    const result = mapWebResponse(
+      webResponse([rssFinding, researchFinding]),
+      [],
+      now,
+      [feed],
+    );
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].sources).toHaveLength(1);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]).toMatchObject({
+      url: source.url,
+      fetchedAt: feed.fetchedAt,
+    });
+  });
+  it("groups different RSS/web reports of one event, labels a later report as repeated, and retains a distinct development", () => {
+    const coverage = {
+      ...researchFinding.sources[0],
+      url: "https://publisher.example/measurement-coverage",
+      sourceKind: "secondary" as const,
+    };
+    const feed = {
+      id: "85284621-181c-41ac-bf9b-a489feef4c63",
+      url: coverage.url,
+      title: coverage.title,
+      text: researchFinding.whatChanged,
+      contentHash: "coverage-hash",
+      fetchedAt: "2026-10-07T08:00:00Z",
+      kind: "rss" as const,
+      feedUrl: "https://publisher.example/feed.xml",
+      feedPublishedAt: null,
+    };
+    const report = {
+      ...researchFinding,
+      category: "trend_analysis",
+      sources: [coverage],
+    };
+    const grouped = mapWebResponse(
+      webResponse([report, researchFinding]),
+      [],
+      now,
+      [feed],
+    );
+    expect(grouped.findings).toHaveLength(1);
+    expect(grouped.findings[0].sources).toHaveLength(2);
+    const previous = [
+      { ...grouped.findings[0], id: "74bc6471-3771-4ddd-912f-2b97e386fc1d" },
+    ];
+    const other = {
+      ...researchFinding,
+      developmentKey: "different-account-security-release",
+      whatChanged:
+        "The platform introduced a separate account security control.",
+    };
+    const later = mapWebResponse(
+      webResponse([researchFinding, other]),
+      previous,
+      now,
+    );
+    expect(later.findings).toHaveLength(2);
+    expect(later.findings[0]).toMatchObject({
+      novelty: "repeated",
+      previousFindingId: previous[0].id,
+    });
+    expect(later.findings[1]).toMatchObject({
+      novelty: "new",
+      previousFindingId: null,
+    });
+  });
+  it("keeps a real update at the same article URL but rejects a follow-up supported only by another tracking link", () => {
+    const first = mapWebResponse(webResponse(), [], now).findings[0];
+    const previous = [{ ...first, id: "74bc6471-3771-4ddd-912f-2b97e386fc1d" }];
+    const follow = {
+      ...researchFinding,
+      whatChanged: "The platform expanded the setting to every account.",
+      novelty: "follow_up",
+      sources: [
+        {
+          ...researchFinding.sources[0],
+          announcedOn: "2026-10-08",
+          dateEvidence:
+            "Updated October 8: the setting is available to every account.",
+        },
+      ],
+    };
+    expect(
+      mapWebResponse(webResponse([follow]), previous, now).findings[0],
+    ).toMatchObject({
+      novelty: "follow_up",
+      previousFindingId: previous[0].id,
+    });
+    const trackingOnly = {
+      ...follow,
+      sources: [
+        {
+          ...researchFinding.sources[0],
+          url: `${researchFinding.sources[0].url}?utm_source=other#updated`,
+        },
+      ],
+    };
+    expect(
+      mapWebResponse(webResponse([trackingOnly]), previous, now).findings[0],
+    ).toMatchObject({
+      novelty: "repeated",
+      previousFindingId: previous[0].id,
+    });
+  });
+  it("keeps distinct non-English developments separate instead of collapsing their keys", () => {
+    const measurement = {
+      ...researchFinding,
+      developmentKey: "تحديث القياس",
+      whatChanged: "تم تحديث خيارات القياس لجميع الحسابات.",
+    };
+    const security = {
+      ...researchFinding,
+      developmentKey: "تحديث الأمان",
+      whatChanged: "تم طرح خيارات أمان جديدة لجميع الحسابات.",
+    };
+    const result = mapWebResponse(
+      webResponse([measurement, security]),
+      [],
+      now,
+    );
+    expect(result.findings).toHaveLength(2);
+    expect(
+      new Set(result.findings.map((finding) => finding.fingerprint)).size,
+    ).toBe(2);
+  });
+  it("recognizes changed non-English facts as a follow-up to their own development", () => {
+    const measurement = {
+      ...researchFinding,
+      developmentKey: "تحديث القياس",
+      whatChanged: "تم تحديث خيارات القياس لبعض الحسابات فقط.",
+    };
+    const first = mapWebResponse(webResponse([measurement]), [], now)
+      .findings[0];
+    const previous = [{ ...first, id: "74bc6471-3771-4ddd-912f-2b97e386fc1d" }];
+    const expanded = {
+      ...measurement,
+      whatChanged: "تم توسيع خيارات القياس لتشمل جميع الحسابات.",
+      novelty: "follow_up",
+      sources: [
+        {
+          ...measurement.sources[0],
+          announcedOn: "2026-10-08",
+          dateEvidence: "Updated October 8: available to every account.",
+        },
+      ],
+    };
+    expect(
+      mapWebResponse(webResponse([expanded]), previous, now).findings[0],
+    ).toMatchObject({
+      novelty: "follow_up",
+      previousFindingId: previous[0].id,
+    });
+  });
   it("reports no evidence honestly, retains candidates after invalid synthesis, and identifies partial tool failure/budget stops", () => {
     expect(mapWebResponse(webResponse([], []), [], now).outcome).toBe("empty");
     const invalid = webResponse();

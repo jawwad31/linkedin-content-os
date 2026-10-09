@@ -1,0 +1,60 @@
+# P10 release validation — 2026-10-09
+
+Status: automated regression and read-only production validation performed; extensive live acceptance remains deferred. P10 is not complete. Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then P10 in IMPLEMENTATION-PLAN.md, product-spec.md and CURRENT.md.
+
+Jawad asked whether RSS and web research deduplicate news and authorized proceeding to the next step if so. Baseline: main `af1cb277988548f1fd3a4eff1d7dfb4a08f42b0d`. This slice adds regression coverage, fixes non-English development/fact normalization, corrects an obsolete test fixture and records release evidence. It changes no schema, provider assignment or variable. The existing main deployment workflow is retained.
+
+## Deduplication that exists
+
+| Layer | Mechanism | Effect |
+|---|---|---|
+| RSS collection | Known tracking parameters/fragments removed; URL hash with database `UNIQUE (client_id, content_hash)` | The same article in two account feeds inserts once. Different articles and different accounts remain separate. |
+| Shared RSS/web briefing | Consulted URLs normalized; duplicate fingerprints skipped; normalized development keys grouped with citation links retained | Feed and web reports of one development appear as one finding in the briefing. |
+| Later briefings | Both manual and scheduled paths load up to 60 non-archived findings from the last 30 days | Matching developments are labelled repeated and linked to the earlier finding. Repeats remain in history. |
+| Meaningful follow-up | Changed summary, new URL/date evidence and the model's follow-up classification are all required | A real update can remain visible. A tracking-link variation alone is insufficient. An unrelated development is retained. |
+
+Story identity and materiality partly depend on the model matching development keys; this is not a guaranteed semantic news merger. Different keys for the same event can evade grouping. History outside the 30-day/60-record budget is not compared. Legacy RSS TrendCards retain their own synthesis/title checks and history; there is no shared master event ledger across every legacy screen. A feed article updated at the same URL is not reinserted by the collector: fresh web research and explicit article reads can supply updated evidence. Feed publication dates alone do not establish material new facts. No automatic Ideas/posts/approvals/publication follow from collection or research.
+
+New tests cover RSS plus web search returning one tracked/canonical article; two publishers covering the same development; a later repeat; a distinct event; changed dated evidence at the same URL; tracking-only false follow-ups; two account feeds colliding on the URL constraint; and account isolation. Existing meaningful-update, source/lease, retry and evidence tests remain.
+
+P10 found that ASCII-only normalization removed non-English letters: two unrelated Arabic development keys collapsed to the same empty key, and changed Arabic facts were labelled repeated. Both regression tests reproduced the failures. Normalization now preserves Unicode letters, numbers and combining marks after NFKC normalization. English behavior remains covered. Existing payloads/fingerprints are retained; comparison normalizes their original development keys rather than rewriting historical records. The two regressions and combined RSS/web/SQL focused checks now pass (20 tests).
+
+## Automated checks
+
+Lint, production build and full suite: **40 files / 341 tests passed** after the Unicode correction. Focused provider checks: 18 tests. The old profile-planning fixture used retired compatibility property names; it now uses the real compatibility builder. Its five focused tests and standalone `npx tsc --noEmit` pass. Lint was rerun after the fixture and Unicode corrections. No test assertion was weakened. Full code/test/document diff review and whitespace checks precede commit.
+
+Existing coverage includes scoped documents/context completeness, profile readership, source-mode compatibility, reservations/reuse, month/default separation and rounding, two claimants, cancellation/retry/revocation, exact approval versions, newsletter dependencies and safe URL/provider limits. These are isolated PostgreSQL/service/provider tests; they do not establish paid model quality or a complete real-user workflow.
+
+Local `.env.local` remains ignored. Scanning all 38 generated browser JavaScript files found neither the configured local OpenRouter/service-role credential literals nor their variable names. No credential value was printed. Hidden Railway values were not read, so this is local bundle evidence rather than a claim about unseen production values.
+
+## Production evidence
+
+- Supabase project `iphivwufbnmgbuqhicjn` / linkedin-content-os is ACTIVE_HEALTHY, PostgreSQL 17.6.1.155. All 36 public tables have RLS enabled; no public views. Research/newsletter service RPCs have fixed paths and service-only execute grants; their public editing RPCs retain deliberate scoped grants. No mutable-path public/private definer was found. RSS account/hash uniqueness, one active post per idea, calendar references and composite newsletter/source/account dependencies are present. The P04 source constraint includes all seven supported legacy/new source modes, and the expected separate profile fields exist.
+- Anonymous REST reads returned zero records for clients, Ideas, Posts, documents and calendar slots, and HTTP 401 / SQL 42501 for research findings, protected run inputs and newsletter attempts. The first run-input probe selected a nonexistent `id`; the corrected `briefing_id` probe denied access as intended. No unauthorized production mutation or signed-in impersonation was attempted.
+- Current inventory snapshot: three clients, two experiences, zero resources, 16 Ideas, four Posts, six feeds, 491 collected articles, one calendar, zero documents/findings/newsletter editions. No missing experience/resource usage owners were found. These counts are current observations, not pre/post migration equality proof; zero rows do not validate a populated workflow.
+- Registered MCP migration history contains `20261009091101` research_automation, `20261009134319` newsletter_editions and `20261009144430` rss_prompt_research. Older manually applied schema is present, including the P04 correction, but the older migration ledger is not fully reconciled. No migration replay, data transformation, deletion or history repair was performed. Backup/restore remains unverified.
+- Signed-in read-only smoke in the existing Bakerzhub workspace: Content Bank, Founder Experiences, Content Resources, Ideas, Posts, manual Publish, Calendar, Newsletter, Settings and Research load. Settings shows Business Profile, ICP & Offer, Personal Brand, Voice & Style, Guardrails & Proof. Existing source identity remains visible across Content Bank and Founder Experiences. Resource management remains on its legacy route; navigation is retained until equivalent management is verified in Content Bank. No forms were saved, sources reserved, paid runs initiated or schedules enabled. Browser navigation/locator timing errors were resolved by checking settled page content; attempted clicks alone were not counted as passes.
+- Railway names-only inspection: web has the twelve role variables and OpenRouter key; worker has the web-research provider/model pair and OpenRouter key. Both have research automation and existing RSS/Supabase settings. Hidden values, provider billing and paid quality remain unverified. The worker still starts with `npm run worker`; Calendar drafting flag is absent/off and there are zero enabled account schedules. No variable change is required for this validation slice.
+
+The Supabase changelog and [RLS documentation](https://supabase.com/docs/guides/database/postgres/row-level-security) were checked. The [PostgreSQL minor-upgrade notice](https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes) concerns ltree, legacy-cipher encryption, affected GiST indexes and custom operators; repository inspection found no such application usage. This is not a database upgrade or exhaustive extension audit.
+
+Security advisors retain the previous baseline: deny-all newsletter_attempts RLS information; mutable-path `set_updated_at`; three anonymous access-check definers whose bodies use `auth.uid()`/accepted membership; 17 deliberately exposed authenticated definers; disabled leaked-password protection. This slice changes no schema or grants and introduces no new database advisory category. Relevant remediation guides: [RLS policies](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [fixed function paths](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable), [anonymous definer grants](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [authenticated definer grants](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable), [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). These are retained findings/intentional API notices, not a claim of clean launch acceptance.
+
+## Required acceptance still pending
+
+| Gate | Available evidence | Remaining live check |
+|---|---|---|
+| Profiles and context | Serialization/retrieval tests; five Settings sections | Real save/reload and model adherence with permitted sources |
+| Standalone posts | Source/plan/service/QA tests; old records/routes load | Paid source-to-draft-to-exact-approval-to-manual-publication workflow |
+| Fresh supplied note/upload | Internal source modes support it | No standalone UI entry point; remains an implementation gap |
+| Content Bank and lead magnets | Scoped source/reuse tests; old entry/management routes | Populated delivery/approval/edit/reuse parity before retiring legacy navigation |
+| Monthly planning | SQL/default/allocation/concurrency tests; Calendar loads | Two months, immutable defaults, shortages and two-window contention |
+| Calendar batch drafting | Lease/retry/cancellation/revocation tests | Deliberate activation and interrupted/retried live batch; flag stays off |
+| Research and deduplication | Combined-source regression, grants and read-only UI | Paid source/date/key/material-update quality with real publishers; three older feed failures remain |
+| Daily schedules | DST/catch-up/shared-lock tests and deployed worker | Real due occurrence, manual collision, notification, pause; schedules stay off |
+| Newsletter | Mixed-source/ledger/approval/deletion tests; UI loads | Populated paid edition, edits, QA, exact approval, copy/export and manual publication |
+| Access and existing deletion | Isolated account/agency/capability/dependency tests | Real member/password-gate and authorized dependency-blocking checks in a test workspace |
+| Migration closure and recovery | Catalog/grant/dependency inventory | Older ledger reconciliation, populated legacy comparison and verified restore path |
+| Usability | Signed-in desktop read-only routes | Keyboard, mobile/tablet and failure-state acceptance |
+
+Proceed with the deferred extensive testing round when Jawad requests it. Keep unchecked gates pending. Record the exact commit/push and actual web/worker deployment results in CURRENT.md/completion report; a deployment alone does not complete P10. Application rollback restores the prior normalizer and test/document state; it does not reverse any existing database migration.

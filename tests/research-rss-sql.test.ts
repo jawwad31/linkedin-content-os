@@ -10,6 +10,8 @@ import {
   INITIAL_RESEARCH_PROMPT,
   RESEARCH_BUDGET,
 } from "@/features/research/web-research/contracts";
+import { normalizeUrl } from "@/features/research/rss-collector/url-normalization";
+import { hashNormalizedUrl } from "@/features/research/rss-collector/content-hash";
 let db: MigratedDb;
 beforeAll(async () => {
   db = await createMigratedDb();
@@ -34,6 +36,68 @@ async function rpc(name: string, params: unknown[]) {
   ).rows[0].r;
 }
 describe("RSS replaces blog discovery without losing history", () => {
+  it("rejects the same normalized article from two account feeds while retaining different articles and account isolation", async () => {
+    const ws = await seedWorkspace(db, "rss-dedup");
+    const other = await seedWorkspace(db, "rss-dedup-other");
+    await db.query("insert into public.profiles(id) values($1),($2)", [
+      ws.adminId,
+      other.adminId,
+    ]);
+    const feeds = (
+      await db.query<{ id: string; client_id: string }>(
+        "insert into public.rss_sources(client_id,source_name,feed_url) values($1,'First feed','https://example.com/feed'),($1,'Second feed','https://publisher.example/feed'),($2,'Other account feed','https://example.com/feed') returning id,client_id",
+        [ws.clientId, other.clientId],
+      )
+    ).rows;
+    const url = normalizeUrl(
+      "https://example.com/release?utm_source=rss#article",
+    )!;
+    const duplicateUrl = normalizeUrl(
+      "https://example.com/release?utm_source=second-feed#coverage",
+    )!;
+    expect(duplicateUrl).toBe(url);
+    const insert = (feed: (typeof feeds)[number], articleUrl: string) =>
+      db.query(
+        "insert into public.market_signal_items(client_id,rss_source_id,title,url,summary,source_name,content_hash) values($1,$2,'Public update',$3,'Publisher summary','Feed',$4)",
+        [feed.client_id, feed.id, articleUrl, hashNormalizedUrl(articleUrl)],
+      );
+    await service(async () => {
+      await insert(feeds[0], url);
+      await expect(insert(feeds[1], duplicateUrl)).rejects.toMatchObject({
+        code: "23505",
+      });
+      await insert(feeds[1], "https://example.com/separate-release");
+      await insert(feeds[2], duplicateUrl);
+    });
+    await asUser(db, ws.adminId, async () => {
+      expect(
+        (
+          await db.query(
+            "select id from public.market_signal_items where client_id=$1",
+            [ws.clientId],
+          )
+        ).rows,
+      ).toHaveLength(2);
+      expect(
+        (
+          await db.query(
+            "select id from public.market_signal_items where client_id=$1",
+            [other.clientId],
+          )
+        ).rows,
+      ).toHaveLength(0);
+    });
+    await asUser(db, other.adminId, async () => {
+      expect(
+        (
+          await db.query(
+            "select id from public.market_signal_items where client_id=$1",
+            [other.clientId],
+          )
+        ).rows,
+      ).toHaveLength(1);
+    });
+  });
   it("blocks new/resumed blog sources but preserves legacy records and snapshots scoped, active, recent RSS articles", async () => {
     const ws = await seedWorkspace(db, "rss-snapshot");
     const other = await seedWorkspace(db, "rss-other");

@@ -7,6 +7,7 @@ import {
 import { canRoleManageClientSetup } from "@/lib/access/roles";
 import { buildContentPrompt } from "@/features/posts/agents/content-agent";
 import { buildPlanningPrompt } from "@/features/ideas/agents/planning-agent";
+import { buildStrategyCompatibility } from "@/lib/ai/playbooks/strategy-compatibility";
 import { planFixture } from "./fixtures/generation-inputs";
 
 describe("Two Context Profiles (P01)", () => {
@@ -117,13 +118,14 @@ describe("Two Context Profiles (P01)", () => {
         sourceArticles: [],
       },
       recentAngles: [],
-      compatibility: {
-        archetypes: ["teardown"],
-        structures: ["contrarian_shift"],
-        frameworks: ["problem_agitate_solve"],
-        hooks: ["curiosity_gap"],
-        ctas: ["soft_comment"],
-      },
+      compatibility: buildStrategyCompatibility({
+        sourceMode: "founder_experience",
+        hasDocumentedBeforeAfter: false,
+        hasDocumentedResult: false,
+        hasDocumentedMistake: false,
+        approvedResourceIds: [],
+        commentGateEligible: false,
+      }),
       resources: [],
     });
 
