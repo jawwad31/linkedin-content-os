@@ -101,6 +101,43 @@ beforeEach(() => {
   });
 });
 describe("P07 authorized manual research service", () => {
+  it("uses the same protected RSS snapshot for a manual saved-prompt run", async () => {
+    vi.stubEnv("RESEARCH_AUTOMATION_ENABLED", "true");
+    const source = {
+      id: briefing,
+      url: "https://example.com/release",
+      title: "Release",
+      text: "Feed summary",
+      contentHash: "hash",
+      fetchedAt: new Date().toISOString(),
+      kind: "rss",
+      feedUrl: "https://example.com/feed.xml",
+      feedPublishedAt: null,
+    };
+    mocks.adminRpc.mockImplementation(async (name) => ({
+      data:
+        name === "load_rss_research_context"
+          ? { ok: true, sources: [source], omitted: 2 }
+          : { ok: true },
+      error: null,
+    }));
+    try {
+      expect(await runWebResearch(client, request)).toMatchObject({
+        ok: true,
+        data: { outcome: "partial" },
+      });
+      expect(mocks.adminRpc).toHaveBeenCalledWith("load_rss_research_context", {
+        p_client_id: client,
+        p_actor: user,
+        p_briefing_id: briefing,
+      });
+      expect(mocks.provider).toHaveBeenCalledWith(
+        expect.objectContaining({ sources: [source] }),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("denies gated users and unauthorized workspaces before RPCs or paid calls", async () => {
     mocks.user.mockResolvedValue({ user: null });
     expect((await runWebResearch(client, request)).ok).toBe(false);

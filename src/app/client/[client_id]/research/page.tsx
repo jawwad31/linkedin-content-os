@@ -147,6 +147,32 @@ export default async function ResearchPage({
                 check its deployment setup.
               </p>
             ) : null}
+            {role && result ? (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>RSS feeds</CardTitle>
+                  <CardDescription>
+                    Add RSS or Atom feed URLs to follow new articles. Daily
+                    research refreshes active feeds and uses recent articles
+                    alongside fresh web search. Your saved prompt guides the
+                    briefing even when no feeds are configured.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {result.ok ? (
+                    <RssSourcesPanel
+                      clientId={clientId}
+                      role={role}
+                      sources={result.sources}
+                    />
+                  ) : (
+                    <p role="alert" className="text-small text-danger-strong">
+                      RSS feeds could not be loaded. Refresh and try again.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
             {webResult[0].status === "fulfilled" &&
             webResult[1].status === "fulfilled" &&
             webResult[2].status === "fulfilled" ? (

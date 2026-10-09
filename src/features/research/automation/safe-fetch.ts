@@ -97,7 +97,7 @@ export const requestSourcePage: FetchDependencies["request"] = (
         signal,
         headers: {
           Accept:
-            "text/html,application/xhtml+xml,application/xml,text/xml,text/plain",
+            "text/html,application/xhtml+xml,application/rss+xml,application/atom+xml,application/xml,text/xml,text/plain",
           "Accept-Encoding": "identity",
           "User-Agent": "Virel-Research/1.0",
         },
@@ -230,11 +230,14 @@ export function extractPage(original: string, url: URL): SourcePage {
     links,
   };
 }
-export async function fetchSource(
+export async function fetchPublicText(
   value: string,
   deps: FetchDependencies = defaults,
-): Promise<SourcePage> {
-  const signal = AbortSignal.timeout(SOURCE_LIMITS.timeoutMs);
+  timeoutMs: number = SOURCE_LIMITS.timeoutMs,
+): Promise<{ url: string; original: string }> {
+  const signal = AbortSignal.timeout(
+    Math.min(timeoutMs, SOURCE_LIMITS.timeoutMs),
+  );
   let url = sourceUrl(value);
   for (let redirects = 0; redirects <= SOURCE_LIMITS.redirects; redirects++) {
     if (signal.aborted) throw new Error("SOURCE_UNAVAILABLE");
@@ -261,10 +264,17 @@ export async function fetchSource(
     }
     if (response.status !== 200 || response.body.length > SOURCE_LIMITS.bytes)
       throw new Error("SOURCE_UNAVAILABLE");
-    return extractPage(
-      new TextDecoder("utf-8", { fatal: true }).decode(response.body),
-      url,
-    );
+    return {
+      original: new TextDecoder("utf-8", { fatal: true }).decode(response.body),
+      url: url.href,
+    };
   }
   throw new Error("SOURCE_UNAVAILABLE");
+}
+export async function fetchSource(
+  value: string,
+  deps: FetchDependencies = defaults,
+): Promise<SourcePage> {
+  const page = await fetchPublicText(value, deps);
+  return extractPage(page.original, new URL(page.url));
 }

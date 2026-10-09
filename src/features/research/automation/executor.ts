@@ -10,6 +10,7 @@ import {
 import { researchWeb } from "../web-research/provider";
 import { fetchSource, type SourcePage } from "./safe-fetch";
 import { automationEnabled } from "./contracts";
+import { collectForClient } from "../rss-collector/collect-for-client";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type Claim = {
@@ -39,19 +40,9 @@ export async function refreshSource(
   let error: string | null = null;
   if (claim) await renewClaim(db, clientId, claim);
   try {
+    if (source.kind !== "article") throw new Error("SOURCE_BLOCKED");
     const index = await fetchSource(source.url);
     pages.push(index);
-    if (source.kind === "blog") {
-      // An explicit sitemap or a blog index is supported. At most two linked
-      // pages per source per occurrence; omitted coverage is reported below.
-      for (const link of index.links.slice(0, 2)) {
-        try {
-          pages.push(await fetchSource(link));
-        } catch (e) {
-          error = sourceError(e);
-        }
-      }
-    }
   } catch (e) {
     error = sourceError(e);
   }
@@ -69,7 +60,6 @@ export async function refreshSource(
   return {
     changed: Number(data.changed ?? 0),
     error,
-    limited: source.kind === "blog" && (pages[0]?.links.length ?? 0) > 2,
   };
 }
 function sourceError(error: unknown) {
@@ -84,7 +74,7 @@ export async function loadResearchSources(
   actor: string,
   briefingId: string,
 ) {
-  const { data, error } = await db.rpc("load_research_source_context", {
+  const { data, error } = await db.rpc("load_rss_research_context", {
     p_client_id: clientId,
     p_actor: actor,
     p_briefing_id: briefingId,
@@ -101,9 +91,12 @@ export async function loadResearchSources(
             text: z.string(),
             contentHash: z.string(),
             fetchedAt: z.string(),
+            kind: z.enum(["article", "rss"]).optional(),
+            feedUrl: z.string().url().optional(),
+            feedPublishedAt: z.string().nullable().optional(),
           }),
         )
-        .max(4),
+        .max(24),
       omitted: z.number().int().nonnegative(),
     })
     .safeParse(data);
@@ -171,33 +164,21 @@ export async function dispatchResearchSchedules(): Promise<{
     let sources: Awaited<ReturnType<typeof loadResearchSources>>["sources"] =
       [];
     try {
-      const monitors = await db
-        .from("research_sources")
-        .select("id,url,kind")
-        .eq("client_id", row.client_id)
-        .eq("enabled", true)
-        .eq("kind", "blog")
-        .is("deleted_at", null)
-        .limit(4);
-      if (monitors.error) throw new Error("SOURCE_HISTORY_UNAVAILABLE");
       const gaps: string[] = [];
-      for (const source of monitors.data ?? []) {
-        const refreshed = await refreshSource(
-          db,
-          row.client_id,
-          source,
-          claim.actor,
-          claim,
+      // Refresh feeds under this occurrence's existing RSS lock. This is
+      // collection only: the saved prompt still performs fresh web research.
+      const rss = await collectForClient(row.client_id, {
+        maxSources: 10,
+        beforeSource: () => renewClaim(db, row.client_id, claim),
+      });
+      if (rss.loadError || rss.errors.length)
+        gaps.push(
+          "Some RSS feeds could not be refreshed. Available feed articles and web search were used.",
         );
-        if (refreshed.error)
-          gaps.push(
-            "A monitored source could not be fully read. Its earlier version may be retained.",
-          );
-        if (refreshed.limited)
-          gaps.push(
-            "Blog discovery checked at most two linked pages. Additional links were not checked in this run.",
-          );
-      }
+      if (rss.skippedSources)
+        gaps.push(
+          `${rss.skippedSources} RSS feeds were outside this run's ten-feed refresh budget. Their collected history is retained.`,
+        );
       const context = await loadResearchSources(
         db,
         row.client_id,
@@ -207,7 +188,7 @@ export async function dispatchResearchSchedules(): Promise<{
       sources = context.sources;
       if (context.omitted)
         gaps.push(
-          `${context.omitted} additional saved source URLs were outside this run's four-source input budget. Their originals are retained.`,
+          `${context.omitted} sources were outside this run's input budget of four imported article URLs and twenty RSS articles. Their originals are retained.`,
         );
       const previous = await db
         .from("research_findings")

@@ -78,10 +78,16 @@ function extractAtomLink(node: XmlNode): string {
   if (links.length === 0) return "";
 
   const alternate = links.find(
-    (link) => typeof link === "object" && link !== null && (link as XmlNode)["@_rel"] === "alternate",
+    (link) =>
+      typeof link === "object" &&
+      link !== null &&
+      (link as XmlNode)["@_rel"] === "alternate",
   );
   const withoutRel = links.find(
-    (link) => typeof link === "object" && link !== null && !("@_rel" in (link as XmlNode)),
+    (link) =>
+      typeof link === "object" &&
+      link !== null &&
+      !("@_rel" in (link as XmlNode)),
   );
   const chosen = alternate ?? withoutRel ?? links[0];
 
@@ -104,6 +110,11 @@ export function parseFeedEntries(xml: string): ParsedFeedEntry[] {
     rss?: { channel?: { item?: XmlNode | XmlNode[] } };
     feed?: { entry?: XmlNode | XmlNode[] };
   };
+  if (
+    !(parsed.rss && Object.hasOwn(parsed.rss, "channel")) &&
+    !Object.hasOwn(parsed, "feed")
+  )
+    throw new Error("Not an RSS or Atom feed.");
 
   const rssItems = asArray(parsed.rss?.channel?.item);
   if (rssItems.length > 0) {

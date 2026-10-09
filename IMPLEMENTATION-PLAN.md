@@ -177,7 +177,7 @@ Use existing run guard and metadata logging. Do not build a parallel unguarded r
 
 Add per-account timezone/time/lookback, enabled/paused, durable last/next-run state, and one run identity per due occurrence. Resolve DST handling explicitly: one run per local day at the selected time; when time is skipped, use the next valid time, and do not run twice at a repeated time. Coalesce missed runs after downtime into one catch-up rather than a backlog storm. Manual and scheduled runs share locking.
 
-Implement Read article and Monitor blog with SSRF protections, bounded index/sitemap discovery, canonical URLs/content hashes, new/updated content detection, and safe inaccessible-source reporting. RSS can remain an adapter. Do not add an extra scheduler or remove stored RSS sources. In-app ready/partial/failure notifications link to saved briefings.
+Implement Read article and optional source monitoring with SSRF protections, bounded collection, canonical URLs/content hashes and safe inaccessible-source reporting. **2026-10-09 confirmed scope change:** Jawad replaced blog/index/sitemap discovery with the original RSS/Atom feed link setup. Reuse feed management/collection, include scoped recent feed summaries in prompt-based research, preserve retired blog history, and stop the page crawler. Do not add an extra scheduler or remove stored RSS sources. In-app ready/partial/failure notifications link to saved briefings.
 
 **Validate:** Karachi schedule, a DST timezone, pause/resume, downtime, two worker replicas, manual collision, one meaningful update, blocked/private redirect, unavailable blog, retry cap, notification dedupe. **Commit:** `feat: schedule research and monitor sources`.
 

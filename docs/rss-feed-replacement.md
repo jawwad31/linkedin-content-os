@@ -1,0 +1,19 @@
+# RSS feed replacement — 2026-10-09
+
+Jawad explicitly requested replacing blog monitoring with the previous RSS link setup. Read AGENTS.md, security-access.md, design.md, feature-checklist.md, CONTRIBUTING.md in that order, then P08, product-spec.md and CURRENT.md before continuing this slice.
+
+Web Briefings now includes the existing Add RSS source, edit, active/pause, archive and administrator deletion controls. The older RSS Focus & Sources tab, collected articles, TrendCards and Runs remain usable. Read article remains a separate import. Retired blog records/revisions are retained and can be archived; they are excluded from new research inputs and are never crawled. No URL is guessed or converted into a feed automatically.
+
+Daily research refreshes at most ten active feeds under the existing shared research lock, renewing its occurrence lease before each feed. The normal RSS worker interval still collects feeds independently. This refresh performs no classifier/synthesis AI call. Each daily run still uses the exact saved prompt and fresh bounded web search, even without feeds. No automatic Ideas, posts, newsletter editions, approval or publication.
+
+Protected input snapshots contain up to four imported article URLs plus the twenty newest RSS articles within the saved lookback. Only same-account active, non-archived feeds/articles qualify. Previous RSS keyword/classification status does not filter the prompt's evidence. Unknown publication dates remain unknown; collection time only qualifies undated entries for the lookback. Feed summaries and publisher-provided dates are labelled as such, with feed/article provenance; material claims and precise announcement/effective dates require web verification. Limits and failed feed refreshes are reported as partial coverage. Originals/history are retained.
+
+Feed fetching reuses public DNS/address pinning, redirect checks, a 512 KB raw-response ceiling and twenty-second timeout. RSS/Atom parsing preserves the existing fifty-entry/1,200-character-summary collection bounds. Ordinary HTML is rejected as a feed. This matches [Supabase's RLS guidance](https://supabase.com/docs/guides/database/postgres/row-level-security) for protected account records; no new table or public read grant is introduced.
+
+Migration `20261009142928_rss_prompt_research.sql` was created by Supabase CLI. It adds service-only `load_rss_research_context` (retains the old RPC for older application versions) and updates the existing admin-only source-management function to reject new/resumed blog monitoring. No data backfill, deletion, schema teardown or legacy-row rewrite. Existing functions' fixed search paths, actor/password/account checks and deliberate grants remain in place. Recovery is unverified; no backup/restore claim. Apply the reviewed forward function migration before the new app deployment; retain it on app rollback and use a forward correction if needed.
+
+No new Railway/local variables or provider keys are needed. Keep the existing worker and current RSS/web-research configuration. Account schedule enablement remains deliberate; this replacement does not enable it. Calendar batch drafting remains off. Full paid/live acceptance remains deferred at Jawad's request.
+
+Validation/deployment evidence is recorded in CURRENT.md and the completion report.
+
+Production schema applied as migration history `20261009144430` / `rss_prompt_research`. The new snapshot RPC is service-only (anonymous/authenticated execute denied), source management retains scoped authenticated access, and fixed function paths were verified. No new security advisor finding; prior baseline notices and remediation links remain in `p08-deployment.md` / `p09-deployment.md`. Lint/build and 40 files / 334 tests pass. Paid acceptance remains pending.

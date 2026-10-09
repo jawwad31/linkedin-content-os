@@ -134,7 +134,7 @@ Findings include source links, what changed, why it matters under the prompt, ac
 
 Human multi-selection offers Create separate posts or Add to newsletter; combining findings into one post is explicit. Preserve authorized review of research sources before downstream use. Briefing angle suggestions are not automatically persisted operational Ideas.
 
-Read this article imports one URL. Monitor this blog periodically checks a source index/sitemap (RSS may remain an internal adapter). Preserve existing RSS history while moving the primary UX to prompt-based research. Do not drop old sources or run duplicate schedulers.
+Read this article imports one URL. Jawad's 2026-10-09 decision replaces blog-page/index/sitemap monitoring with the existing RSS/Atom feed URL setup. Active feeds collect publisher-listed articles; daily research refreshes feeds and includes recent feed summaries alongside fresh web search guided by the saved prompt. Feeds are optional, not a hidden topic filter. Preserve existing RSS sources/articles and retired blog revisions; no automatic URL conversion or duplicate scheduler. Research still works without RSS feeds.
 
 Run scheduling uses saved timezone and durable due times. Shared account-scoped run guard covers manual and scheduled runs, with retry/backoff, lease expiry/recovery, a budget cap, and idempotent outcomes. In-app notifications are the first notification channel; email/push is not assumed available.
 

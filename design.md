@@ -324,7 +324,7 @@ Main controls: sources, topic/instructions, pillar, post type, funnel stage. Sug
 
 ### Research
 
-Saved prompt is a large editable admin field, with Save, Run saved prompt, schedule/timezone, pause, lookback, monitored URLs, and optional profile context (off). When edited but unsaved, distinguish Save and run from Run saved prompt. Findings show direct links, dates, what changed, consequence, action/angle, confidence, novelty, and coverage gaps. Multi-select offers Create separate posts or Add to newsletter; combining is deliberate. Keep RSS history accessible during transition without requiring feed setup.
+Saved prompt is a large editable admin field, with Save, Run saved prompt, schedule/timezone, pause, lookback, optional RSS feeds/article imports, and optional profile context (off). Jawad replaced blog-page monitoring with the existing RSS link setup on 2026-10-09. Show RSS feed management in Web Briefings; retain RSS Focus/history routes. When edited but unsaved, distinguish Save and run from Run saved prompt. Findings show direct links, dates, what changed, consequence, action/angle, confidence, novelty, and coverage gaps. Multi-select offers Create separate posts or Add to newsletter; combining is deliberate. Keep RSS history accessible without requiring feeds for prompt-based web research.
 
 ### Newsletter
 

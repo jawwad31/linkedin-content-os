@@ -295,7 +295,7 @@ describe("P08 durable schedules and scoped source records", () => {
       rpc("manage_research_source", [
         ws.clientId,
         "https://example.com/blog",
-        "blog",
+        "article",
         null,
         true,
       ]),
@@ -426,7 +426,7 @@ describe("P08 durable schedules and scoped source records", () => {
       rpc("manage_research_source", [
         ws.clientId,
         "https://example.com/sitemap.xml",
-        "blog",
+        "article",
         null,
         true,
       ]),
@@ -481,7 +481,7 @@ describe("P08 durable schedules and scoped source records", () => {
       rpc("manage_research_source", [
         ws.clientId,
         "https://example.com/sitemap.xml",
-        "blog",
+        "article",
         src.id,
         false,
         true,

@@ -29,7 +29,14 @@ export const sourceSchema = z
     enabled: z.boolean().optional(),
     archived: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      value.kind === "article" ||
+      (!!value.sourceId &&
+        (value.archived === true || value.enabled === false)),
+    "Blog monitoring has been replaced by RSS feeds.",
+  );
 export type ScheduleView = {
   version: number;
   enabled: boolean;

@@ -164,7 +164,7 @@ export async function runWebResearch(
         });
         if (context.omitted) {
           result.coverageGaps.push(
-            `${context.omitted} saved source URLs were outside this run's four-source input budget. Originals are retained.`,
+            `${context.omitted} sources were outside this run's input budget of four imported article URLs and twenty RSS articles. Originals are retained.`,
           );
           if (["success", "empty"].includes(result.outcome))
             result.outcome = "partial";

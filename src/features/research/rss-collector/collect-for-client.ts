@@ -12,6 +12,8 @@ export type CollectForClientSummary = {
   skippedInvalid: number;
   skippedStale: number;
   skippedError: number;
+  skippedSources: number;
+  loadError: boolean;
   errors: { sourceId: string; sourceName: string; message: string }[];
 };
 
@@ -24,6 +26,7 @@ export type CollectForClientSummary = {
  */
 export async function collectForClient(
   clientId: string,
+  options: { maxSources?: number; beforeSource?: () => Promise<void> } = {},
 ): Promise<CollectForClientSummary> {
   const admin = createAdminClient();
 
@@ -35,21 +38,33 @@ export async function collectForClient(
     skippedInvalid: 0,
     skippedStale: 0,
     skippedError: 0,
+    skippedSources: 0,
+    loadError: false,
     errors: [],
   };
 
-  const { data: sources, error } = await admin
+  let query = admin
     .from("rss_sources")
-    .select("id, client_id, source_name, feed_url, recency_days")
+    .select("id, client_id, source_name, feed_url, recency_days", {
+      count: "exact",
+    })
     .eq("client_id", clientId)
     .eq("active", true)
     .is("deleted_at", null);
+  if (options.maxSources) query = query.order("id").limit(options.maxSources);
+  const { data: sources, error, count } = await query;
 
   if (error || !sources) {
+    summary.loadError = true;
     return summary;
   }
+  summary.skippedSources = Math.max(
+    0,
+    (count ?? sources.length) - sources.length,
+  );
 
   for (const source of sources) {
+    await options.beforeSource?.();
     const result = await collectSource(admin, {
       id: source.id,
       clientId: source.client_id,

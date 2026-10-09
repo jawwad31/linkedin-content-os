@@ -37,7 +37,7 @@ export function RssSourcesPanel({
         <EmptyState
           icon={Rss}
           title="No RSS sources yet"
-          description="Add trusted industry feeds so Research can collect articles for TrendCards later."
+          description="Add trusted RSS or Atom feeds to collect articles for daily briefings and TrendCards."
         />
       ) : (
         <div className="flex flex-col gap-2">

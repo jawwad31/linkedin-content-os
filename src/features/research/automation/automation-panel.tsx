@@ -150,14 +150,13 @@ export function AutomationPanel({
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Articles and monitored sources</CardTitle>
+              <CardTitle>Read an article</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-small text-muted-foreground">
-                Read one public article, or monitor a blog index or sitemap
-                during daily research. Up to four sources. Discovery checks at
-                most two linked pages per blog each run; additional links remain
-                outside that run’s coverage.
+                Import a public article to use alongside your saved prompt. Up
+                to four article sources. Add RSS feeds below to follow new
+                articles from your preferred publishers.
               </p>
               <label className="block space-y-1 text-small">
                 Public URL
@@ -166,7 +165,7 @@ export function AutomationPanel({
                   aria-label="Research source URL"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com/blog"
+                  placeholder="https://example.com/article"
                   disabled={busy}
                 />
               </label>
@@ -177,17 +176,10 @@ export function AutomationPanel({
                 >
                   Read article
                 </Button>
-                <Button
-                  variant="outline"
-                  disabled={busy || !url}
-                  onClick={() => send("source", { url, kind: "blog" })}
-                >
-                  Monitor blog
-                </Button>
               </div>
               {!view.sources.length ? (
                 <p className="text-small text-muted-foreground">
-                  No imported or monitored sources yet.
+                  No imported articles yet.
                 </p>
               ) : (
                 <ul className="space-y-3">
@@ -205,8 +197,10 @@ export function AutomationPanel({
                         {source.url}
                       </a>
                       <p>
-                        {source.kind === "blog" ? "Blog monitoring" : "Article"}{" "}
-                        · {source.enabled ? "Enabled" : "Paused"} · Checked:{" "}
+                        {source.kind === "blog"
+                          ? "Retired blog source · history retained"
+                          : `Article · ${source.enabled ? "Enabled" : "Paused"}`}{" "}
+                        · Checked:{" "}
                         {source.checked_at
                           ? new Date(source.checked_at).toLocaleString()
                           : "not yet"}
@@ -218,35 +212,41 @@ export function AutomationPanel({
                         </p>
                       ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() =>
-                            send("source", {
-                              url: source.url,
-                              kind: source.kind,
-                              sourceId: source.id,
-                              enabled: !source.enabled,
-                            })
-                          }
-                        >
-                          {source.enabled ? "Pause source" : "Resume source"}
-                        </Button>
-                        {source.enabled ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              send("source", {
-                                url: source.url,
-                                kind: source.kind,
-                              })
-                            }
-                          >
-                            Read again
-                          </Button>
+                        {source.kind === "article" ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() =>
+                                send("source", {
+                                  url: source.url,
+                                  kind: source.kind,
+                                  sourceId: source.id,
+                                  enabled: !source.enabled,
+                                })
+                              }
+                            >
+                              {source.enabled
+                                ? "Pause source"
+                                : "Resume source"}
+                            </Button>
+                            {source.enabled ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() =>
+                                  send("source", {
+                                    url: source.url,
+                                    kind: source.kind,
+                                  })
+                                }
+                              >
+                                Read again
+                              </Button>
+                            ) : null}
+                          </>
                         ) : null}
                         <Button
                           variant="outline"

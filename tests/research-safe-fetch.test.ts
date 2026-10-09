@@ -13,6 +13,9 @@ import {
   type FetchDependencies,
 } from "@/features/research/automation/safe-fetch";
 import { researchTick } from "@/worker/research-tick";
+import { fetchFeed } from "@/features/research/rss-collector/feed-fetch";
+import { parseFeedEntries } from "@/features/research/rss-collector/feed-parser";
+import { SAFE_FEED_ERROR } from "@/features/research/rss-collector/constants";
 const address = { address: "93.184.216.34", family: 4 };
 function deps(): FetchDependencies {
   return {
@@ -27,6 +30,44 @@ function deps(): FetchDependencies {
   };
 }
 describe("bounded source fetching and independent worker gates", () => {
+  it("reads RSS/Atom using pinned safe fetching, rejects private redirects and ordinary HTML", async () => {
+    const d = deps();
+    const xml =
+      "<rss><channel><item><title>Release</title><link>https://example.com/release</link><description>Confirmed update</description><pubDate>Fri, 09 Oct 2026 09:00:00 GMT</pubDate></item></channel></rss>";
+    d.request = vi.fn(async () => ({
+      status: 200,
+      type: "application/rss+xml",
+      body: Buffer.from(xml),
+    }));
+    const result = await fetchFeed("https://example.com/feed", 20000, d);
+    expect(result).toEqual({ ok: true, body: xml });
+    expect(parseFeedEntries(xml)).toMatchObject([
+      {
+        title: "Release",
+        url: "https://example.com/release",
+        publishedAt: "2026-10-09T09:00:00.000Z",
+      },
+    ]);
+    expect(
+      parseFeedEntries(
+        '<feed><entry><title>Atom release</title><link rel="alternate" href="https://example.com/atom"/></entry></feed>',
+      )[0].url,
+    ).toBe("https://example.com/atom");
+    expect(() =>
+      parseFeedEntries("<html><body>Not a feed</body></html>"),
+    ).toThrow();
+    d.request = vi.fn(async () => ({
+      status: 302,
+      type: "",
+      body: Buffer.alloc(0),
+      location: "http://169.254.169.254",
+    }));
+    expect(await fetchFeed("https://example.com/feed", 20000, d)).toEqual({
+      ok: false,
+      error: SAFE_FEED_ERROR,
+    });
+    expect(d.request).toHaveBeenCalledTimes(1);
+  });
   it("pins the actual HTTP lookup, disables connection reuse and rejects compressed/binary responses", async () => {
     let type = "text/html";
     let encoding = "identity";

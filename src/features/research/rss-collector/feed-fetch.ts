@@ -1,10 +1,13 @@
 import "server-only";
 
 import { FEED_FETCH_TIMEOUT_MS, SAFE_FEED_ERROR } from "./constants";
+import {
+  fetchPublicText,
+  type FetchDependencies,
+} from "../automation/safe-fetch";
 
 export type FeedFetchResult =
-  | { ok: true; body: string }
-  | { ok: false; error: string };
+  { ok: true; body: string } | { ok: false; error: string };
 
 /**
  * Fetches a feed URL server-side with a hard timeout via AbortController.
@@ -14,28 +17,12 @@ export type FeedFetchResult =
 export async function fetchFeed(
   url: string,
   timeoutMs: number = FEED_FETCH_TIMEOUT_MS,
+  deps?: FetchDependencies,
 ): Promise<FeedFetchResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent": "AIXelerateContentOS-RSSCollector/1.0",
-      },
-    });
-
-    if (!response.ok) {
-      return { ok: false, error: SAFE_FEED_ERROR };
-    }
-
-    const body = await response.text();
-    return { ok: true, body };
+    const response = await fetchPublicText(url, deps, timeoutMs);
+    return { ok: true, body: response.original };
   } catch {
     return { ok: false, error: SAFE_FEED_ERROR };
-  } finally {
-    clearTimeout(timeout);
   }
 }
