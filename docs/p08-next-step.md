@@ -2,6 +2,8 @@
 
 Prepared 2026-10-09 after Jawad asked whether the RSS worker is still needed, whether Virel is moving in the right direction, and to move to the next step. This is the implementation brief for the next focused phase; it does not claim P08 is implemented.
 
+Implementation update 2026-10-09: Jawad subsequently said "alright lets proceed". P08 code is now implemented; release and activation evidence is recorded in `docs/handoffs/CURRENT.md` and `docs/p08-deployment.md`. The prompt below records the authorized scope. Production migration/automation activation and deferred manual acceptance are separate pending gates.
+
 ## Architecture assessment
 
 Keep the existing Railway worker service. It currently performs scheduled RSS collection and optionally classification/TrendCard synthesis. Manual web research and individual post generation are handled by the web application, so those actions do not require the worker. The approved next phase requires background scheduled research, source monitoring and notifications; extend the existing worker for those tasks. RSS is an optional source adapter. Do not add a second scheduler or remove stored RSS sources/history. The service may retain its infrastructure name `rss-worker`; renaming it is not a prerequisite.

@@ -25,6 +25,8 @@ import {
 } from "./contracts";
 import { getPreviousFindings } from "./queries";
 import { researchWeb } from "./provider";
+import { automationEnabled } from "../automation/contracts";
+import { loadResearchSources } from "../automation/executor";
 
 type Result<T> =
   { ok: true; data: T } | { ok: false; code: string; message: string };
@@ -147,19 +149,31 @@ export async function runWebResearch(
           useProfileContext: prepared.useProfileContext,
         };
         // The DB captures optional profile context only when the saved toggle is on.
+        const admin = createAdminClient();
+        const context = automationEnabled()
+          ? await loadResearchSources(admin, clientId, user.id, prepared.id)
+          : { sources: [], omitted: 0 };
+        const sources = context.sources;
         const result = await researchWeb({
           clientId,
           userId: user.id,
           settings,
           profile: prepared.profile,
           previous,
+          sources,
         });
+        if (context.omitted) {
+          result.coverageGaps.push(
+            `${context.omitted} saved source URLs were outside this run's four-source input budget. Originals are retained.`,
+          );
+          if (["success", "empty"].includes(result.outcome))
+            result.outcome = "partial";
+        }
         const currentUser = await authorize(clientId);
         if (currentUser?.id !== user.id) {
           problem = "FORBIDDEN";
           throw new Error("ACCESS_CHANGED");
         }
-        const admin = createAdminClient();
         const { data: finished, error: finishError } = await admin.rpc(
           "finish_web_research",
           {

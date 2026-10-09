@@ -372,7 +372,7 @@ export function ResearchWorkbench({
         </p>
       ) : null}
       {briefings.map((briefing) => (
-        <Card key={briefing.id}>
+        <Card key={briefing.id} id={`briefing-${briefing.id}`}>
           <CardHeader>
             <CardTitle>{outcomes[briefing.outcome]}</CardTitle>
             <p className="text-caption text-muted-foreground">

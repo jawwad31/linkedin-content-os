@@ -30,6 +30,9 @@ import {
 } from "@/features/research/research-runs/run-guard";
 import type { ResearchRunSummary } from "@/features/research/research-runs/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { dispatchResearchSchedules } from "@/features/research/automation/executor";
+import { automationEnabled } from "@/features/research/automation/contracts";
+import { researchTick } from "./research-tick";
 
 const SYNTHESIZE_STAGE = "synthesize";
 
@@ -89,18 +92,25 @@ function readWorkerEnv(): WorkerEnv {
   const enabled =
     (process.env.RSS_COLLECTOR_ENABLED ?? "true").toLowerCase() !== "false";
 
-  const intervalHoursRaw = Number(process.env.RSS_COLLECTOR_INTERVAL_HOURS ?? "6");
+  const intervalHoursRaw = Number(
+    process.env.RSS_COLLECTOR_INTERVAL_HOURS ?? "6",
+  );
   const intervalHours =
     Number.isFinite(intervalHoursRaw) && intervalHoursRaw > 0
       ? intervalHoursRaw
       : 6;
 
   const runOnStart =
-    (process.env.RSS_COLLECTOR_RUN_ON_START ?? "true").toLowerCase() !== "false";
+    (process.env.RSS_COLLECTOR_RUN_ON_START ?? "true").toLowerCase() !==
+    "false";
 
-  const batchDelayMsRaw = Number(process.env.RSS_COLLECTOR_BATCH_DELAY_MS ?? "0");
+  const batchDelayMsRaw = Number(
+    process.env.RSS_COLLECTOR_BATCH_DELAY_MS ?? "0",
+  );
   const batchDelayMs =
-    Number.isFinite(batchDelayMsRaw) && batchDelayMsRaw >= 0 ? batchDelayMsRaw : 0;
+    Number.isFinite(batchDelayMsRaw) && batchDelayMsRaw >= 0
+      ? batchDelayMsRaw
+      : 0;
 
   const fullPipeline =
     (process.env.RESEARCH_PIPELINE_FULL ?? "false").toLowerCase() === "true";
@@ -258,21 +268,30 @@ async function runCollectionCycle(
         summary.relevantCount += result.classify.summary.relevantCount;
         summary.irrelevantCount += result.classify.summary.irrelevantCount;
         summary.classificationErrorCount += result.classify.summary.errorCount;
-      } else if (result.classify && result.classify.reason !== "not_configured") {
+      } else if (
+        result.classify &&
+        result.classify.reason !== "not_configured"
+      ) {
         summary.classificationErrorCount += 1;
       }
 
       if (result.synthesize?.ok) {
         summary.signalsCreated += result.synthesize.summary.signalsCreated;
-        summary.synthesisErrorCount += result.synthesize.summary.synthesisErrorCount;
-      } else if (result.synthesize && result.synthesize.reason !== "not_configured") {
+        summary.synthesisErrorCount +=
+          result.synthesize.summary.synthesisErrorCount;
+      } else if (
+        result.synthesize &&
+        result.synthesize.reason !== "not_configured"
+      ) {
         summary.synthesisErrorCount += 1;
       }
     } else if (guardResult.ok && guardResult.status === "locked") {
       summary.lockedRuns += 1;
     } else {
       summary.failedRuns += 1;
-      console.error("[rss-worker] Research run failed for one client; continuing.");
+      console.error(
+        "[rss-worker] Research run failed for one client; continuing.",
+      );
     }
 
     if (batchDelayMs > 0) {
@@ -294,44 +313,62 @@ const MAX_SET_TIMEOUT_MS = 2_147_483_647;
 
 let stopped = false;
 let timer: NodeJS.Timeout | null = null;
+let nextCollectionAt = 0;
 
 function scheduleNextCycle(env: WorkerEnv): void {
   if (stopped) return;
 
   const intervalMs = Math.min(
-    env.intervalHours * 60 * 60 * 1000,
+    automationEnabled() ? 60_000 : env.intervalHours * 60 * 60 * 1000,
     MAX_SET_TIMEOUT_MS,
   );
 
   timer = setTimeout(async () => {
     if (stopped) return;
 
-    try {
-      const summary = await runCollectionCycle(env.batchDelayMs, env.fullPipeline);
-      logCycleSummary(summary);
-    } catch {
-      console.error(
-        "[rss-worker] Collection cycle failed; will retry next interval.",
-      );
-    }
+    await runTick(env);
 
     scheduleNextCycle(env);
   }, intervalMs);
 }
 
 async function mainLoop(env: WorkerEnv): Promise<void> {
-  if (env.runOnStart) {
-    try {
-      const summary = await runCollectionCycle(env.batchDelayMs, env.fullPipeline);
-      logCycleSummary(summary);
-    } catch {
-      console.error(
-        "[rss-worker] Initial collection cycle failed; will retry next interval.",
-      );
-    }
-  }
-
+  nextCollectionAt = env.runOnStart
+    ? 0
+    : Date.now() + env.intervalHours * 3_600_000;
+  await runTick(env);
   scheduleNextCycle(env);
+}
+async function runTick(env: WorkerEnv): Promise<void> {
+  await researchTick(
+    {
+      rssEnabled: env.enabled,
+      automationEnabled: automationEnabled(),
+      rssDue: Date.now() >= nextCollectionAt,
+    },
+    {
+      research: async () => {
+        const summary = await dispatchResearchSchedules();
+        console.log(
+          "[rss-worker] Scheduled research cycle:",
+          JSON.stringify(summary),
+        );
+      },
+      rss: async () => {
+        try {
+          logCycleSummary(
+            await runCollectionCycle(env.batchDelayMs, env.fullPipeline),
+          );
+        } finally {
+          nextCollectionAt = Date.now() + env.intervalHours * 3_600_000;
+        }
+      },
+      onError: (task) =>
+        console.error(
+          `[rss-worker] ${task} cycle failed; will retry on its next tick.`,
+        ),
+    },
+  );
 }
 
 function handleShutdown(signal: string): void {
@@ -358,8 +395,10 @@ async function start(): Promise<void> {
     `[rss-worker] Interval: ${env.intervalHours}h, run on start: ${env.runOnStart}.`,
   );
 
-  if (!env.enabled) {
-    console.log("[rss-worker] RSS_COLLECTOR_ENABLED=false — worker is idle.");
+  if (!env.enabled && !automationEnabled()) {
+    console.log(
+      "[rss-worker] RSS and research automation are disabled — worker is idle.",
+    );
     return;
   }
 
@@ -369,10 +408,7 @@ async function start(): Promise<void> {
   await mainLoop(env);
 }
 
-start().catch((error) => {
-  console.error(
-    "[rss-worker] Failed to start:",
-    error instanceof Error ? error.message : "unknown error",
-  );
+start().catch(() => {
+  console.error("[rss-worker] Failed to start. Check service configuration.");
   process.exit(1);
 });

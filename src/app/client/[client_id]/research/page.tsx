@@ -40,6 +40,8 @@ import {
   getWebBriefings,
 } from "@/features/research/web-research/queries";
 import { ResearchWorkbench } from "@/features/research/web-research/research-workbench";
+import { getAutomationView } from "@/features/research/automation/service";
+import { AutomationPanel } from "@/features/research/automation/automation-panel";
 import { canDraftPosts, canManageIdeas } from "@/lib/access/client-access";
 
 export default async function ResearchPage({
@@ -52,6 +54,7 @@ export default async function ResearchPage({
     articles?: string;
     article_page?: string;
     article_page_size?: string;
+    briefing?: string;
   }>;
 }) {
   const { client_id: clientId } = await params;
@@ -60,6 +63,7 @@ export default async function ResearchPage({
     articles: articlesParam,
     article_page: articlePageParam,
     article_page_size: articlePageSizeParam,
+    briefing: briefingParam,
   } = await searchParams;
   const activeTab = parseResearchTab(tabParam);
   const { user } = await getServerUser();
@@ -94,11 +98,12 @@ export default async function ResearchPage({
     activeTab === "briefings" && role
       ? await Promise.allSettled([
           canManage ? getResearchSettings(clientId) : Promise.resolve(null),
-          getWebBriefings(clientId),
+          getWebBriefings(clientId, briefingParam),
           Promise.all([
             canDraftPosts(user.id, clientId),
             canManageIdeas(user.id, clientId),
           ]),
+          getAutomationView(clientId, canManage),
         ])
       : null;
 
@@ -128,6 +133,20 @@ export default async function ResearchPage({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {activeTab === "briefings" && webResult ? (
           <div className="lg:col-span-2">
+            {webResult[3].status === "fulfilled" && webResult[3].value ? (
+              <div className="mb-6">
+                <AutomationPanel
+                  key={`${clientId}:${webResult[3].value.schedule.version}:${webResult[3].value.versions[0]?.id ?? "none"}:${webResult[3].value.sources.map((s) => s.enabled).join()}`}
+                  clientId={clientId}
+                  view={webResult[3].value}
+                />
+              </div>
+            ) : webResult[3].status === "rejected" ? (
+              <p role="alert" className="mb-4 text-small text-danger-strong">
+                Research automation could not be loaded. An administrator must
+                check its deployment setup.
+              </p>
+            ) : null}
             {webResult[0].status === "fulfilled" &&
             webResult[1].status === "fulfilled" &&
             webResult[2].status === "fulfilled" ? (
@@ -138,9 +157,7 @@ export default async function ResearchPage({
                 briefings={webResult[1].value}
                 canManage={canManage}
                 canCreatePosts={webResult[2].value.every(Boolean)}
-                providerConfigured={
-                  !!getLlmConfig("webResearch")
-                }
+                providerConfigured={!!getLlmConfig("webResearch")}
               />
             ) : (
               <p role="alert" className="text-small text-danger-strong">

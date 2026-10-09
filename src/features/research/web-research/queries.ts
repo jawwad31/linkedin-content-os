@@ -49,9 +49,10 @@ export async function getResearchSettings(
 
 export async function getWebBriefings(
   clientId: string,
+  briefingId?: string,
 ): Promise<BriefingView[]> {
   const db = await createClient();
-  const { data, error } = await db
+  let query = db
     .from("research_briefings")
     .select(
       "id,revision,outcome,summary,coverage_gaps,error_code,created_at,candidate_count,run_id",
@@ -59,6 +60,9 @@ export async function getWebBriefings(
     .eq("client_id", clientId)
     .order("created_at", { ascending: false })
     .limit(10);
+  if (briefingId && z.string().uuid().safeParse(briefingId).success)
+    query = query.eq("id", briefingId);
+  const { data, error } = await query;
   if (error) throw new Error("RESEARCH_SCHEMA_UNAVAILABLE");
   if (!data?.length) return [];
   const ids = data.map((row) => row.id);
