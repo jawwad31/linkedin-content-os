@@ -1,6 +1,6 @@
 # Content Bank management completion — 2026-10-09
 
-Status: implemented, awaiting normal deployment and deferred testing. This is a focused P02/P10 completion, not a new roadmap phase. Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then P02/P10 in IMPLEMENTATION-PLAN.md, product-spec.md and CURRENT.md. Baseline: main `fc2b8ad02fc6dd9a4bcab2c70c49f4ff395c0a2f`.
+Status: feature `bfa6d57bf077b870dfe3b27c2dcff0ce71fd1115` pushed/deployed; testing deferred. This is a focused P02/P10 completion, not a new roadmap phase. Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then P02/P10 in IMPLEMENTATION-PLAN.md, product-spec.md and CURRENT.md. Baseline: main `fc2b8ad02fc6dd9a4bcab2c70c49f4ff395c0a2f`.
 
 ## Change
 
@@ -32,7 +32,7 @@ The previous `posts?sourceId=...` link did not load a selected source. It is rep
 
 No migration, variable, dependency, provider, worker or scheduler change. Existing source IDs/data, legacy routes/navigation, reservations, one active post per Idea, QA/human approval and manual publishing services remain. Calendar batch drafting stays off; account schedules stay paused. Unrelated `supabase/.temp/` is excluded.
 
-Source/diff review only. At Jawad's explicit request, automated tests, local lint/build/type checks, browser/HTTP/API/database acceptance and paid model calls were not run. Railway's normal automatic compilation/deployment is not a manual or functional acceptance pass. The commit/push and actual web/worker platform results will be recorded in CURRENT.md and the completion report.
+Source/diff review only. At Jawad's explicit request, automated tests, local lint/build/type checks, browser/HTTP/API/database acceptance and paid model calls were not run. Railway's normal automatic compilation/deployment is not a manual or functional acceptance pass. Exact-feature-SHA worker `f7a86c7f-f50b-4697-8876-de4c16a1deb1` reports SUCCESS at 17:26:41 UTC. Web `27e4fca4-f0c9-49eb-be3d-ea792b1a5c56` reports SLEEPING at 17:33:10 UTC; describe-service confirms live state and existing `sleepApplication=true`. The prior web deployment is removed. No app request was sent to wake it; web SUCCESS was not directly observed before sleep. This documentation-only closeout retains application code and triggers another normal deployment; its final exact-SHA platform state belongs to the completion report.
 
 The deferred manual round must compare populated legacy and Bank records before/after edits, exercise independent notes/description/activation/approval/delivery, clearing fields, stale edits, retry/error presentation, resource/experience/category permission denial, work-log versus reaction capabilities, archive/restore, refreshed legacy writes, source usage and available output links, and keyboard/mobile behavior. Existing administrator deletion must still enforce its dependencies. Required acceptance remains pending; keep legacy navigation and do not mark P02/P10 complete.
 
