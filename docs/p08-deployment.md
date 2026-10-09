@@ -1,6 +1,8 @@
 # P08 — scheduled research, monitored sources and notifications
 
-Updated 2026-10-09. Implementation is validated and ready for a feature-off release. Production activation and manual acceptance are separate steps; P08 is not complete until those gates pass.
+Updated 2026-10-09. Code `dd1ddfe` is deployed with automation off. Both Railway services report SUCCESS at the exact feature commit. Production activation and manual acceptance are separate steps; P08 is not complete until those gates pass.
+
+Release evidence: web `8175ad7e-26f3-4556-bde9-ad71f46c1266`, worker `060c279b-3c29-4361-8480-ac5a9cba7034`; `/login` 200, unauthenticated Client 1 Research 307 to login. Existing worker starts and completes RSS collection with zero failed runs. Three feed collection errors also occur in its previous deployment; no new scheduled AI run was activated. No production schema, Railway variable/settings or paid research call was changed by Codex.
 
 ## Resulting behavior
 
@@ -25,6 +27,8 @@ Migration: `supabase/migrations/20261009072944_research_automation.sql`, created
 6. Set `RESEARCH_AUTOMATION_ENABLED=true` on web and worker only after schema/configuration readiness. All account schedules still start off until an authorized admin deliberately saves an enabled schedule. RSS may be disabled independently. `RSS_COLLECTOR_BATCH_DELAY_MS` remains optional on the worker and defaults to zero; no Calendar flag is required for research.
 
 Backup check, 2026-10-09: the signed-in production project's [Database Backups page](https://supabase.com/dashboard/project/iphivwufbnmgbuqhicjn/database/backups/scheduled) shows Free Plan and states that project backups are not included. No separate backup/restore path has been verified. A backup is a saved copy of the database that can be restored if needed; no production SQL is applied until that recovery path exists. Follow the official [Supabase backup instructions](https://supabase.com/docs/guides/platform/backups) for a private local CLI dump and recovery procedure, or verify an existing backup. An upgrade is not required merely to deploy the code with the flag off.
+
+Jawad answered "No / I'm not sure" about a downloaded backup. The normal [CLI backup/restore procedure](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) needs Docker, the Session pooler connection string from Connect, and the existing database password entered privately on the local computer. `pg_dump`, `psql` and Docker are currently unavailable in PATH; no private database password was supplied. A future backup should live outside Git in private storage; do not print data/credentials, put passwords into chat, or restore over production just to test it. Verify export success and restore capability in an isolated target. Storage files need separate preservation. No database password reset, paid upgrade or destructive restore has been performed.
 
 ### Railway variable changes
 
