@@ -25,25 +25,23 @@ export default async function ContentBankPage({
 
   const result = await getContentBankEntries(clientId);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Content Bank"
-        description="Unified vault of founder experiences, observations, experiments, case studies, and lead magnets. Manage explicit reuse and draft assignments."
-      />
-
-      {result.ok ? (
-        <ContentBankPanel
-          clientId={clientId}
-          role={access.role}
-          permissions={access.permissions}
-          entries={result.entries}
-        />
-      ) : (
+  if (!result.ok) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Content Bank" />
         <p className="text-small text-danger-strong">
           We could not load the Content Bank. Please try again.
         </p>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <ContentBankPanel
+      clientId={clientId}
+      role={access.role}
+      permissions={access.permissions}
+      entries={result.entries}
+    />
   );
 }

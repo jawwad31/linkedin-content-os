@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, BookOpen, CalendarPlus, FilePenLine, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Archive, BookOpen, CalendarPlus, ChevronDown, FileText, FilePenLine, Lightbulb, Link2, Mail, Pencil, Plus, RefreshCw, Search, Trash2, TrendingUp, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
+import { PageHeader } from "@/components/ui/page-header";
+import { SegmentedNavigation } from "@/components/ui/segmented-navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +21,7 @@ import {
 import { formatUtcDate } from "@/lib/format/date";
 
 import {
-  CONTENT_BANK_CATEGORIES, CONTENT_BANK_CATEGORY_LABELS, CONTENT_BANK_READINESS, USAGE_STATUSES,
+  CONTENT_BANK_CATEGORY_LABELS, CONTENT_BANK_READINESS, USAGE_STATUSES,
   type ContentBankEntry, type SourceUsageRecord,
 } from "./schemas";
 import { toggleAllowReuseAction, archiveContentBankEntryAction, deleteContentBankExperienceAction, loadContentBankUsageAction } from "./actions";
@@ -73,14 +75,31 @@ function UsageHistory({ clientId, entry }: { clientId: string; entry: ContentBan
   </div>;
 }
 
+type TypeTab = "all" | "experience" | "trend" | "resource";
+
+function entryType(entry: ContentBankEntry): Exclude<TypeTab, "all"> {
+  return entry.sourceType === "content_resource" ? "resource" : entry.entryType === "trend_reaction" ? "trend" : "experience";
+}
+
+const TYPE_LABELS: Record<Exclude<TypeTab, "all">, string> = { experience: "Experience", trend: "Trend reaction", resource: "Resource" };
+const TYPE_ICONS: Record<Exclude<TypeTab, "all">, LucideIcon> = { experience: Lightbulb, trend: TrendingUp, resource: FileText };
+
+/** Readiness choices under Advanced: archived entries stay out of the list unless asked for. */
+const READINESS_VIEWS = [
+  { value: "active", label: "Draft and ready" },
+  { value: "all", label: "Everything, including archived" },
+  ...CONTENT_BANK_READINESS.map((value) => ({ value, label: value === "archived" ? "Archived only" : `${value[0].toUpperCase()}${value.slice(1)} only` })),
+];
+
 export function ContentBankPanel({ clientId, role, permissions, entries }: {
   clientId: string; role: EffectiveClientRole; permissions: ClientPermission[]; entries: ContentBankEntry[];
 }) {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedReadiness, setSelectedReadiness] = useState("all");
+  const [selectedType, setSelectedType] = useState<TypeTab>("all");
+  const [selectedReadiness, setSelectedReadiness] = useState("active");
   const [selectedUsage, setSelectedUsage] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editor, setEditor] = useState<ContentBankEntry | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ContentBankEntry | null>(null);
   const [calendarEntry, setCalendarEntry] = useState<CalendarEntryChoice | null>(null);
@@ -98,15 +117,19 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
     return entry.sourceType === "content_resource" ? isAdmin
       : entry.entryType === "trend_reaction" ? canManageReactions : canManageExperiences;
   }
-  const filteredEntries = entries.filter((entry) => {
-    if (selectedCategory !== "all" && entry.category !== selectedCategory) return false;
-    if (selectedReadiness !== "all" && entry.readiness !== selectedReadiness) return false;
+  const query = searchQuery.trim().toLowerCase();
+  // Everything except the type tab, so each tab can show how many entries it holds.
+  const matchingEntries = entries.filter((entry) => {
+    if (selectedReadiness === "active" ? entry.readiness === "archived"
+      : selectedReadiness !== "all" && entry.readiness !== selectedReadiness) return false;
     if (selectedUsage !== "all" && entry.usageStatus !== selectedUsage) return false;
-    const query = searchQuery.trim().toLowerCase();
     return !query || [entry.title, entry.rawNotes, entry.takeaway, entry.whatHappened,
       entry.whatWasLearned, entry.whatChanged, entry.whyItMatters, entry.description,
       entry.problemSolved, entry.targetUseCase, entry.keyword].some((value) => value?.toLowerCase().includes(query));
   });
+  const filteredEntries = selectedType === "all" ? matchingEntries : matchingEntries.filter((entry) => entryType(entry) === selectedType);
+  const typeCount = (type: Exclude<TypeTab, "all">) => matchingEntries.filter((entry) => entryType(entry) === type).length;
+  const canCapture = canManageExperiences || isAdmin;
 
   function mutate(entry: ContentBankEntry, action: "reuse" | "archive") {
     if (action === "archive" && !window.confirm(`Mark "${entry.title}" archived? Its record and usage history will be retained.`)) return;
@@ -123,12 +146,18 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   }
 
   return <div className="flex flex-col gap-4">
-    <div className="flex flex-wrap items-center gap-3">
-      {canManageExperiences || isAdmin ? <Button type="button" variant="brand" disabled={isPending || editor !== null} onClick={() => { setEditor("new"); setError(null); setSuccess(null); }}>
-        <Plus className="h-4 w-4" /> Capture entry
-      </Button> : null}
-      <span className="text-small text-muted-foreground">{entries.length} entries · reuse is always deliberate</span>
-    </div>
+    <PageHeader
+      title="Content Bank"
+      action={<div className="flex flex-wrap items-center gap-3">
+        <span className="relative">
+          <Search aria-hidden="true" className="absolute left-3 top-[7px] h-4 w-4 text-muted-foreground" />
+          <Input aria-label="Search entries" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search entries" className="h-[30px] w-full pl-9 sm:w-[260px]" />
+        </span>
+        {canCapture ? <Button type="button" variant="brand" disabled={isPending || editor !== null} onClick={() => { setEditor("new"); setError(null); setSuccess(null); }}>
+          <Plus className="h-4 w-4" /> New entry
+        </Button> : null}
+      </div>}
+    />
     {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
     {success ? <p role="status" className="text-small text-success-strong">{success}</p> : null}
     {editor ? <ContentBankEntryForm key={editor === "new" ? "new" : `${editor.sourceType}:${editor.id}`}
@@ -136,37 +165,26 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
       canManageExperiences={canManageExperiences} canManageResources={isAdmin}
       onCancel={() => setEditor(null)} onSaved={() => { setEditor(null); setError(null); setSuccess("Entry saved."); router.refresh(); }}
     /> : null}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <label className="flex flex-col gap-1.5 text-small">Search
-        <span className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search notes, details, keywords" className="pl-9" />
-        </span>
-      </label>
-      <label className="flex flex-col gap-1.5 text-small">Category
-        <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} className={selectClass}>
-          <option value="all">All categories</option>
-          {CONTENT_BANK_CATEGORIES.map((value) => <option key={value} value={value}>{CONTENT_BANK_CATEGORY_LABELS[value]}</option>)}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1.5 text-small">Readiness
-        <select value={selectedReadiness} onChange={(event) => setSelectedReadiness(event.target.value)} className={selectClass}>
-          <option value="all">All readiness</option>
-          {CONTENT_BANK_READINESS.map((value) => <option key={value} value={value}>{value}</option>)}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1.5 text-small">Usage
-        <select value={selectedUsage} onChange={(event) => setSelectedUsage(event.target.value)} className={selectClass}>
-          <option value="all">All usage</option>
-          {USAGE_STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}
-        </select>
-      </label>
-    </div>
-    {filteredEntries.length === 0 ? <EmptyState icon={BookOpen} title="No Content Bank entries found" description="Capture an experience or resource, or change your filters." />
-      : <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <SegmentedNavigation
+      items={[
+        { id: "all" as TypeTab, label: "All", count: matchingEntries.length },
+        { id: "experience" as TypeTab, label: "Experiences", count: typeCount("experience") },
+        { id: "trend" as TypeTab, label: "Trend reactions", count: typeCount("trend") },
+        { id: "resource" as TypeTab, label: "Resources", count: typeCount("resource") },
+      ]}
+      activeId={selectedType}
+      onChange={setSelectedType}
+    />
+    {filteredEntries.length === 0 ? <EmptyState icon={BookOpen} title="No Content Bank entries found" description="Capture an experience or resource, or change your search." />
+      : <ul className="overflow-hidden rounded-card border border-border-subtle bg-white shadow-xs">
         {filteredEntries.map((entry) => {
+          const key = `${entry.sourceType}:${entry.id}`;
+          const type = entryType(entry);
+          const TypeIcon = TYPE_ICONS[type];
           const isResource = entry.sourceType === "content_resource";
           const editable = canEdit(entry);
           const available = entry.readiness === "ready" && (!isResource || entry.active);
+          const expanded = expandedKey === key;
           const postEligibility = getContentBankPostEligibility(entry);
           const calendarEligibility = getContentBankPostEligibility(entry, "calendar");
           const createPostHref = `/client/${clientId}/posts?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
@@ -174,73 +192,89 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
             sourceId: entry.id,
             sourceType: entry.sourceType,
             title: entry.title,
-            typeLabel: entry.sourceType === "content_resource" ? "Resource" : entry.entryType === "trend_reaction" ? "Trend reaction" : "Experience",
+            typeLabel: isResource ? "Resource" : entry.entryType === "trend_reaction" ? "Trend reaction" : "Experience",
             reuseLabel: entry.allowReuse ? "Reusable" : "Single-use",
           };
-          return <Card key={`${entry.sourceType}:${entry.id}`}>
-            <CardHeader className="pb-3">
+          const busy = isPending || editor !== null;
+          const menuItems: ActionMenuItem[] = [
+            ...(canManageIdeas && calendarEligibility.eligible ? [{ label: "Add to Calendar", icon: CalendarPlus, onSelect: () => setCalendarEntry(calendarChoice) }] : []),
+            { label: expanded ? "Hide details" : "View details", icon: ChevronDown, onSelect: () => setExpandedKey(expanded ? null : key) },
+            ...(editable && !busy ? [{ label: "Edit", icon: Pencil, onSelect: () => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); } }] : []),
+            ...(editable && !busy ? [{ label: entry.allowReuse ? "Make single-use" : "Make reusable", icon: RefreshCw, onSelect: () => mutate(entry, "reuse") }] : []),
+            ...(available && canUseNewsletter ? [{ label: "Use in newsletter", icon: Mail, onSelect: () => router.push(`/client/${clientId}/newsletter?new=true&sources=${entry.id}`) }] : []),
+            ...(available && canManageIdeas ? [{ label: "Open Ideas", icon: Link2, onSelect: () => router.push(`/client/${clientId}/ideas`) }] : []),
+            ...(editable && entry.readiness !== "archived" && !busy ? [{ label: "Archive", icon: Archive, onSelect: () => mutate(entry, "archive") }] : []),
+            ...(isAdmin && entry.sourceType === "founder_experience" && !busy ? [{ label: "Delete", icon: Trash2, destructive: true, onSelect: () => setDeleteTarget(entry) }] : []),
+          ];
+          return <li key={key} className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 border-t border-border-subtle px-5 py-4 first:border-t-0 sm:grid-cols-[40px_minmax(0,1fr)_auto]">
+            <div aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary-soft text-link">
+              <TypeIcon className="h-5 w-5" />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="break-words text-small font-medium text-near-black">{entry.title}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={isResource ? "accent-purple" : "neutral"}>{CONTENT_BANK_CATEGORY_LABELS[entry.category]}</Badge>
-                <Badge variant="outline">{entry.readiness}</Badge>
-                <Badge variant={entry.usageStatus === "published" ? "success" : "neutral"}>{entry.usageStatus}</Badge>
-                {entry.entryType === "trend_reaction" ? <Badge variant="info">Trend reaction</Badge> : null}
-              </div>
-              <CardTitle className="mt-2 leading-snug">{entry.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <Detail label={isResource ? "Problem solved" : "Takeaway"} value={isResource ? entry.problemSolved : entry.takeaway} />
-              {isResource ? <div className="flex flex-wrap gap-2">
-                <Badge variant={entry.active ? "success" : "neutral"}>{entry.active ? "Active" : "Inactive"}</Badge>
-                <Badge variant={entry.commentGateApproved ? "success" : "neutral"}>{entry.commentGateApproved ? "Comment CTA approved" : "Comment CTA not approved"}</Badge>
-                {entry.keyword ? <Badge variant="outline">Keyword: {entry.keyword}</Badge> : null}
-              </div> : null}
-              <details className="rounded-control border border-border-grey p-3">
-                <summary className="cursor-pointer text-small font-medium">View complete entry</summary>
-                <div className="mt-3 flex flex-col gap-3">
-                  <Detail label="Raw notes" value={entry.rawNotes} />
-                  {isResource ? <>
-                    <Detail label="Resource type" value={entry.resourceType} />
-                    <Detail label="Resource description" value={entry.description} />
-                    <Detail label="Target use case" value={entry.targetUseCase} />
-                    <Detail label="Delivery URL" value={entry.deliveryUrl} />
-                    {entry.deliveryUrl && /^https?:\/\//i.test(entry.deliveryUrl) ? <a href={entry.deliveryUrl} target="_blank" rel="noreferrer" className="text-small text-link underline">Open delivery link</a> : null}
-                    <Detail label="Manual delivery instructions" value={entry.deliveryInstructions} />
-                  </> : <>
-                    <Detail label="What happened / proof" value={entry.whatHappened} />
-                    <Detail label={entry.entryType === "trend_reaction" ? "Your take" : "What was learned"} value={entry.whatWasLearned} />
-                    <Detail label="What changed" value={entry.whatChanged} />
-                    <Detail label="Why it matters" value={entry.whyItMatters} />
-                    <Detail label="Reaction type" value={entry.reactionType} />
-                    {entry.sourceTrendCardId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
-                  </>}
-                  <p className="text-caption text-muted-foreground">Created {formatUtcDate(entry.createdAt)} · Updated {formatUtcDate(entry.updatedAt)} · {entry.usageCount} recorded successful uses</p>
-                  <UsageHistory clientId={clientId} entry={entry} />
-                </div>
-              </details>
-              <div className="flex flex-wrap items-center gap-2 border-t border-border-grey pt-3">
-                {canCreatePost && postEligibility.eligible ? <Link
-                  href={createPostHref}
-                  className={buttonVariants({ variant: "accent-purple", size: "sm" })}
-                ><FilePenLine className="h-4 w-4" /> Create post</Link> : null}
-                {canManageIdeas && calendarEligibility.eligible ? <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setCalendarEntry(calendarChoice)}
-                ><CalendarPlus className="h-4 w-4" /> Add to Calendar</Button> : null}
-                {editable ? <Button type="button" size="sm" variant="outline" disabled={isPending || editor !== null} onClick={() => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil className="h-4 w-4" /> Edit</Button> : null}
-                <Button type="button" size="sm" variant="ghost" disabled={!editable || isPending || editor !== null} onClick={() => mutate(entry, "reuse")}><RefreshCw className="h-4 w-4" />{entry.allowReuse ? "Reusable" : "Single-use"}</Button>
-                {editable && entry.readiness !== "archived" ? <Button type="button" size="sm" variant="ghost" disabled={isPending || editor !== null} onClick={() => mutate(entry, "archive")}><Archive className="h-4 w-4" /> Archive</Button> : null}
-                {isAdmin && entry.sourceType === "founder_experience" ? <Button type="button" size="sm" variant="ghost" className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong" disabled={isPending || editor !== null} onClick={() => setDeleteTarget(entry)}><Trash2 className="h-4 w-4" /> Delete</Button> : null}
-                {available && canUseNewsletter ? <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small text-link underline">Use in newsletter</a> : null}
-                {available && canManageIdeas ? <a href={`/client/${clientId}/ideas`} className="text-small text-link underline">Open Ideas</a> : null}
+                <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+                  {TYPE_LABELS[type]} · {CONTENT_BANK_CATEGORY_LABELS[entry.category]}
+                </span>
+                <Badge variant={entry.allowReuse ? "accent-purple" : "neutral"}>{entry.allowReuse ? "Reusable" : "Single-use"}</Badge>
+                <Badge variant={entry.usageStatus === "published" ? "success" : "neutral"}>{`${entry.usageStatus[0].toUpperCase()}${entry.usageStatus.slice(1)}`}</Badge>
+                {entry.readiness !== "ready" ? <Badge variant="outline">{entry.readiness}</Badge> : null}
+                {isResource && !entry.active ? <Badge variant="neutral">Inactive</Badge> : null}
               </div>
               {canCreatePost && !postEligibility.eligible ? <p className="text-caption text-muted-foreground">Create post unavailable: {postEligibility.message}</p> : null}
               {canManageIdeas && !calendarEligibility.eligible && (!canCreatePost || calendarEligibility.message !== postEligibility.message) ? <p className="text-caption text-muted-foreground">Add to Calendar unavailable: {calendarEligibility.message}</p> : null}
-            </CardContent>
-          </Card>;
+            </div>
+            <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
+              {canCreatePost && postEligibility.eligible ? <Link href={createPostHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                <FilePenLine className="h-4 w-4" /> Create post
+              </Link> : null}
+              <ActionMenu label={`More actions for ${entry.title}`} items={menuItems} />
+            </div>
+            {expanded ? <div className="col-span-full flex flex-col gap-3 rounded-control bg-surface-sunken p-4">
+              <Detail label={isResource ? "Problem solved" : "Takeaway"} value={isResource ? entry.problemSolved : entry.takeaway} />
+              {isResource ? <div className="flex flex-wrap gap-2">
+                <Badge variant={entry.commentGateApproved ? "success" : "neutral"}>{entry.commentGateApproved ? "Comment CTA approved" : "Comment CTA not approved"}</Badge>
+                {entry.keyword ? <Badge variant="outline">Keyword: {entry.keyword}</Badge> : null}
+              </div> : null}
+              <Detail label="Raw notes" value={entry.rawNotes} />
+              {isResource ? <>
+                <Detail label="Resource type" value={entry.resourceType} />
+                <Detail label="Resource description" value={entry.description} />
+                <Detail label="Target use case" value={entry.targetUseCase} />
+                <Detail label="Delivery URL" value={entry.deliveryUrl} />
+                {entry.deliveryUrl && /^https?:\/\//i.test(entry.deliveryUrl) ? <a href={entry.deliveryUrl} target="_blank" rel="noreferrer" className="text-small text-link underline">Open delivery link</a> : null}
+                <Detail label="Manual delivery instructions" value={entry.deliveryInstructions} />
+              </> : <>
+                <Detail label="What happened / proof" value={entry.whatHappened} />
+                <Detail label={entry.entryType === "trend_reaction" ? "Your take" : "What was learned"} value={entry.whatWasLearned} />
+                <Detail label="What changed" value={entry.whatChanged} />
+                <Detail label="Why it matters" value={entry.whyItMatters} />
+                <Detail label="Reaction type" value={entry.reactionType} />
+                {entry.sourceTrendCardId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
+              </>}
+              <p className="text-caption text-muted-foreground">Created {formatUtcDate(entry.createdAt)} · Updated {formatUtcDate(entry.updatedAt)} · {entry.usageCount} recorded successful uses</p>
+              <UsageHistory clientId={clientId} entry={entry} />
+            </div> : null}
+          </li>;
         })}
-      </div>}
+      </ul>}
+    <details className="text-small">
+      <summary className="cursor-pointer text-link underline">Advanced</summary>
+      <p className="mt-2 text-caption text-muted-foreground">Archived entries are hidden from the list above. Show them, or narrow by usage, here.</p>
+      <div className="mt-3 grid max-w-xl gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1.5">Show
+          <select value={selectedReadiness} onChange={(event) => setSelectedReadiness(event.target.value)} className={selectClass}>
+            {READINESS_VIEWS.map((view) => <option key={view.value} value={view.value}>{view.label}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5">Usage
+          <select value={selectedUsage} onChange={(event) => setSelectedUsage(event.target.value)} className={selectClass}>
+            <option value="all">All usage</option>
+            {USAGE_STATUSES.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+      </div>
+    </details>
     <AddToCalendarDialog clientId={clientId} entry={calendarEntry} onClose={() => setCalendarEntry(null)} />
     <DestructiveConfirmDialog
       open={deleteTarget !== null}
