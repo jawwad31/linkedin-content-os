@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FUNNEL_STAGES, POST_TYPES } from "@/lib/ai/playbooks/taxonomies";
-import { STANDALONE_SOURCE_MAX_BYTES, type StandaloneBriefInput, type StandaloneDocumentOption } from "./standalone-brief-schema";
+import {
+  STANDALONE_SOURCE_MAX_BYTES,
+  type StandaloneBriefInput,
+  type StandaloneContentBankOption,
+  type StandaloneDocumentOption,
+} from "./standalone-brief-schema";
 
 const POST_LABELS: Record<(typeof POST_TYPES)[number], string> = {
   framework: "Explainer", case_study: "Case study", contrarian_take: "Opinion / analysis",
@@ -18,19 +24,33 @@ const POST_LABELS: Record<(typeof POST_TYPES)[number], string> = {
 };
 const selectClass = "rounded-control border border-border-grey bg-white px-3 py-2 text-small";
 
-export function StandalonePostForm({ clientId, documents, documentsUnavailable, canUpload }: {
-  clientId: string; documents: StandaloneDocumentOption[]; documentsUnavailable: boolean; canUpload: boolean;
+export function StandalonePostForm({
+  clientId,
+  documents,
+  documentsUnavailable,
+  canUpload,
+  initialContentBankSource,
+  initialSourceError,
+}: {
+  clientId: string;
+  documents: StandaloneDocumentOption[];
+  documentsUnavailable: boolean;
+  canUpload: boolean;
+  initialContentBankSource: StandaloneContentBankOption | null;
+  initialSourceError: string | null;
 }) {
   const router = useRouter();
   const requestId = useRef<string | null>(null);
   const inFlight = useRef(false);
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"note" | "document" | "upload">("note");
+  const [open, setOpen] = useState(Boolean(initialContentBankSource || initialSourceError));
+  const [mode, setMode] = useState<"note" | "document" | "upload" | "content_bank">(
+    initialContentBankSource ? "content_bank" : "note",
+  );
   const [notes, setNotes] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [file, setFile] = useState<{ filename: string; contentText: string } | null>(null);
   const [readingFile, setReadingFile] = useState(false);
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(initialContentBankSource?.title ?? "");
   const [instructions, setInstructions] = useState("");
   const [reader, setReader] = useState("");
   const [takeaway, setTakeaway] = useState("");
@@ -40,6 +60,17 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
   const [ideaId, setIdeaId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sourceCanGenerate = mode !== "content_bank" || Boolean(initialContentBankSource?.eligible);
+
+  function changeMode(nextMode: typeof mode) {
+    setMode(nextMode);
+    if (
+      postType === "lead_magnet_offer" &&
+      !(nextMode === "content_bank" && initialContentBankSource?.canOffer)
+    ) {
+      setPostType("");
+    }
+  }
 
   async function readFile(selected?: File) {
     setFile(null);
@@ -69,6 +100,10 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
       setError("Notes and instructions each support 4,000 characters. Use a document for a longer source; your text has not been shortened.");
       return;
     }
+    if (!ideaId && mode === "content_bank" && (!initialContentBankSource || !initialContentBankSource.eligible)) {
+      setError(initialContentBankSource?.eligibilityMessage ?? "Choose an eligible Content Bank entry.");
+      return;
+    }
     if (!ideaId && ((mode === "note" && !notes.trim()) || (mode === "document" && !documentId) || (mode === "upload" && !file))) {
       setError("Add a note or choose a source document.");
       return;
@@ -81,7 +116,12 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
         requestId.current ??= crypto.randomUUID();
         const source: StandaloneBriefInput["source"] = mode === "note" ? { mode, notes }
           : mode === "document" ? { mode, documentId }
-          : { mode: "upload", ...file! };
+          : mode === "upload" ? { mode: "upload", ...file! }
+          : {
+              mode: "content_bank",
+              sourceId: initialContentBankSource!.id,
+              sourceType: initialContentBankSource!.sourceType,
+            };
         const input: StandaloneBriefInput = {
           requestId: requestId.current, source, topic, instructions,
           intendedReader: reader, primaryTakeaway: takeaway, contentPillar: pillar,
@@ -123,7 +163,7 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>Create a standalone post</CardTitle>
-          <p className="mt-1 text-small text-muted-foreground">Start with your notes or a source document, then review the draft.</p>
+          <p className="mt-1 text-small text-muted-foreground">Start with a selected Content Bank entry, your notes, or a source document, then review the draft.</p>
         </div>
         <Button type="button" variant="outline" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="standalone-post-form">
           {open ? "Hide brief" : "Create post"}
@@ -131,17 +171,43 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
       </CardHeader>
       {open ? <CardContent id="standalone-post-form">
         <form onSubmit={createDraft} className="flex flex-col gap-4">
+          {initialSourceError ? <p role="alert" className="rounded-control border border-danger/30 bg-danger/5 p-3 text-small text-danger-strong">{initialSourceError}</p> : null}
           <fieldset disabled={pending || readingFile || !!ideaId} className="flex min-w-0 flex-col gap-4">
             <legend className="sr-only">Source and post brief</legend>
             <label className="flex flex-col gap-1 text-small font-medium">
               Source
-              <select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)} className={selectClass}>
+              <select value={mode} onChange={(event) => changeMode(event.target.value as typeof mode)} className={selectClass}>
+                {initialContentBankSource ? <option value="content_bank">Selected Content Bank entry</option> : null}
                 <option value="note">Pasted note or transcript</option>
                 <option value="document">Saved source document</option>
                 {canUpload ? <option value="upload">Upload .md or .txt</option> : null}
               </select>
             </label>
-            {mode === "note" ? <label className="flex flex-col gap-1 text-small font-medium">
+            {mode === "content_bank" && initialContentBankSource ? <section aria-labelledby="selected-content-bank-source" className="flex flex-col gap-3 rounded-card border border-brand-purple/30 bg-brand-purple/5 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="accent-purple">{initialContentBankSource.sourceType === "content_resource" ? "Content resource" : initialContentBankSource.entryType === "trend_reaction" ? "Trend reaction" : "Founder experience"}</Badge>
+                <Badge variant="outline">{initialContentBankSource.categoryLabel}</Badge>
+                <Badge variant="outline">{initialContentBankSource.readiness}</Badge>
+                <Badge variant="neutral">{initialContentBankSource.usageStatus}</Badge>
+                <Badge variant="neutral">{initialContentBankSource.allowReuse ? "Reusable" : "Single-use"}</Badge>
+                {initialContentBankSource.canOffer ? <Badge variant="success">Comment CTA approved</Badge> : null}
+              </div>
+              <div>
+                <h3 id="selected-content-bank-source" className="text-body font-semibold">{initialContentBankSource.title}</h3>
+                <p className="text-caption text-muted-foreground">This exact workspace source will be verified again before the assignment is saved.</p>
+              </div>
+              {initialContentBankSource.details.length ? <details className="rounded-control border border-border-grey bg-white p-3" open>
+                <summary className="cursor-pointer text-small font-medium">Review source details</summary>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {initialContentBankSource.details.map((detail) => <div key={detail.label} className="min-w-0">
+                    <p className="text-caption font-medium text-muted-foreground">{detail.label}</p>
+                    <p className="whitespace-pre-wrap break-words text-small">{detail.value}</p>
+                  </div>)}
+                </div>
+              </details> : null}
+              {!initialContentBankSource.eligible ? <p role="alert" className="text-small text-danger-strong">{initialContentBankSource.eligibilityMessage}</p> : null}
+              {initialContentBankSource.sourceType === "content_resource" && !initialContentBankSource.canOffer ? <p className="text-caption text-muted-foreground">This resource can inform an educational post. A Resource offer remains unavailable until its comment CTA and delivery details are approved.</p> : null}
+            </section> : mode === "note" ? <label className="flex flex-col gap-1 text-small font-medium">
               Source notes
               <Textarea rows={6} value={notes} onChange={(event) => setNotes(event.target.value)} required placeholder="Paste what happened, what you learned, or the material this post should use." />
               <span className="text-caption font-normal text-muted-foreground">{notes.length.toLocaleString()} / 4,000 characters. For longer sources, use a document.</span>
@@ -161,7 +227,7 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
               {readingFile ? <p role="status" className="text-small">Reading file...</p> : null}
               {file ? <><p className="break-words text-small">{file.filename}</p><Textarea aria-label="Source file preview" value={file.contentText} rows={6} readOnly /></> : null}
             </div>}
-            {mode !== "note" ? <p className="text-caption text-muted-foreground">UTF-8 source files up to 128 KB are used in full and kept private. Larger originals remain in your document library; supply a smaller file or a relevant note for this draft.</p> : null}
+            {mode === "document" || mode === "upload" ? <p className="text-caption text-muted-foreground">UTF-8 source files up to 128 KB are used in full and kept private. Larger originals remain in your document library; supply a smaller file or a relevant note for this draft.</p> : null}
             <label className="flex flex-col gap-1 text-small font-medium">
               Topic / angle
               <Input value={topic} onChange={(event) => setTopic(event.target.value)} minLength={3} maxLength={500} required placeholder="What should this post explain?" />
@@ -175,7 +241,7 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
               <label className="flex flex-col gap-1 text-small font-medium">Post type
                 <select className={selectClass} value={postType} onChange={(event) => setPostType(event.target.value as typeof postType)}>
                   <option value="">Auto</option>
-                  {POST_TYPES.filter((type) => type !== "lead_magnet_offer").map((type) => <option key={type} value={type}>{POST_LABELS[type]}</option>)}
+                  {POST_TYPES.filter((type) => type !== "lead_magnet_offer" || (mode === "content_bank" && initialContentBankSource?.canOffer)).map((type) => <option key={type} value={type}>{POST_LABELS[type]}</option>)}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-small font-medium">Funnel stage
@@ -187,13 +253,13 @@ export function StandalonePostForm({ clientId, documents, documentsUnavailable, 
               <label className="flex flex-col gap-1 text-small font-medium">Content pillar (optional)<Input value={pillar} onChange={(event) => setPillar(event.target.value)} maxLength={500} placeholder="Auto when blank" /></label>
             </div>
             <label className="flex flex-col gap-1 text-small font-medium">Main takeaway (optional)<Input value={takeaway} onChange={(event) => setTakeaway(event.target.value)} maxLength={700} placeholder="What should the reader understand or do?" /></label>
-            <p className="text-caption text-muted-foreground">For a lead magnet offer, select the approved resource in Content Bank.</p>
+            {mode !== "content_bank" || initialContentBankSource?.sourceType !== "content_resource" ? <p className="text-caption text-muted-foreground">For a lead magnet offer, select the approved resource in Content Bank.</p> : null}
           </fieldset>
           {ideaId ? <p role="status" className="text-small">Your brief is saved. Retry uses this same brief. You can also find it in <Link href={`/client/${clientId}/ideas`} className="font-medium text-brand-orange underline">Ideas</Link>.</p> : null}
           {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="brand" disabled={pending || readingFile}>{pending ? "Creating draft..." : ideaId ? "Retry draft" : "Create draft"}</Button>
-            {ideaId || error ? <Button type="button" variant="outline" disabled={pending || readingFile} onClick={() => { requestId.current = null; setIdeaId(null); setError(null); }}>Start a new brief</Button> : null}
+            <Button type="submit" variant="brand" disabled={pending || readingFile || !sourceCanGenerate}>{pending ? "Creating draft..." : ideaId ? "Retry draft" : "Create draft"}</Button>
+            {(ideaId || error) && mode !== "content_bank" ? <Button type="button" variant="outline" disabled={pending || readingFile} onClick={() => { requestId.current = null; setIdeaId(null); setError(null); }}>Start a new brief</Button> : null}
           </div>
           <p className="text-caption text-muted-foreground">Creating a draft uses your configured AI models. Human approval and manual publishing follow review.</p>
         </form>

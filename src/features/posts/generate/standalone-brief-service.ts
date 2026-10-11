@@ -5,18 +5,35 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { canManageIdeas, canDraftPosts, canManageFounderExperiences } from "@/lib/access/client-access";
+import {
+  linkSourceReservationToIdea,
+  releaseSourceReservation,
+  reserveSourceEntry,
+} from "@/features/content-bank/usage-service";
 import type { StrategyOverrides } from "@/lib/ai/playbooks/contracts";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
-import { standaloneBriefSchema, STANDALONE_SOURCE_MAX_BYTES } from "./standalone-brief-schema";
+import {
+  directContentBankContextSchema,
+  standaloneBriefSchema,
+  STANDALONE_SOURCE_MAX_BYTES,
+  type StandaloneBriefInput,
+} from "./standalone-brief-schema";
 
 type Result =
   | { ok: true; data: { ideaId: string } }
   | { ok: false; code: string; message: string };
 type SavedBrief = { id: string; source_context: unknown; status: string };
 type DocumentRow = { id: string; content_hash: string; version: number; content_text: string };
+type DirectContentBankSource = {
+  sourceId: string;
+  sourceType: "founder_experience" | "content_resource";
+  ideaSourceType: "founder_experience" | "trend_reaction" | "content_resource";
+  sourceIds: string[];
+  resourceOffer: boolean;
+};
 
 const failure = (code: string, message: string): Result => ({ ok: false, code, message });
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -26,6 +43,111 @@ function requestRecordId(kind: string, clientId: string, userId: string, request
 }
 
 const savedRequestSchema = z.object({ standaloneRequestHash: z.string().length(64) });
+
+async function resolveContentBankSource(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  source: Extract<StandaloneBriefInput["source"], { mode: "content_bank" }>,
+  postType: StandaloneBriefInput["postType"],
+): Promise<
+  | { ok: true; source: DirectContentBankSource }
+  | { ok: false; result: Result }
+> {
+  const resourceOffer = postType === "lead_magnet_offer";
+  if (source.sourceType === "content_resource") {
+    const { data, error } = await supabase.from("content_resources")
+      .select("id,readiness,active,comment_gate_approved,keyword,delivery_url,delivery_instructions")
+      .eq("id", source.sourceId).eq("client_id", clientId)
+      .is("deleted_at", null).maybeSingle<{
+        id: string;
+        readiness: string;
+        active: boolean;
+        comment_gate_approved: boolean;
+        keyword: string | null;
+        delivery_url: string | null;
+        delivery_instructions: string | null;
+      }>();
+    if (error || !data) {
+      return { ok: false, result: failure("NOT_FOUND", "This Content Bank resource is no longer available in this workspace.") };
+    }
+    if (data.readiness !== "ready" || !data.active) {
+      return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Content Bank resource is no longer ready and active. Return to Content Bank and choose another source.") };
+    }
+    if (resourceOffer && (!data.comment_gate_approved || !data.keyword || !(data.delivery_url || data.delivery_instructions))) {
+      return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This resource is not approved for a comment-gated offer. Use it for an educational post or update its approval and delivery details.") };
+    }
+    if (resourceOffer) {
+      const recent = await supabase.from("posts").select("source_context_used")
+        .eq("client_id", clientId).is("deleted_at", null)
+        .neq("status", "rejected").order("created_at", { ascending: false })
+        .limit(5).returns<Array<{ source_context_used: unknown }>>();
+      if (recent.error || !recent.data) {
+        return { ok: false, result: failure("UNKNOWN_ERROR", "Could not verify comment-gate eligibility. Please try again.") };
+      }
+      const recentCommentGate = recent.data.some(({ source_context_used: value }) =>
+        Boolean(value && typeof value === "object" && !Array.isArray(value) &&
+          (value as Record<string, unknown>).cta_type === "comment_gate"));
+      if (recentCommentGate) {
+        return { ok: false, result: failure("SOURCE_UNAVAILABLE", "A recent active post already used a comment-gated resource. Choose another post type for this source.") };
+      }
+    }
+    return { ok: true, source: {
+      sourceId: data.id,
+      sourceType: "content_resource",
+      ideaSourceType: "content_resource",
+      sourceIds: [data.id],
+      resourceOffer,
+    } };
+  }
+
+  if (resourceOffer) {
+    return { ok: false, result: failure("VALIDATION_ERROR", "Resource offers require an approved Content Resource.") };
+  }
+  const { data, error } = await supabase.from("founder_experiences")
+    .select("id,readiness,entry_type,source_trend_card_id")
+    .eq("id", source.sourceId).eq("client_id", clientId)
+    .is("deleted_at", null).maybeSingle<{
+      id: string;
+      readiness: string;
+      entry_type: "work_log" | "trend_reaction";
+      source_trend_card_id: string | null;
+    }>();
+  if (error || !data) {
+    return { ok: false, result: failure("NOT_FOUND", "This Founder Experience is no longer available in this workspace.") };
+  }
+  if (data.readiness !== "ready") {
+    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Founder Experience is no longer ready. Return to Content Bank and choose another source.") };
+  }
+  if (data.entry_type === "trend_reaction") {
+    if (!data.source_trend_card_id) {
+      return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This trend reaction no longer has its research source.") };
+    }
+    const linked = await supabase.from("trend_cards").select("id")
+      .eq("id", data.source_trend_card_id).eq("client_id", clientId)
+      .eq("approved_for_ideas", true).is("deleted_at", null)
+      .maybeSingle<{ id: string }>();
+    if (linked.error || !linked.data) {
+      return { ok: false, result: failure("SOURCE_UNAVAILABLE", "The research source for this trend reaction is no longer approved for drafting.") };
+    }
+    return { ok: true, source: {
+      sourceId: data.id,
+      sourceType: "founder_experience",
+      ideaSourceType: "trend_reaction",
+      sourceIds: [data.id, linked.data.id],
+      resourceOffer: false,
+    } };
+  }
+  if (data.entry_type !== "work_log" || data.source_trend_card_id) {
+    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Founder Experience is not eligible for direct drafting.") };
+  }
+  return { ok: true, source: {
+    sourceId: data.id,
+    sourceType: "founder_experience",
+    ideaSourceType: "founder_experience",
+    sourceIds: [data.id],
+    resourceOffer: false,
+  } };
+}
 
 /** Save one protected brief; the normal idea-to-post endpoint owns paid generation. */
 export async function prepareStandaloneBrief(clientId: string, rawInput: unknown): Promise<Result> {
@@ -46,18 +168,32 @@ export async function prepareStandaloneBrief(clientId: string, rawInput: unknown
   const requestHash = hash(JSON.stringify(input));
   const findBrief = () => supabase.from("content_ideas").select("id,source_context,status")
     .eq("client_id", clientId).eq("id", ideaId).is("deleted_at", null).maybeSingle<SavedBrief>();
-  const resume = (row: SavedBrief): Result => {
+  const resume = async (row: SavedBrief): Promise<Result> => {
     const saved = savedRequestSchema.safeParse(row.source_context);
-    return saved.success && saved.data.standaloneRequestHash === requestHash && ["ready", "used"].includes(row.status)
-      ? { ok: true, data: { ideaId: row.id } }
-      : failure("VALIDATION_ERROR", "This saved brief has changed. Start a new post.");
+    if (!saved.success || saved.data.standaloneRequestHash !== requestHash || !["ready", "used"].includes(row.status)) {
+      return failure("VALIDATION_ERROR", "This saved brief has changed. Start a new post.");
+    }
+    const direct = directContentBankContextSchema.safeParse(row.source_context);
+    if (direct.success && row.status === "ready") {
+      const linked = await linkSourceReservationToIdea({
+        clientId,
+        usageId: direct.data.contentBankUsageId,
+        sourceId: direct.data.contentBankSource.sourceId,
+        sourceType: direct.data.contentBankSource.sourceType,
+        contentIdeaId: row.id,
+      }, supabase);
+      if (!linked.ok) {
+        return failure("SOURCE_UNAVAILABLE", "This saved assignment no longer owns its Content Bank reservation. Start again from Content Bank.");
+      }
+    }
+    return { ok: true, data: { ideaId: row.id } };
   };
   const existing = await findBrief();
   if (existing.error) return failure("UNKNOWN_ERROR", "Could not load the saved brief. Please try again.");
   if (existing.data) return resume(existing.data);
 
   let document: DocumentRow | null = null;
-  if (input.source.mode !== "note") {
+  if (input.source.mode === "document" || input.source.mode === "upload") {
     const source = input.source;
     const documentId = source.mode === "upload"
       ? requestRecordId("document", clientId, user.id, input.requestId) : source.documentId;
@@ -108,9 +244,37 @@ export async function prepareStandaloneBrief(clientId: string, rawInput: unknown
     }
   }
 
+  if (input.postType === "lead_magnet_offer" && input.source.mode !== "content_bank") {
+    return failure("VALIDATION_ERROR", "Resource offers require an approved Content Resource selected from Content Bank.");
+  }
+
+  let directSource: DirectContentBankSource | null = null;
+  let reservationId: string | null = null;
+  if (input.source.mode === "content_bank") {
+    const resolved = await resolveContentBankSource(
+      supabase,
+      clientId,
+      input.source,
+      input.postType,
+    );
+    if (!resolved.ok) return resolved.result;
+    directSource = resolved.source;
+    const reservation = await reserveSourceEntry({
+      clientId,
+      sourceId: directSource.sourceId,
+      sourceType: directSource.sourceType,
+      channel: "linkedin_post",
+      angle: input.topic,
+      takeaway: input.primaryTakeaway || null,
+      requireAtomic: true,
+    }, supabase);
+    if (!reservation.ok) return failure(reservation.code, reservation.error);
+    reservationId = reservation.usageId;
+  }
+
   const overrides: StrategyOverrides = {
-    // A note/document is not an explicitly selected, approved gated resource.
-    ctaType: "none",
+    ctaType: directSource?.resourceOffer ? "comment_gate" : "none",
+    ...(directSource?.resourceOffer ? { resourceId: directSource.sourceId } : {}),
     ...(input.postType ? { postType: input.postType } : {}),
     ...(input.funnelStage ? { funnelStage: input.funnelStage } : {}),
     ...(input.intendedReader ? { intendedReader: input.intendedReader } : {}),
@@ -123,30 +287,60 @@ export async function prepareStandaloneBrief(clientId: string, rawInput: unknown
     ...(document ? { selectedDocument: {
       id: document.id, contentHash: document.content_hash, version: document.version,
     } } : {}),
+    ...(directSource && reservationId ? {
+      contentBankDirectCreate: true as const,
+      contentBankUsageId: reservationId,
+      contentBankSource: directSource,
+    } : {}),
   };
   const inserted = await supabase.from("content_ideas").insert({
-    id: ideaId, client_id: clientId, source_type: "custom_upload",
-    source_ids_json: document ? [document.id] : [], source_context: sourceContext,
+    id: ideaId, client_id: clientId, source_type: directSource?.ideaSourceType ?? "custom_upload",
+    source_ids_json: directSource?.sourceIds ?? (document ? [document.id] : []), source_context: sourceContext,
     angle: input.topic, founder_direction: input.instructions || null,
     commercial_relevance: input.primaryTakeaway || null, content_pillar: input.contentPillar || null,
     intended_reader: input.intendedReader || null, primary_takeaway: input.primaryTakeaway || null,
-    allocation_bucket: "evergreen", post_type: input.postType ?? null,
+    allocation_bucket: directSource?.sourceType === "content_resource"
+      ? "asset"
+      : directSource
+        ? "experience"
+        : "evergreen",
+    post_type: input.postType ?? null,
     funnel_stage: input.funnelStage ?? null, strategy_overrides: overrides, status: "ready",
+    selected_resource_id: directSource?.resourceOffer ? directSource.sourceId : null,
   }).select("id,source_context,status").maybeSingle<SavedBrief>();
   if (inserted.error || !inserted.data) {
+    if (reservationId) {
+      await releaseSourceReservation({ clientId, usageId: reservationId }, supabase);
+    }
     if (inserted.error?.code === "23505") {
       const retry = await findBrief();
       if (retry.data) return resume(retry.data);
     }
     return failure("UNKNOWN_ERROR", "Could not save the post brief. Please try again.");
   }
+  if (directSource && reservationId) {
+    const linked = await linkSourceReservationToIdea({
+      clientId,
+      usageId: reservationId,
+      sourceId: directSource.sourceId,
+      sourceType: directSource.sourceType,
+      contentIdeaId: inserted.data.id,
+    }, supabase);
+    if (!linked.ok) {
+      return failure("UNKNOWN_ERROR", "The post brief was saved, but its source reservation could not be confirmed. Retry this same brief.");
+    }
+  }
   await writeAuditLog({
     clientId, userId: user.id, action: "standalone_brief_created",
     entityType: "content_idea", entityId: ideaId,
-    metadata: { source_type: "custom_upload", source_id: document?.id ?? null },
+    metadata: {
+      source_type: directSource?.ideaSourceType ?? "custom_upload",
+      source_id: directSource?.sourceId ?? document?.id ?? null,
+    },
   });
   revalidatePath(`/client/${clientId}/ideas`);
   revalidatePath(`/client/${clientId}/posts`);
   revalidatePath(`/client/${clientId}/settings`);
+  if (directSource) revalidatePath(`/client/${clientId}/content-bank`);
   return { ok: true, data: { ideaId } };
 }

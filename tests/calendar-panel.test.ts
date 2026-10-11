@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/features/calendar/actions", () => ({
   cancelCalendarSlotsAction: vi.fn(),
+  checkCalendarSourceAssignmentAction: vi.fn(),
   commitCalendarPlanAction: vi.fn(),
   previewCalendarPlanAction: vi.fn(),
   resetMonthToDefaultsAction: vi.fn(),
@@ -81,6 +82,8 @@ function render(overrides: Partial<Parameters<typeof CalendarPanel>[0]> = {}) {
       calendar: null,
       slots: [],
       candidates: { experience: [], asset: [] },
+      incomingSource: null,
+      incomingSourceError: null,
       ...overrides,
     }),
   );

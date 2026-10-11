@@ -12,7 +12,7 @@ Account/actor/password checks and the session-bound RLS client protect every mut
 
 List/ledger/history reads paginate past the default database row limit. Source usage is keyed by record type and ID. A failed usage read prevents an incorrect unused status or empty-history success. Failed reuse/archive/save actions display an error and retain the prior visible state. The panel takes refreshed server entries directly; it no longer keeps a stale copy of the initial list or reloads the entire browser after capture. Legacy writes invalidate the Bank route as well.
 
-The previous `posts?sourceId=...` link did not load a selected source. It is replaced by honest Open Ideas navigation. Existing deliberate newsletter selection remains. Direct Bank Create post and Add to calendar actions still require a separate integration slice through the shared writer/reservation services; this release does not claim those actions are implemented. The existing resource schema/database supports seven resource types; Framework is not offered as a saveable type until an additive schema/playbook change supports it. No existing type or record is rewritten.
+The previous `posts?sourceId=...` link did not load a selected source. It was replaced by honest Open Ideas navigation, which remains. Existing deliberate newsletter selection remains. At this release the direct Bank Create post and Add to calendar actions were not implemented; they are now implemented in the uncommitted working tree (see docs/handoffs/CURRENT.md) and remain untested and undeployed. The existing resource schema/database supports seven resource types; Framework is not offered as a saveable type until an additive schema/playbook change supports it. No existing type or record is rewritten.
 
 ## Files
 

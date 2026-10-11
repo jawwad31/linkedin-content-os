@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, BookOpen, Pencil, Plus, RefreshCw, Search } from "lucide-react";
+import { Archive, BookOpen, CalendarPlus, FilePenLine, Pencil, Plus, RefreshCw, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
 } from "./schemas";
 import { toggleAllowReuseAction, archiveContentBankEntryAction, loadContentBankUsageAction } from "./actions";
 import { ContentBankEntryForm } from "./content-bank-entry-form";
+import { getContentBankPostEligibility } from "./post-eligibility";
 
 const selectClass = "h-10 rounded-control border border-border-grey bg-white px-3 text-small";
 
@@ -85,7 +87,9 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   const canManageExperiences = canRoleManageFounderExperiences(role, permissions);
   const canManageReactions = canRoleContributeResearch(role, permissions);
   const canManageIdeas = canRoleManageIdeas(role, permissions);
-  const canUseNewsletter = canManageIdeas && canRoleDraftPosts(role, permissions);
+  const canDraftPosts = canRoleDraftPosts(role, permissions);
+  const canCreatePost = canManageIdeas && canDraftPosts;
+  const canUseNewsletter = canCreatePost;
   function canEdit(entry: ContentBankEntry) {
     return entry.sourceType === "content_resource" ? isAdmin
       : entry.entryType === "trend_reaction" ? canManageReactions : canManageExperiences;
@@ -161,6 +165,10 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
           const isResource = entry.sourceType === "content_resource";
           const editable = canEdit(entry);
           const available = entry.readiness === "ready" && (!isResource || entry.active);
+          const postEligibility = getContentBankPostEligibility(entry);
+          const calendarEligibility = getContentBankPostEligibility(entry, "calendar");
+          const createPostHref = `/client/${clientId}/posts?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
+          const addToCalendarHref = `/client/${clientId}/calendar?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
           return <Card key={`${entry.sourceType}:${entry.id}`}>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -202,12 +210,22 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                 </div>
               </details>
               <div className="flex flex-wrap items-center gap-2 border-t border-border-grey pt-3">
+                {canCreatePost && postEligibility.eligible ? <Link
+                  href={createPostHref}
+                  className={buttonVariants({ variant: "accent-purple", size: "sm" })}
+                ><FilePenLine className="h-4 w-4" /> Create post</Link> : null}
+                {canManageIdeas && calendarEligibility.eligible ? <Link
+                  href={addToCalendarHref}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                ><CalendarPlus className="h-4 w-4" /> Add to Calendar</Link> : null}
                 {editable ? <Button type="button" size="sm" variant="outline" disabled={isPending || editor !== null} onClick={() => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil className="h-4 w-4" /> Edit</Button> : null}
                 <Button type="button" size="sm" variant="ghost" disabled={!editable || isPending || editor !== null} onClick={() => mutate(entry, "reuse")}><RefreshCw className="h-4 w-4" />{entry.allowReuse ? "Reusable" : "Single-use"}</Button>
                 {editable && entry.readiness !== "archived" ? <Button type="button" size="sm" variant="ghost" disabled={isPending || editor !== null} onClick={() => mutate(entry, "archive")}><Archive className="h-4 w-4" /> Archive</Button> : null}
                 {available && canUseNewsletter ? <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small text-brand-purple underline">Use in newsletter</a> : null}
                 {available && canManageIdeas ? <a href={`/client/${clientId}/ideas`} className="text-small text-brand-purple underline">Open Ideas</a> : null}
               </div>
+              {canCreatePost && !postEligibility.eligible ? <p className="text-caption text-muted-foreground">Create post unavailable: {postEligibility.message}</p> : null}
+              {canManageIdeas && !calendarEligibility.eligible && (!canCreatePost || calendarEligibility.message !== postEligibility.message) ? <p className="text-caption text-muted-foreground">Add to Calendar unavailable: {calendarEligibility.message}</p> : null}
             </CardContent>
           </Card>;
         })}

@@ -49,22 +49,44 @@ const experienceSlot = (sourceId: string): SlotInput => ({
 const evergreenSlot: SlotInput = { bucket: "evergreen" };
 const newsSlot: SlotInput = { bucket: "news" };
 
+function planPayload(slots: SlotInput[]): string {
+  return JSON.stringify(slots.map((slot) => ({
+    requested_bucket: slot.bucket,
+    shortage_reason: null,
+    source_id: null,
+    source_type: null,
+    ...slot,
+  })));
+}
+
+async function currentRevision(calendarId: string): Promise<number> {
+  const result = await db.query<{ plan_revision: number }>(
+    "select plan_revision from public.content_calendars where id = $1",
+    [calendarId],
+  );
+  return result.rows[0].plan_revision;
+}
+
+/** Commits against the plan revision currently stored, as a freshly previewed caller would. */
 async function commit(
   clientId: string,
   calendarId: string,
   slots: SlotInput[],
   replace = false,
 ): Promise<PlanResult> {
-  const payload = slots.map((slot) => ({
-    requested_bucket: slot.bucket,
-    shortage_reason: null,
-    source_id: null,
-    source_type: null,
-    ...slot,
-  }));
+  return commitAt(clientId, calendarId, slots, replace, await currentRevision(calendarId));
+}
+
+async function commitAt(
+  clientId: string,
+  calendarId: string,
+  slots: SlotInput[],
+  replace: boolean,
+  expectedRevision: number | null,
+): Promise<PlanResult> {
   const result = await db.query<{ r: PlanResult }>(
-    "select public.commit_calendar_plan($1, $2, $3::jsonb, $4) as r",
-    [clientId, calendarId, JSON.stringify(payload), replace],
+    "select public.commit_calendar_plan($1, $2, $3::jsonb, $4, $5::integer) as r",
+    [clientId, calendarId, planPayload(slots), replace, expectedRevision],
   );
   return result.rows[0].r;
 }
@@ -225,7 +247,7 @@ describe("commit_calendar_plan", () => {
     const b = await seedExperience(db, ws.clientId, "Lock B");
 
     const locksHeldInside = await db.transaction(async (tx) => {
-      await tx.query("select public.commit_calendar_plan($1, $2, $3::jsonb, false)", [
+      await tx.query("select public.commit_calendar_plan($1, $2, $3::jsonb, false, 0)", [
         ws.clientId,
         calendarId,
         JSON.stringify([
@@ -390,6 +412,137 @@ describe("commit_calendar_plan", () => {
   });
 });
 
+describe("commit_calendar_plan expected plan revision", () => {
+  async function snapshot(calendarId: string, sourceId: string) {
+    return {
+      revision: await currentRevision(calendarId),
+      slots: await slotStatuses(calendarId),
+      usage: await usageStatuses(sourceId),
+    };
+  }
+
+  it("commits and advances the revision when the expected revision matches", async () => {
+    const ws = await seedWorkspace(db, "revision-match");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
+    const experienceId = await seedExperience(db, ws.clientId, "Matching revision");
+
+    expect(await currentRevision(calendarId)).toBe(0);
+    const first = await commitAt(ws.clientId, calendarId, [experienceSlot(experienceId), newsSlot], false, 0);
+    expect(first).toMatchObject({ ok: true, plan_revision: 1, slot_count: 2 });
+
+    const replan = await commitAt(ws.clientId, calendarId, [evergreenSlot, evergreenSlot], true, 1);
+    expect(replan).toMatchObject({ ok: true, plan_revision: 2, released: 2 });
+  });
+
+  it("rejects a stale revision without changing slots, reservations or the revision", async () => {
+    const ws = await seedWorkspace(db, "revision-stale");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 3);
+    const original = await seedExperience(db, ws.clientId, "Original plan");
+    const incoming = await seedExperience(db, ws.clientId, "Incoming from stale preview");
+
+    // Two sessions preview revision 0. The first commits; the second is now stale.
+    expect((await commitAt(ws.clientId, calendarId, [experienceSlot(original), evergreenSlot], false, 0)).ok).toBe(true);
+    const before = await snapshot(calendarId, original);
+
+    const stale = await commitAt(ws.clientId, calendarId, [experienceSlot(incoming)], true, 0);
+    expect(stale).toEqual({ ok: false, code: "PLAN_REVISION_CONFLICT", current_plan_revision: 1 });
+
+    // The first session's reservation survives; nothing was released or added.
+    expect(await snapshot(calendarId, original)).toEqual(before);
+    expect(await usageStatuses(incoming)).toEqual([]);
+    expect(await usageStatuses(original)).toEqual(["reserved"]);
+  });
+
+  it("rejects a revision ahead of the stored one", async () => {
+    const ws = await seedWorkspace(db, "revision-ahead");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
+
+    const result = await commitAt(ws.clientId, calendarId, [evergreenSlot], false, 5);
+    expect(result).toMatchObject({ ok: false, code: "PLAN_REVISION_CONFLICT" });
+    expect(await slotStatuses(calendarId)).toEqual([]);
+    expect(await currentRevision(calendarId)).toBe(0);
+  });
+
+  it("refuses a null expected revision instead of skipping the check", async () => {
+    const ws = await seedWorkspace(db, "revision-null");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
+
+    const result = await commitAt(ws.clientId, calendarId, [evergreenSlot], false, null);
+    expect(result).toEqual({ ok: false, code: "PLAN_REVISION_REQUIRED" });
+    expect(await slotStatuses(calendarId)).toEqual([]);
+    expect(await currentRevision(calendarId)).toBe(0);
+  });
+
+  it("applies a duplicate submission once: the replay is a conflict, not a second reservation", async () => {
+    const ws = await seedWorkspace(db, "revision-duplicate");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
+    const experienceId = await seedExperience(db, ws.clientId, "Submitted twice");
+    const slots = [experienceSlot(experienceId), evergreenSlot];
+
+    expect((await commitAt(ws.clientId, calendarId, slots, false, 0)).ok).toBe(true);
+    const replay = await commitAt(ws.clientId, calendarId, slots, true, 0);
+    expect(replay.code).toBe("PLAN_REVISION_CONFLICT");
+
+    expect(await usageStatuses(experienceId)).toEqual(["reserved"]);
+    expect(await slotStatuses(calendarId)).toEqual(["reserved", "planned"]);
+    expect(await currentRevision(calendarId)).toBe(1);
+  });
+
+  it("is checked before validation, so a stale caller learns of the conflict first", async () => {
+    const ws = await seedWorkspace(db, "revision-order");
+    const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 1);
+    await commitAt(ws.clientId, calendarId, [evergreenSlot], false, 0);
+
+    const result = await commitAt(
+      ws.clientId,
+      calendarId,
+      [evergreenSlot, evergreenSlot, evergreenSlot],
+      true,
+      0,
+    );
+    expect(result.code).toBe("PLAN_REVISION_CONFLICT");
+  });
+
+  it("still rejects another account's calendar and keeps source contention rules", async () => {
+    const ws = await seedWorkspace(db, "revision-scope-a");
+    const other = await seedWorkspace(db, "revision-scope-b");
+    const foreignCalendar = await seedCalendar(db, other.clientId, "2026-11-01", 2);
+    expect(await commitAt(ws.clientId, foreignCalendar, [evergreenSlot], false, 0)).toEqual({
+      ok: false,
+      code: "NOT_FOUND",
+    });
+
+    const ownCalendar = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
+    const secondCalendar = await seedCalendar(db, ws.clientId, "2026-12-01", 2);
+    const contested = await seedExperience(db, ws.clientId, "Contested with revision");
+    expect((await commitAt(ws.clientId, ownCalendar, [experienceSlot(contested)], false, 0)).ok).toBe(true);
+    const clash = await commitAt(ws.clientId, secondCalendar, [experienceSlot(contested)], false, 0);
+    expect(clash.code).toBe("SOURCE_UNAVAILABLE");
+    expect(await currentRevision(secondCalendar)).toBe(0);
+  });
+
+  it("exposes only the checked five-argument function to the API roles", async () => {
+    const grants = await db.query<{ args: number; role: string; allowed: boolean }>(
+      `select p.pronargs::int as args, r.rolname as role,
+              has_function_privilege(r.rolname, p.oid, 'execute') as allowed
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+       cross join (select rolname from pg_roles where rolname in ('anon', 'authenticated', 'service_role')) r
+       where n.nspname = 'public' and p.proname = 'commit_calendar_plan'
+       order by 1, 2`,
+    );
+
+    const byArgs = new Map<number, Record<string, boolean>>();
+    for (const row of grants.rows) {
+      byArgs.set(row.args, { ...byArgs.get(row.args), [row.role]: row.allowed });
+    }
+    expect([...byArgs.keys()].sort()).toEqual([4, 5]);
+    // The old unchecked entry point is retained but unreachable to every API role.
+    expect(byArgs.get(4)).toEqual({ anon: false, authenticated: false, service_role: false });
+    expect(byArgs.get(5)).toEqual({ anon: false, authenticated: true, service_role: true });
+  });
+});
+
 describe("cancel_calendar_slots", () => {
   it("releases reservations so the entry becomes available again", async () => {
     const ws = await seedWorkspace(db, "cancel");
@@ -472,7 +625,7 @@ describe("row level security", () => {
     const calendarId = await seedCalendar(db, ws.clientId, "2026-11-01", 2);
 
     const planAs = (userId: string, clientId = ws.clientId) =>
-      asUser(db, userId, () => commit(clientId, calendarId, [evergreenSlot, evergreenSlot]));
+      asUser(db, userId, () => commitAt(clientId, calendarId, [evergreenSlot, evergreenSlot], false, 0));
 
     expect((await planAs(ws.drafterId)).code).toBe("NOT_FOUND");
     expect((await planAs(outsider.adminId)).code).toBe("NOT_FOUND");

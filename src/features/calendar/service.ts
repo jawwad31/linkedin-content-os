@@ -32,10 +32,12 @@ import {
   type CalendarRecord,
 } from "./queries";
 import {
+  calendarSourceHintSchema,
   cancelSlotsSchema,
   monthKeySchema,
   parseCalendarSettings,
   planSelectionSchema,
+  type PlanSelection,
   type SettingsIssue,
 } from "./schemas";
 
@@ -308,13 +310,30 @@ export async function resetMonthToDefaults(
   return { ok: true, data: saved };
 }
 
+/** A source held by an unfinished slot that a confirmed replan would release. */
+export type ReleasedReservation = {
+  sourceId: string;
+  sourceType: "founder_experience" | "content_resource";
+  title: string;
+  slotIndex: number;
+  /** Still selected, but the month has no open allocation left for it. */
+  reason: "beyond_capacity" | "not_selected";
+};
+
 export type PlanPreview = {
   plan: AllocationPlan;
   hasExistingPlan: boolean;
   /** Slots a confirmed replan would cancel and release. */
   replannableSlots: number;
-  /** Slots kept because they already carry a post. */
+  /** Slots kept because they already carry a post, or are queued or drafting. */
   preservedSlots: number;
+  /** Source reservations among the replannable slots that the new plan drops. */
+  releasedReservations: ReleasedReservation[];
+  /**
+   * The month's plan revision when this preview was built. A commit must send it
+   * back; the database refuses the commit if the plan has since changed.
+   */
+  planRevision: number;
 };
 
 type LoadedPlanContext = {
@@ -323,6 +342,8 @@ type LoadedPlanContext = {
   hasExistingPlan: boolean;
   replannableSlots: number;
   preservedSlots: number;
+  releasedReservations: ReleasedReservation[];
+  requiredSource: PlanSelection["requiredSource"] | null;
 };
 
 /**
@@ -346,16 +367,23 @@ async function buildPlan(
   if (!calendar) return { ok: false, error: NOT_FOUND };
 
   const slots = await getCalendarSlots(clientId, calendar.id);
-  const { preserved, replannable } = splitSlots(slots);
+  const { preserved, replannable, locked } = splitSlots(slots);
   const heldUsage = await getReplannableUsageIds(clientId, calendar.id);
   const inventory = await getCandidateInventory(clientId, slots, heldUsage);
+  const requiredSource = selection.data.requiredSource ?? null;
+  const requiredLockedSlot = requiredSource
+    ? locked.find((slot) =>
+        slot.sourceId === requiredSource.sourceId &&
+        slot.sourceType === requiredSource.sourceType)
+    : null;
 
   const eligible = new Set([
     ...inventory.experience.map((entry) => entry.id),
     ...inventory.asset.map((entry) => entry.id),
   ]);
   const requested = [...selection.data.experienceIds, ...selection.data.assetIds];
-  const missing = requested.filter((id) => !eligible.has(id));
+  const missing = requested.filter((id) =>
+    !eligible.has(id) && id !== requiredLockedSlot?.sourceId);
   if (missing.length > 0) {
     return {
       ok: false,
@@ -374,18 +402,81 @@ async function buildPlan(
   const experienceIds = new Set(inventory.experience.map((entry) => entry.id));
   const assetIds = new Set(inventory.asset.map((entry) => entry.id));
   const crossBucket =
-    selection.data.experienceIds.some((id) => !experienceIds.has(id)) ||
-    selection.data.assetIds.some((id) => !assetIds.has(id));
+    selection.data.experienceIds.some((id) =>
+      !experienceIds.has(id) &&
+      !(requiredLockedSlot?.sourceType === "founder_experience" && requiredLockedSlot.sourceId === id)) ||
+    selection.data.assetIds.some((id) =>
+      !assetIds.has(id) &&
+      !(requiredLockedSlot?.sourceType === "content_resource" && requiredLockedSlot.sourceId === id));
   if (crossBucket) return { ok: false, error: INVALID_INPUT };
+
+  if (requiredSource && !requiredLockedSlot) {
+    const selectedInCorrectBucket = requiredSource.sourceType === "founder_experience"
+      ? selection.data.experienceIds.includes(requiredSource.sourceId)
+      : selection.data.assetIds.includes(requiredSource.sourceId);
+    if (!selectedInCorrectBucket || !eligible.has(requiredSource.sourceId)) {
+      return {
+        ok: false,
+        error: fail(
+          "SOURCE_UNAVAILABLE",
+          "The Content Bank entry is no longer eligible for this month. Return to Content Bank or choose another source.",
+        ),
+      };
+    }
+  }
+
+  const selectedExperienceIds = selection.data.experienceIds.filter((id) =>
+    !(requiredLockedSlot?.sourceType === "founder_experience" && requiredLockedSlot.sourceId === id));
+  const selectedAssetIds = selection.data.assetIds.filter((id) =>
+    !(requiredLockedSlot?.sourceType === "content_resource" && requiredLockedSlot.sourceId === id));
 
   const plan = planAllocation({
     settings: calendar.settings,
     selection: {
-      experience: selection.data.experienceIds,
-      asset: selection.data.assetIds,
+      experience: selectedExperienceIds,
+      asset: selectedAssetIds,
     },
     available: { experience: inventory.experience.length, asset: inventory.asset.length },
     preserved,
+  });
+
+  if (requiredSource && !requiredLockedSlot) {
+    const included = plan.slots.some((slot) =>
+      slot.sourceId === requiredSource.sourceId &&
+      slot.sourceType === requiredSource.sourceType);
+    if (!included) {
+      const label = requiredSource.sourceType === "founder_experience"
+        ? "experience"
+        : "asset";
+      return {
+        ok: false,
+        error: fail(
+          "SOURCE_CAPACITY",
+          `This month has no open ${label} allocation for the selected Content Bank entry. Adjust and save the monthly count or source percentages, then preview again.`,
+        ),
+      };
+    }
+  }
+
+  // Reservations held by unfinished slots survive a replan only when the new plan
+  // keeps the same entry. Name every other one so the user sees what is released.
+  const ignored = new Set([
+    ...plan.ignoredSelections.experience,
+    ...plan.ignoredSelections.asset,
+  ]);
+  const releasedReservations: ReleasedReservation[] = replannable.flatMap((slot) => {
+    const { sourceId, sourceType } = slot;
+    if (!sourceId || !sourceType) return [];
+    const kept = plan.slots.some((planned) =>
+      planned.sourceId === sourceId && planned.sourceType === sourceType);
+    if (kept) return [];
+    return [{
+      sourceId,
+      sourceType,
+      title: slot.sourceTitle ?? "Untitled entry",
+      slotIndex: slot.slotIndex,
+      reason: ignored.has(sourceId) ? "beyond_capacity" as const : "not_selected" as const,
+    }];
   });
 
   return {
@@ -396,6 +487,8 @@ async function buildPlan(
       hasExistingPlan: slots.length > 0,
       replannableSlots: replannable.length,
       preservedSlots: sumCounts(preserved),
+      releasedReservations,
+      requiredSource,
     },
   };
 }
@@ -411,8 +504,25 @@ export async function previewCalendarPlan(
   const built = await buildPlan(gate.auth.clientId, monthKey, rawSelection);
   if (!built.ok) return built.error;
 
-  const { plan, hasExistingPlan, replannableSlots, preservedSlots } = built.context;
-  return { ok: true, data: { plan, hasExistingPlan, replannableSlots, preservedSlots } };
+  const {
+    calendar,
+    plan,
+    hasExistingPlan,
+    replannableSlots,
+    preservedSlots,
+    releasedReservations,
+  } = built.context;
+  return {
+    ok: true,
+    data: {
+      plan,
+      hasExistingPlan,
+      replannableSlots,
+      preservedSlots,
+      releasedReservations,
+      planRevision: calendar.planRevision,
+    },
+  };
 }
 
 type CommitRpcResult = {
@@ -424,7 +534,96 @@ type CommitRpcResult = {
   unavailable?: { source_id: string; reason: string }[];
 };
 
+export type CommittedCalendarSource = {
+  sourceId: string;
+  sourceType: "founder_experience" | "content_resource";
+  slotId: string;
+  state: "reserved" | "already_in_month";
+};
+
+export type CommitCalendarPlanResult = {
+  planRevision: number;
+  slotCount: number;
+  released: number;
+  selectedSource: CommittedCalendarSource | null;
+};
+
+async function confirmCalendarSourceAssignment(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  calendarId: string,
+  source: NonNullable<PlanSelection["requiredSource"]>,
+): Promise<CommittedCalendarSource | null> {
+  const slot = await supabase.from("calendar_slots")
+    .select("id,source_usage_id,post_id")
+    .eq("client_id", clientId)
+    .eq("calendar_id", calendarId)
+    .eq("source_id", source.sourceId)
+    .eq("source_type", source.sourceType)
+    .neq("status", "cancelled")
+    .limit(1)
+    .maybeSingle<{ id: string; source_usage_id: string | null; post_id: string | null }>();
+  if (slot.error || !slot.data) return null;
+
+  if (slot.data.post_id) {
+    return { ...source, slotId: slot.data.id, state: "already_in_month" };
+  }
+  if (!slot.data.source_usage_id) return null;
+
+  const usage = await supabase.from("source_usage")
+    .select("id")
+    .eq("id", slot.data.source_usage_id)
+    .eq("client_id", clientId)
+    .eq("source_id", source.sourceId)
+    .eq("source_type", source.sourceType)
+    .eq("channel", "calendar_slot")
+    .eq("status", "reserved")
+    .maybeSingle<{ id: string }>();
+  if (usage.error || usage.data?.id !== slot.data.source_usage_id) return null;
+
+  return { ...source, slotId: slot.data.id, state: "reserved" };
+}
+
+/**
+ * Read-only: reports whether one Content Bank entry holds a confirmed slot and
+ * reservation in a month. The browser calls it after a commit response is lost, so
+ * it can tell an assignment that succeeded from a request that did not, without
+ * sending another reservation.
+ */
+export async function checkCalendarSourceAssignment(
+  clientId: string,
+  monthKey: string,
+  rawSource: unknown,
+): Promise<CalendarServiceResult<{ assignment: CommittedCalendarSource | null }>> {
+  const gate = await authorize(clientId, "planner");
+  if (!gate.ok) return gate.error;
+
+  const month = monthKeySchema.safeParse(monthKey);
+  const source = calendarSourceHintSchema.safeParse(rawSource);
+  if (!month.success || !source.success) return INVALID_INPUT;
+
+  const calendar = await getCalendarForMonth(gate.auth.clientId, month.data);
+  if (!calendar) return { ok: true, data: { assignment: null } };
+
+  const supabase = await createClient();
+  const assignment = await confirmCalendarSourceAssignment(
+    supabase,
+    gate.auth.clientId,
+    calendar.id,
+    source.data,
+  );
+  return { ok: true, data: { assignment } };
+}
+
+const PLAN_CHANGED_MESSAGE =
+  "This month's plan changed after you previewed it. Nothing was changed. Reload, review the latest plan and preview again.";
+
+const planRevisionSchema = z.number().int().min(0).max(2_147_483_647);
+
 const COMMIT_MESSAGES: Record<string, string> = {
+  PLAN_REVISION_CONFLICT: PLAN_CHANGED_MESSAGE,
+  PLAN_REVISION_REQUIRED:
+    "The plan revision is missing. Reload, review the latest plan and preview again.",
   PLAN_EXISTS: "This month already has a plan. Preview and confirm a replan to change it.",
   TOO_MANY_SLOTS: "The plan has more slots than this month's post count allows.",
   DUPLICATE_SOURCE: "An entry can be planned only once in a month.",
@@ -436,21 +635,32 @@ const COMMIT_MESSAGES: Record<string, string> = {
  * selected entry ids (nothing the browser computed is trusted), then writes slots
  * and reservations in one SQL transaction. If any selected entry was claimed in the
  * meantime, nothing is written and the unavailable entries are reported.
+ *
+ * `expectedPlanRevision` is the revision returned by the preview the user
+ * confirmed. The database compares it under the calendar-row lock, so a plan that
+ * another session committed in between is never replaced unseen. It is never
+ * defaulted from a fresh read here, which would defeat the check.
  */
 export async function commitCalendarPlan(
   clientId: string,
   monthKey: string,
   rawSelection: unknown,
   confirmReplace: boolean,
-): Promise<CalendarServiceResult<{ planRevision: number; slotCount: number; released: number }>> {
+  expectedPlanRevision: unknown,
+): Promise<CalendarServiceResult<CommitCalendarPlanResult>> {
   const gate = await authorize(clientId, "planner");
   if (!gate.ok) return gate.error;
+
+  const expectedRevision = planRevisionSchema.safeParse(expectedPlanRevision);
+  if (!expectedRevision.success) {
+    return fail("PLAN_REVISION_REQUIRED", COMMIT_MESSAGES.PLAN_REVISION_REQUIRED);
+  }
 
   const { userId, clientId: verifiedClientId } = gate.auth;
   const built = await buildPlan(verifiedClientId, monthKey, rawSelection);
   if (!built.ok) return built.error;
 
-  const { calendar, plan, hasExistingPlan } = built.context;
+  const { calendar, plan, hasExistingPlan, requiredSource } = built.context;
 
   if (hasExistingPlan && !confirmReplace) {
     return fail(
@@ -471,6 +681,7 @@ export async function commitCalendarPlan(
       source_type: slot.sourceType,
     })),
     p_replace: hasExistingPlan,
+    p_expected_plan_revision: expectedRevision.data,
   });
 
   const result = data as CommitRpcResult | null;
@@ -493,6 +704,16 @@ export async function commitCalendarPlan(
     return fail(code, COMMIT_MESSAGES[code] ?? GENERIC_FAILURE.message);
   }
 
+  const selectedSource = requiredSource
+    ? await confirmCalendarSourceAssignment(
+        supabase,
+        verifiedClientId,
+        calendar.id,
+        requiredSource,
+      )
+    : null;
+  const selectedSourceUnconfirmed = Boolean(requiredSource && !selectedSource);
+
   await writeAuditLog({
     clientId: verifiedClientId,
     userId,
@@ -507,16 +728,26 @@ export async function commitCalendarPlan(
       released: result.released ?? 0,
       requested: plan.requested as BucketCounts,
       actual: plan.actual as BucketCounts,
+      selected_source_id: requiredSource?.sourceId ?? null,
+      selected_source_type: requiredSource?.sourceType ?? null,
+      selected_source_confirmed: requiredSource ? Boolean(selectedSource) : null,
     },
   });
 
   revalidate(verifiedClientId);
+  if (selectedSourceUnconfirmed) {
+    return fail(
+      "COMMIT_UNCONFIRMED",
+      "The calendar plan was saved, but the selected Content Bank reservation could not be confirmed. Refresh the month before trying again.",
+    );
+  }
   return {
     ok: true,
     data: {
       planRevision: result.plan_revision ?? calendar.planRevision + 1,
       slotCount: result.slot_count ?? plan.slots.length,
       released: result.released ?? 0,
+      selectedSource,
     },
   };
 }

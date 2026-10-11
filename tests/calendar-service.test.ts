@@ -299,7 +299,7 @@ describe("authorization", () => {
       saveMonthSettings(CLIENT_ID, MONTH, validSettings, null),
       saveAccountDefaults(CLIENT_ID, validSettings, null),
       previewCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }),
-      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false),
+      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false, 0),
       cancelCalendarSlots(CLIENT_ID, MONTH, {}),
     ]);
 
@@ -314,7 +314,7 @@ describe("authorization", () => {
     const results = await Promise.all([
       saveMonthSettings(CLIENT_ID, MONTH, validSettings, null),
       saveAccountDefaults(CLIENT_ID, validSettings, null),
-      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false),
+      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false, 0),
       cancelCalendarSlots(CLIENT_ID, MONTH, {}),
     ]);
 
@@ -341,7 +341,7 @@ describe("authorization", () => {
       saveMonthSettings(CLIENT_ID, MONTH, validSettings, 3),
       resetMonthToDefaults(CLIENT_ID, MONTH, 3),
       previewCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }),
-      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false),
+      commitCalendarPlan(CLIENT_ID, MONTH, { experienceIds: [], assetIds: [] }, false, 0),
       cancelCalendarSlots(CLIENT_ID, MONTH, {}),
     ]);
 
@@ -467,7 +467,7 @@ describe("commit", () => {
   });
 
   it("recomputes the plan on the server and sends only slots derived from it", async () => {
-    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false);
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 0);
 
     expect(result.ok).toBe(true);
     expect(state.rpcCalls).toHaveLength(1);
@@ -483,6 +483,48 @@ describe("commit", () => {
     expect(writeAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: "calendar_plan_committed", clientId: CLIENT_ID }),
     );
+  });
+
+  it("sends the previewed plan revision to the database, never one read at commit time", async () => {
+    vi.mocked(getCalendarForMonth).mockResolvedValue({ ...calendar, planRevision: 7 });
+
+    const preview = await previewCalendarPlan(CLIENT_ID, MONTH, selection());
+    expect(preview.ok && preview.data.planRevision).toBe(7);
+
+    // The month moved on after the preview; the caller still names revision 7.
+    vi.mocked(getCalendarForMonth).mockResolvedValue({ ...calendar, planRevision: 9 });
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 7);
+
+    expect(state.rpcCalls).toHaveLength(1);
+    expect(state.rpcCalls[0].args).toMatchObject({ p_expected_plan_revision: 7 });
+    expect(result.ok).toBe(true);
+  });
+
+  it.each([undefined, null, -1, 1.5, "3", Number.NaN])(
+    "refuses to commit without a valid expected revision (%s)",
+    async (revision) => {
+      const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, revision);
+
+      expect(result).toMatchObject({ ok: false, code: "PLAN_REVISION_REQUIRED" });
+      expect(state.rpcCalls).toHaveLength(0);
+      expect(writeAuditLog).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports a stale plan as a safe conflict and writes no audit entry", async () => {
+    state.rpcResult = {
+      data: { ok: false, code: "PLAN_REVISION_CONFLICT", current_plan_revision: 4 },
+      error: null,
+    };
+
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 3);
+
+    expect(result).toMatchObject({ ok: false, code: "PLAN_REVISION_CONFLICT" });
+    if (!result.ok) {
+      expect(result.message).toContain("Nothing was changed");
+      expect(result.message).not.toMatch(/4|current_plan_revision/);
+    }
+    expect(writeAuditLog).not.toHaveBeenCalled();
   });
 
   it("requires explicit confirmation to replan an existing plan", async () => {
@@ -502,11 +544,11 @@ describe("commit", () => {
       },
     ]);
 
-    const unconfirmed = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false);
+    const unconfirmed = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 0);
     expect(unconfirmed).toMatchObject({ ok: false, code: "REPLAN_CONFIRMATION_REQUIRED" });
     expect(state.rpcCalls).toHaveLength(0);
 
-    const confirmed = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), true);
+    const confirmed = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), true, 0);
     expect(confirmed.ok).toBe(true);
     expect(state.rpcCalls[0].args).toMatchObject({ p_replace: true });
   });
@@ -522,7 +564,7 @@ describe("commit", () => {
       error: null,
     };
 
-    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false);
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 0);
 
     expect(result).toMatchObject({ ok: false, code: "SOURCE_UNAVAILABLE" });
     if (result.ok) return;
@@ -537,6 +579,7 @@ describe("commit", () => {
       MONTH,
       { experienceIds: [uuid(777)], assetIds: [] },
       false,
+      0,
     );
     expect(result).toMatchObject({ ok: false, code: "SOURCE_UNAVAILABLE" });
     expect(state.rpcCalls).toHaveLength(0);
@@ -548,7 +591,7 @@ describe("commit", () => {
       error: { code: "XX000", message: 'deadlock detected on relation "source_usage"' },
     };
 
-    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false);
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 0);
 
     expect(result).toMatchObject({ ok: false, code: "UNKNOWN_ERROR" });
     if (!result.ok) expect(result.message).not.toMatch(/deadlock|source_usage|XX000/);
@@ -557,7 +600,7 @@ describe("commit", () => {
 
   it("maps a plan-exists race to a safe message", async () => {
     state.rpcResult = { data: { ok: false, code: "PLAN_EXISTS" }, error: null };
-    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false);
+    const result = await commitCalendarPlan(CLIENT_ID, MONTH, selection(), false, 0);
     expect(result).toMatchObject({ ok: false, code: "PLAN_EXISTS" });
   });
 });

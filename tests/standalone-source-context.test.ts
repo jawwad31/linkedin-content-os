@@ -30,6 +30,20 @@ describe("standalone redraft source resolution", () => {
     const missing = client(null);
     expect((await loadSourceContext(missing.admin, "other", idea("content_resource", [id]))).ok).toBe(false);
   });
+  it.each([
+    ["founder_experience", { id, title: "Win" }],
+    ["trend_reaction", { id, title: "Take", source_trend_card_id: null }],
+    ["content_resource", { id, title: "Guide" }],
+  ] as const)("requires a ready %s only when a new direct assignment asks for it", async (mode, row) => {
+    const redraft = client(row);
+    await loadSourceContext(redraft.admin, "account", idea(mode, [id]));
+    expect(redraft.query.eq).not.toHaveBeenCalledWith("readiness", "ready");
+
+    const direct = client(row);
+    await loadSourceContext(direct.admin, "account", idea(mode, [id]), { requireReadySource: true });
+    expect(direct.query.eq).toHaveBeenCalledWith("readiness", "ready");
+    expect(direct.query.eq).toHaveBeenCalledWith("client_id", "account");
+  });
   it("uses profile fields without inventing an experience", async () => {
     const { admin } = client({ principles: "Measure first", personal_positioning: "Reliability", role_and_work: "Engineer" });
     const result = await loadSourceContext(admin, "account", idea("profile_led"));

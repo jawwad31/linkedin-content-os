@@ -20,6 +20,7 @@ import { ALLOCATION_BUCKETS } from "@/lib/ai/playbooks/taxonomies";
 
 import {
   cancelCalendarSlotsAction,
+  checkCalendarSourceAssignmentAction,
   commitCalendarPlanAction,
   previewCalendarPlanAction,
   resetMonthToDefaultsAction,
@@ -43,10 +44,29 @@ import type {
   CandidateEntry,
   CandidateInventory,
 } from "./queries";
-import { BUCKET_LABELS, parseCalendarSettings } from "./schemas";
+import {
+  BUCKET_LABELS,
+  parseCalendarSettings,
+  type CalendarIncomingSource,
+} from "./schemas";
 import type { PlanPreview } from "./service";
 
 type Notice = { kind: "success" | "error"; text: string };
+
+/**
+ * Failures that mean the month, its plan or an entry changed after the preview was
+ * built. The preview is discarded and the page data is reloaded rather than leaving
+ * the user to retry against what they were shown.
+ */
+const STALE_PLAN_CODES = new Set([
+  "PLAN_REVISION_CONFLICT",
+  "PLAN_REVISION_REQUIRED",
+  "SOURCE_UNAVAILABLE",
+  "SOURCE_CAPACITY",
+  "PLAN_EXISTS",
+  "REPLAN_CONFIRMATION_REQUIRED",
+  "COMMIT_UNCONFIRMED",
+]);
 
 type FormState = {
   timezone: string;
@@ -107,7 +127,26 @@ type PanelProps = {
   calendar: CalendarRecord | null;
   slots: CalendarSlotRecord[];
   candidates: CandidateInventory;
+  incomingSource: CalendarIncomingSource | null;
+  incomingSourceError: string | null;
 };
+
+function initialCandidateSelection(
+  entries: CandidateEntry[],
+  incomingSource: CalendarIncomingSource | null,
+  bucket: "experience" | "asset",
+): string[] {
+  const inPlan = entries.filter((entry) => entry.inPlan).map((entry) => entry.id);
+  if (
+    incomingSource?.state !== "eligible" ||
+    incomingSource.bucket !== bucket ||
+    !entries.some((entry) => entry.id === incomingSource.sourceId)
+  ) {
+    return inPlan;
+  }
+  return [incomingSource.sourceId, ...inPlan.filter((id) => id !== incomingSource.sourceId)]
+    .slice(0, 60);
+}
 
 /**
  * The notice lives here, outside the keyed workspace, so a success message survives
@@ -153,6 +192,8 @@ function CalendarWorkspace({
   calendar,
   slots,
   candidates,
+  incomingSource,
+  incomingSourceError,
   onNotice,
 }: PanelProps & { onNotice: (notice: Notice | null) => void }) {
   const router = useRouter();
@@ -166,10 +207,10 @@ function CalendarWorkspace({
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const [experienceIds, setExperienceIds] = useState<string[]>(() =>
-    candidates.experience.filter((entry) => entry.inPlan).map((entry) => entry.id),
+    initialCandidateSelection(candidates.experience, incomingSource, "experience"),
   );
   const [assetIds, setAssetIds] = useState<string[]>(() =>
-    candidates.asset.filter((entry) => entry.inPlan).map((entry) => entry.id),
+    initialCandidateSelection(candidates.asset, incomingSource, "asset"),
   );
   const [preview, setPreview] = useState<PlanPreview | null>(null);
   const [unavailable, setUnavailable] = useState<string[]>([]);
@@ -199,6 +240,17 @@ function CalendarWorkspace({
   const requested = savedSettings ? computeTargetCounts(savedSettings) : null;
   const lockedSlots = slots.filter((slot) => slot.postId || slot.status === "queued" || slot.status === "drafting");
   const replannableSlots = slots.filter((slot) => !lockedSlots.includes(slot));
+
+  // Only an eligible selection is sent; an assigned or unavailable one is display-only.
+  const eligibleIncoming = incomingSource?.state === "eligible" ? incomingSource : null;
+  const requiredSource = eligibleIncoming
+    ? { sourceId: eligibleIncoming.sourceId, sourceType: eligibleIncoming.sourceType }
+    : null;
+  const planSelection = {
+    experienceIds,
+    assetIds,
+    ...(requiredSource ? { requiredSource } : {}),
+  };
 
   const titleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -281,49 +333,119 @@ function CalendarWorkspace({
     setUnavailable([]);
   }
 
+  function dropUnavailableSelections(lost: Set<string>) {
+    setExperienceIds((ids) => ids.filter((id) => !lost.has(id)));
+    setAssetIds((ids) => ids.filter((id) => !lost.has(id)));
+  }
+
+  /** Discards the preview and reloads data after a failure that made it stale. */
+  function recoverFromStalePlan(result: {
+    code: string;
+    unavailable?: { sourceId: string }[];
+  }) {
+    setPreview(null);
+    if (!STALE_PLAN_CODES.has(result.code)) {
+      setUnavailable((result.unavailable ?? []).map((entry) => entry.sourceId));
+      return;
+    }
+    const lost = new Set((result.unavailable ?? []).map((entry) => entry.sourceId));
+    if (result.code === "SOURCE_UNAVAILABLE" && requiredSource && lost.size === 0) {
+      lost.add(requiredSource.sourceId);
+    }
+    setUnavailable([...lost]);
+    dropUnavailableSelections(lost);
+    router.refresh();
+  }
+
   function previewPlan() {
     onNotice(null);
     setUnavailable([]);
     startTransition(async () => {
-      const result = await previewCalendarPlanAction(clientId, monthKey, { experienceIds, assetIds });
+      const result = await previewCalendarPlanAction(clientId, monthKey, planSelection);
       if (result.ok) {
         setPreview(result.data);
         return;
       }
-      setPreview(null);
-      setUnavailable((result.unavailable ?? []).map((entry) => entry.sourceId));
+      recoverFromStalePlan(result);
       onNotice({ kind: "error", text: result.message });
     });
+  }
+
+  /**
+   * The commit response never arrived, so its outcome is unknown. Ask the server
+   * (read-only) whether this entry now holds a confirmed reservation instead of
+   * guessing, and never send a second reservation from here.
+   */
+  async function resolveLostCommit() {
+    setPreview(null);
+    router.refresh();
+    if (!eligibleIncoming || !requiredSource) {
+      onNotice({
+        kind: "error",
+        text: "The connection was interrupted, so the result is unknown. The month was reloaded; check the plan below before trying again.",
+      });
+      return;
+    }
+    try {
+      const check = await checkCalendarSourceAssignmentAction(clientId, monthKey, requiredSource);
+      if (!check.ok) throw new Error(check.message);
+      if (check.data.assignment) {
+        onNotice({
+          kind: "success",
+          text: `“${eligibleIncoming.title}” is assigned to ${monthLabel} with a confirmed reservation. The earlier request did succeed; nothing was reserved a second time.`,
+        });
+      } else {
+        onNotice({
+          kind: "error",
+          text: `The request was interrupted and “${eligibleIncoming.title}” is not assigned to ${monthLabel}. Preview the plan again to retry; a retry cannot create a duplicate reservation.`,
+        });
+      }
+    } catch {
+      onNotice({
+        kind: "error",
+        text: "The connection was interrupted and the result could not be checked. The month was reloaded; look for this entry in the plan before trying again.",
+      });
+    }
   }
 
   function commitPlan() {
     if (!preview) return;
     onNotice(null);
     startTransition(async () => {
-      const result = await commitCalendarPlanAction(
-        clientId,
-        monthKey,
-        { experienceIds, assetIds },
-        preview.hasExistingPlan,
-      );
+      let result: Awaited<ReturnType<typeof commitCalendarPlanAction>>;
+      try {
+        result = await commitCalendarPlanAction(
+          clientId,
+          monthKey,
+          planSelection,
+          preview.hasExistingPlan,
+          preview.planRevision,
+        );
+      } catch {
+        await resolveLostCommit();
+        return;
+      }
       if (result.ok) {
+        const confirmed = eligibleIncoming &&
+          result.data.selectedSource?.sourceId === eligibleIncoming.sourceId &&
+          result.data.selectedSource.sourceType === eligibleIncoming.sourceType &&
+          result.data.selectedSource.state === "reserved"
+          ? eligibleIncoming
+          : null;
+        const replaced = `${result.data.released} unfinished ${result.data.released === 1 ? "slot was" : "slots were"} replaced.`;
         onNotice({
           kind: "success",
-          text: preview.hasExistingPlan
-            ? `Replanned ${monthLabel}. ${result.data.released} unfinished ${result.data.released === 1 ? "slot was" : "slots were"} replaced.`
-            : `Saved the plan for ${monthLabel} and reserved the selected entries.`,
+          text: confirmed
+            ? `Added “${confirmed.title}” to ${monthLabel} and confirmed its reservation.${preview.hasExistingPlan ? ` ${replaced}` : ""}`
+            : preview.hasExistingPlan
+              ? `Replanned ${monthLabel}. ${replaced}`
+              : `Saved the plan for ${monthLabel} and reserved the selected entries.`,
         });
         setPreview(null);
         router.refresh();
         return;
       }
-      if (result.code === "SOURCE_UNAVAILABLE") {
-        const lost = new Set((result.unavailable ?? []).map((entry) => entry.sourceId));
-        setUnavailable([...lost]);
-        setExperienceIds((ids) => ids.filter((id) => !lost.has(id)));
-        setAssetIds((ids) => ids.filter((id) => !lost.has(id)));
-        setPreview(null);
-      }
+      recoverFromStalePlan(result);
       onNotice({ kind: "error", text: result.message });
     });
   }
@@ -344,6 +466,29 @@ function CalendarWorkspace({
 
   return (
     <>
+      {incomingSourceError ? (
+        <p role="alert" className="rounded-control border border-danger/30 bg-danger/5 p-4 text-small text-danger-strong">
+          {incomingSourceError}
+        </p>
+      ) : null}
+      {incomingSource ? (
+        <Card className="border-brand-purple/30 bg-brand-purple/5">
+          <CardHeader>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="accent-purple">Selected from Content Bank</Badge>
+              <Badge variant="outline">
+                {incomingSource.sourceType === "founder_experience" ? "Founder experience" : "Content resource"}
+              </Badge>
+              <Badge variant="outline">{BUCKET_LABELS[incomingSource.bucket]}</Badge>
+              <Badge variant={incomingSource.state === "eligible" ? "success" : incomingSource.state === "already_in_month" ? "info" : "warning"}>
+                {incomingSource.state === "eligible" ? "Eligible" : incomingSource.state === "already_in_month" ? "Already assigned" : "Unavailable"}
+              </Badge>
+            </div>
+            <CardTitle>{incomingSource.title}</CardTitle>
+            <CardDescription>{incomingSource.message}</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Settings for {monthLabel}</CardTitle>
@@ -515,7 +660,10 @@ function CalendarWorkspace({
             <CardTitle>Choose Content Bank entries</CardTitle>
             <CardDescription>
               Nothing is reserved until you save the plan. Entries marked reusable are
-              suggested, never selected for you.
+              suggested, never selected automatically.
+              {eligibleIncoming
+                ? " The Content Bank entry you chose is deliberately preselected and must appear in the preview before it can be committed."
+                : ""}
               {requested
                 ? ` This month asks for ${requested.experience} experience and ${requested.asset} asset ${requested.asset === 1 ? "post" : "posts"}.`
                 : ""}
@@ -529,6 +677,7 @@ function CalendarWorkspace({
                 entries={candidates.experience}
                 selected={experienceIds}
                 unavailable={unavailable}
+                pinnedId={eligibleIncoming?.bucket === "experience" ? eligibleIncoming.sourceId : null}
                 disabled={pending}
                 onToggle={(id) => toggle(id, experienceIds, setExperienceIds)}
               />
@@ -538,6 +687,7 @@ function CalendarWorkspace({
                 entries={candidates.asset}
                 selected={assetIds}
                 unavailable={unavailable}
+                pinnedId={eligibleIncoming?.bucket === "asset" ? eligibleIncoming.sourceId : null}
                 disabled={pending}
                 onToggle={(id) => toggle(id, assetIds, setAssetIds)}
               />
@@ -577,13 +727,40 @@ function CalendarWorkspace({
                   shortages={preview.plan.shortages}
                 />
                 <PlanNotes plan={preview.plan} />
+                {preview.releasedReservations.length > 0 ? (
+                  <div role="alert" className="flex flex-col gap-2 rounded-control border border-warning/40 bg-warning/10 p-3 text-small text-warning-strong">
+                    <p className="font-medium">
+                      {preview.releasedReservations.length === 1
+                        ? "This replan releases one entry already reserved for this month:"
+                        : `This replan releases ${preview.releasedReservations.length} entries already reserved for this month:`}
+                    </p>
+                    <ul className="list-disc pl-5">
+                      {preview.releasedReservations.map((entry) => (
+                        <li key={`${entry.sourceType}:${entry.sourceId}`}>
+                          “{entry.title}” (slot {entry.slotIndex}) —{" "}
+                          {entry.reason === "beyond_capacity"
+                            ? "still selected, but this month has no open allocation left for it"
+                            : "no longer selected"}
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      {eligibleIncoming
+                        ? `Adding “${eligibleIncoming.title}” takes the place of ${preview.releasedReservations.length === 1 ? "that entry" : "those entries"}. `
+                        : ""}
+                      Released entries return to Content Bank and are no longer held for this
+                      month. Monthly counts and percentages are not changed; adjust them first
+                      if you want to keep every entry.
+                    </p>
+                  </div>
+                ) : null}
                 {preview.hasExistingPlan ? (
                   <p className="text-small text-near-black">
                     Confirming cancels {preview.replannableSlots} unfinished{" "}
                     {preview.replannableSlots === 1 ? "slot" : "slots"} and releases their
                     reservations.{" "}
                     {preview.preservedSlots > 0
-                      ? `${preview.preservedSlots} slots with saved or pending drafts stay untouched.`
+                      ? `${preview.preservedSlots} ${preview.preservedSlots === 1 ? "slot" : "slots"} with saved, queued or drafting posts stay untouched.`
                       : "No slot has a post yet."}
                   </p>
                 ) : null}
@@ -749,6 +926,7 @@ function CandidateList({
   entries,
   selected,
   unavailable,
+  pinnedId,
   disabled,
   onToggle,
 }: {
@@ -757,6 +935,7 @@ function CandidateList({
   entries: CandidateEntry[];
   selected: string[];
   unavailable: string[];
+  pinnedId: string | null;
   disabled: boolean;
   onToggle: (id: string) => void;
 }) {
@@ -777,6 +956,7 @@ function CandidateList({
           {entries.map((entry) => {
             const checked = selected.includes(entry.id);
             const lost = unavailable.includes(entry.id);
+            const pinned = entry.id === pinnedId;
             return (
               <li key={entry.id}>
                 <label
@@ -790,7 +970,7 @@ function CandidateList({
                     type="checkbox"
                     className="mt-0.5 h-4 w-4 shrink-0 accent-[#9600C7]"
                     checked={checked}
-                    disabled={disabled}
+                    disabled={disabled || pinned}
                     onChange={() => onToggle(entry.id)}
                   />
                   <span className="flex min-w-0 flex-col gap-1">
@@ -810,6 +990,7 @@ function CandidateList({
                         <Badge variant="neutral">Unused</Badge>
                       )}
                       {entry.inPlan ? <Badge variant="info">In current plan</Badge> : null}
+                      {pinned ? <Badge variant="accent-purple">Selected from Content Bank</Badge> : null}
                     </span>
                   </span>
                 </label>

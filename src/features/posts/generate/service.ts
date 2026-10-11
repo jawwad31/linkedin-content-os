@@ -1,14 +1,23 @@
 import "server-only";
 
 import { computeContentHash } from "@/features/documents/retrieval-service";
-import { STANDALONE_SOURCE_MAX_BYTES } from "./standalone-brief-schema";
+import {
+  directContentBankContextSchema,
+  STANDALONE_SOURCE_MAX_BYTES,
+  type DirectContentBankContext,
+} from "./standalone-brief-schema";
+import {
+  commitContentBankPostUsage,
+  hasSourceReservationForIdea,
+  releaseSourceReservation,
+} from "@/features/content-bank/usage-service";
 
 import { storedFindingSchema } from "@/features/research/web-research/contracts";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { canAccessClient, canDraftPosts, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
+import { canAccessClient, canDraftPosts, canManageIdeas, canUserDeleteBusinessRecords } from "@/lib/access/client-access";
 import {
   runContentAgent,
   buildFinalPost,
@@ -235,6 +244,27 @@ const GENERIC_FAILURE = {
   code: "UNKNOWN_ERROR",
   message: "Could not generate this post. Please try again.",
 };
+
+const CONTENT_BANK_SOURCE_UNAVAILABLE = {
+  ok: false as const,
+  code: "SOURCE_UNAVAILABLE",
+  message: "This Content Bank entry is no longer eligible or reserved for this assignment. Return to Content Bank and choose it again.",
+};
+
+function directContentBankContext(idea: ContentIdeaRow): DirectContentBankContext | null {
+  const parsed = directContentBankContextSchema.safeParse(idea.source_context);
+  if (!parsed.success) return null;
+  const sourceIds = idsFromJson(idea.source_ids_json);
+  const source = parsed.data.contentBankSource;
+  if (
+    idea.source_type !== source.ideaSourceType ||
+    sourceIds.length !== source.sourceIds.length ||
+    sourceIds.some((id, index) => id !== source.sourceIds[index])
+  ) {
+    return null;
+  }
+  return parsed.data;
+}
 
 function idsFromJson(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -675,11 +705,12 @@ async function loadFounderExperienceSource(
   admin: AdminClient,
   clientId: string,
   sourceIds: string[],
+  options: SourceLoadOptions,
 ): Promise<SourceLoadResult> {
   const sourceId = sourceIds[0];
   if (!sourceId) return { ok: false, failure: IDEA_NOT_AVAILABLE };
 
-  const { data, error } = await admin
+  let query = admin
     .from("founder_experiences")
     .select(
       "id, title, what_happened, what_was_learned, what_changed, why_it_matters, entry_type, reaction_type, source_trend_card_id",
@@ -688,8 +719,9 @@ async function loadFounderExperienceSource(
     .eq("client_id", clientId)
     .eq("entry_type", "work_log")
     .is("source_trend_card_id", null)
-    .is("deleted_at", null)
-    .maybeSingle<FounderExperienceRow>();
+    .is("deleted_at", null);
+  if (options.requireReadySource) query = query.eq("readiness", "ready");
+  const { data, error } = await query.maybeSingle<FounderExperienceRow>();
 
   if (error || !data) return { ok: false, failure: IDEA_NOT_AVAILABLE };
 
@@ -747,11 +779,12 @@ async function loadTrendReactionSource(
   admin: AdminClient,
   clientId: string,
   sourceIds: string[],
+  options: SourceLoadOptions,
 ): Promise<SourceLoadResult> {
   const sourceId = sourceIds[0];
   if (!sourceId) return { ok: false, failure: IDEA_NOT_AVAILABLE };
 
-  const { data: reaction, error } = await admin
+  let reactionQuery = admin
     .from("founder_experiences")
     .select(
       "id, title, what_happened, what_was_learned, what_changed, why_it_matters, entry_type, reaction_type, source_trend_card_id",
@@ -759,8 +792,9 @@ async function loadTrendReactionSource(
     .eq("id", sourceId)
     .eq("client_id", clientId)
     .eq("entry_type", "trend_reaction")
-    .is("deleted_at", null)
-    .maybeSingle<FounderExperienceRow>();
+    .is("deleted_at", null);
+  if (options.requireReadySource) reactionQuery = reactionQuery.eq("readiness", "ready");
+  const { data: reaction, error } = await reactionQuery.maybeSingle<FounderExperienceRow>();
 
   if (error || !reaction || !reaction.source_trend_card_id) {
     return { ok: false, failure: IDEA_NOT_AVAILABLE };
@@ -798,15 +832,24 @@ async function loadTrendReactionSource(
   };
 }
 
+/**
+ * `requireReadySource` is set only for a new direct Content Bank assignment, whose
+ * source must still be marked ready when generation starts. Redrafts, Calendar
+ * drafting and the older Idea flows keep their prior behavior: a source that was
+ * ready when it was assigned stays loadable for work already underway.
+ */
+export type SourceLoadOptions = { requireReadySource?: boolean };
+
 export async function loadSourceContext(
   admin: AdminClient,
   clientId: string,
   idea: Pick<ContentIdeaRow, "source_type" | "source_ids_json" | "source_context">,
+  options: SourceLoadOptions = {},
 ): Promise<SourceLoadResult> {
   const sourceIds = idsFromJson(idea.source_ids_json);
 
   if (idea.source_type === "founder_experience") {
-    return loadFounderExperienceSource(admin, clientId, sourceIds);
+    return loadFounderExperienceSource(admin, clientId, sourceIds, options);
   }
 
   if (idea.source_type === "trend_card") {
@@ -814,14 +857,16 @@ export async function loadSourceContext(
   }
 
   if (idea.source_type === "trend_reaction") {
-    return loadTrendReactionSource(admin, clientId, sourceIds);
+    return loadTrendReactionSource(admin, clientId, sourceIds, options);
   }
 
   if (idea.source_type === "content_resource") {
     if (!sourceIds[0]) return { ok: false, failure: IDEA_NOT_AVAILABLE };
-    const { data, error } = await admin.from("content_resources").select("*")
+    let resourceQuery = admin.from("content_resources").select("*")
       .eq("id", sourceIds[0]).eq("client_id", clientId)
-      .eq("active", true).is("deleted_at", null).maybeSingle();
+      .eq("active", true).is("deleted_at", null);
+    if (options.requireReadySource) resourceQuery = resourceQuery.eq("readiness", "ready");
+    const { data, error } = await resourceQuery.maybeSingle();
     if (error || !data) return { ok: false, failure: IDEA_NOT_AVAILABLE };
     return { ok: true, sourceContext: {
       sourceType: "content_resource", sourceIds, sourceTitle: data.title,
@@ -1291,7 +1336,49 @@ export async function generatePostFromIdea(
   if (!idea) return IDEA_NOT_AVAILABLE;
   if (idea.status === "archived") return IDEA_NOT_AVAILABLE;
 
+  const declaresDirectContentBankSource = Boolean(
+    idea.source_context &&
+    typeof idea.source_context === "object" &&
+    !Array.isArray(idea.source_context) &&
+    (idea.source_context as Record<string, unknown>).contentBankDirectCreate === true,
+  );
+  const directBank = directContentBankContext(idea);
+  if (declaresDirectContentBankSource && !directBank) {
+    return CONTENT_BANK_SOURCE_UNAVAILABLE;
+  }
+  if (directBank && !(await canManageIdeas(user.id, clientIdResult.data))) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "You need permission to create ideas and draft posts for this Content Bank assignment.",
+    };
+  }
+
+  const supabase = await createClient();
+  const commitDirectUsage = async (postId: string) => {
+    if (!directBank) return true;
+    const committed = await commitContentBankPostUsage({
+      clientId: clientIdResult.data,
+      usageId: directBank.contentBankUsageId,
+      sourceId: directBank.contentBankSource.sourceId,
+      sourceType: directBank.contentBankSource.sourceType,
+      contentIdeaId: idea.id,
+      postId,
+    }, supabase);
+    if (committed.ok) revalidatePath(`/client/${clientIdResult.data}/content-bank`);
+    return committed.ok;
+  };
+  const releaseDirectUsage = async () => {
+    if (!directBank) return;
+    await releaseSourceReservation({
+      clientId: clientIdResult.data,
+      usageId: directBank.contentBankUsageId,
+    }, supabase);
+    revalidatePath(`/client/${clientIdResult.data}/content-bank`);
+  };
+
   if (existingPostId) {
+    if (!(await commitDirectUsage(existingPostId))) return GENERIC_FAILURE;
     if (idea.status !== "used") {
       const markedUsed = await markContentIdeaUsed({
         clientId: clientIdResult.data,
@@ -1321,8 +1408,73 @@ export async function generatePostFromIdea(
 
   if (idea.status !== "ready") return IDEA_NOT_AVAILABLE;
 
-  const source = await loadSourceContext(admin, clientIdResult.data, idea);
-  if (!source.ok) return source.failure;
+  if (directBank) {
+    const reserved = await hasSourceReservationForIdea({
+      clientId: clientIdResult.data,
+      usageId: directBank.contentBankUsageId,
+      sourceId: directBank.contentBankSource.sourceId,
+      sourceType: directBank.contentBankSource.sourceType,
+      contentIdeaId: idea.id,
+    }, supabase);
+    if (!reserved) return CONTENT_BANK_SOURCE_UNAVAILABLE;
+
+    const overrides = parseStrategyOverrides(idea.strategy_overrides);
+    const requestsResourceOffer = directBank.contentBankSource.resourceOffer &&
+      overrides.ctaType === "comment_gate" &&
+      overrides.resourceId === directBank.contentBankSource.sourceId;
+    if (requestsResourceOffer) {
+      const approvedResource = await supabase.from("content_resources")
+        .select("id,keyword,delivery_url,delivery_instructions")
+        .eq("id", directBank.contentBankSource.sourceId)
+        .eq("client_id", clientIdResult.data)
+        .eq("readiness", "ready")
+        .eq("active", true)
+        .eq("comment_gate_approved", true)
+        .is("deleted_at", null)
+        .maybeSingle<{
+          id: string;
+          keyword: string | null;
+          delivery_url: string | null;
+          delivery_instructions: string | null;
+        }>();
+      const hasDelivery = Boolean(
+        approvedResource.data?.delivery_url?.trim() ||
+        approvedResource.data?.delivery_instructions?.trim(),
+      );
+      if (
+        approvedResource.error ||
+        !approvedResource.data?.keyword?.trim() ||
+        !hasDelivery ||
+        !resources.some((resource) => resource.id === directBank.contentBankSource.sourceId)
+      ) {
+        await releaseDirectUsage();
+        return {
+          ok: false,
+          code: "SOURCE_UNAVAILABLE",
+          message: "This resource is no longer approved with valid comment-gate delivery details. Return to Content Bank after updating it, or create a new educational post from it.",
+        };
+      }
+      if (!commentGateEligible) {
+        await releaseDirectUsage();
+        return {
+          ok: false,
+          code: "SOURCE_UNAVAILABLE",
+          message: "A recent active post already used a comment-gated resource. Return to Content Bank and create a new educational post from this resource.",
+        };
+      }
+    }
+  }
+
+  const source = await loadSourceContext(admin, clientIdResult.data, idea, {
+    requireReadySource: Boolean(directBank),
+  });
+  if (!source.ok) {
+    if (directBank) {
+      await releaseDirectUsage();
+      return CONTENT_BANK_SOURCE_UNAVAILABLE;
+    }
+    return source.failure;
+  }
 
   const generated = await produceReviewedPost({
     clientId: clientIdResult.data,
@@ -1336,7 +1488,6 @@ export async function generatePostFromIdea(
 
   if (!generated.ok) return generated.failure;
 
-  const supabase = await createClient();
   const { data: inserted, error: insertError } = await supabase
     .from("posts")
     .insert({
@@ -1368,6 +1519,7 @@ export async function generatePostFromIdea(
     if (insertError?.code === "23505") {
       const existingId = await getExistingPostId(admin, clientIdResult.data, idea.id);
       if (existingId) {
+        if (!(await commitDirectUsage(existingId))) return GENERIC_FAILURE;
         await markContentIdeaUsed({
           clientId: clientIdResult.data,
           ideaId: idea.id,
@@ -1384,6 +1536,8 @@ export async function generatePostFromIdea(
     }
     return GENERIC_FAILURE;
   }
+
+  if (!(await commitDirectUsage(inserted.id))) return GENERIC_FAILURE;
 
   const markedUsed = await markContentIdeaUsed({
     clientId: clientIdResult.data,

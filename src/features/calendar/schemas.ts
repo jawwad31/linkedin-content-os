@@ -117,9 +117,26 @@ export function newsRoom(settings: Pick<CalendarSettings, "postCount" | "newsCap
 export const planSelectionSchema = z.object({
   experienceIds: z.array(z.string().uuid()).max(MAX_POST_COUNT),
   assetIds: z.array(z.string().uuid()).max(MAX_POST_COUNT),
+  requiredSource: z.object({
+    sourceId: z.string().uuid(),
+    sourceType: z.enum(["founder_experience", "content_resource"]),
+  }).strict().optional(),
 });
 
 export type PlanSelection = z.infer<typeof planSelectionSchema>;
+
+export const calendarSourceHintSchema = z.object({
+  sourceId: z.string().uuid(),
+  sourceType: z.enum(["founder_experience", "content_resource"]),
+}).strict();
+
+export type CalendarIncomingSource = z.infer<typeof calendarSourceHintSchema> & {
+  title: string;
+  bucket: "experience" | "asset";
+  state: "eligible" | "already_in_month" | "unavailable";
+  message: string;
+  slotId: string | null;
+};
 
 export const cancelSlotsSchema = z.object({
   slotIds: z.array(z.string().uuid()).max(MAX_POST_COUNT).optional(),

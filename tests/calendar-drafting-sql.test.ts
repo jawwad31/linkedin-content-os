@@ -22,7 +22,7 @@ async function fixture(label: string, count = 2, source = false) {
   const calendar = await seedCalendar(db, ws.clientId, "2026-11-01", count);
   const sourceId = source ? await seedExperience(db, ws.clientId, "Actual experience") : null;
   const slots = Array.from({ length: count }, (_, i) => ({ bucket: sourceId && i === 0 ? "experience" : "evergreen", requested_bucket: sourceId && i === 0 ? "experience" : "evergreen", source_id: i === 0 ? sourceId : null, source_type: sourceId && i === 0 ? "founder_experience" : null }));
-  await asUser(db, ws.adminId, () => rpc("commit_calendar_plan", [ws.clientId, calendar, JSON.stringify(slots), false]));
+  await asUser(db, ws.adminId, () => rpc("commit_calendar_plan", [ws.clientId, calendar, JSON.stringify(slots), false, 0]));
   const rows = (await db.query<{ id: string }>("select id from public.calendar_slots where calendar_id=$1 order by slot_index", [calendar])).rows;
   const payload = rows.map(row => ({ slot_id: row.id, brief }));
   return { ...ws, calendar, rows, payload, sourceId };
@@ -91,7 +91,7 @@ describe("P06 durable SQL transitions", () => {
     const f = await fixture("batch-cancel", 2, true);
     await asUser(db, f.adminId, async () => {
       const j = await start(f); const c = await claim(f.clientId, j.job_id!);
-      expect((await rpc("commit_calendar_plan", [f.clientId, f.calendar, "[]", true])).ok).toBe(true);
+      expect((await rpc("commit_calendar_plan", [f.clientId, f.calendar, "[]", true, 1])).ok).toBe(true);
       await rpc("cancel_calendar_slots", [f.clientId, f.calendar, null]);
       expect((await db.query<{ status: string }>("select status from public.calendar_slots where id=$1", [c.slot_id])).rows[0].status).toBe("drafting");
       expect((await rpc("cancel_calendar_draft_job", [f.clientId, j.job_id])).ok).toBe(true);

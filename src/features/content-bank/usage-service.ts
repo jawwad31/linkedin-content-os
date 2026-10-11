@@ -25,6 +25,7 @@ type ReserveSourceParams = {
   postId?: string | null;
   angle?: string | null;
   takeaway?: string | null;
+  requireAtomic?: boolean;
 };
 
 const RESERVE_ERROR_MESSAGES: Record<string, string> = {
@@ -64,6 +65,13 @@ export async function reserveSourceEntry(
   });
 
   if (isMissingFunctionError(error)) {
+    if (params.requireAtomic) {
+      return {
+        ok: false,
+        code: "RESERVATION_UNAVAILABLE",
+        error: "Atomic source reservation is not available. Please contact an administrator before drafting this entry.",
+      };
+    }
     // The P05 migration has not been applied yet. Remove this fallback once it is
     // confirmed in every environment.
     return reserveSourceEntryWithoutLock(params, supabase);
@@ -270,6 +278,116 @@ export async function releaseSourceReservation(
 
   const { error } = await query;
   return { ok: !error };
+}
+
+/** Link a still-pending direct assignment to its backing Idea. */
+export async function linkSourceReservationToIdea(
+  params: {
+    clientId: string;
+    usageId: string;
+    sourceId: string;
+    sourceType: SourceType;
+    contentIdeaId: string;
+  },
+  customClient?: SupabaseAnyClient,
+): Promise<{ ok: boolean }> {
+  const supabase = customClient ?? (await createClient());
+  const { data, error } = await supabase
+    .from("source_usage")
+    .update({
+      content_idea_id: params.contentIdeaId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.usageId)
+    .eq("client_id", params.clientId)
+    .eq("source_id", params.sourceId)
+    .eq("source_type", params.sourceType)
+    .eq("channel", "linkedin_post")
+    .eq("status", "reserved")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  return { ok: !error && data?.id === params.usageId };
+}
+
+/** Confirm that generation still owns the exact source reservation it saved. */
+export async function hasSourceReservationForIdea(
+  params: {
+    clientId: string;
+    usageId: string;
+    sourceId: string;
+    sourceType: SourceType;
+    contentIdeaId: string;
+  },
+  customClient?: SupabaseAnyClient,
+): Promise<boolean> {
+  const supabase = customClient ?? (await createClient());
+  const { data, error } = await supabase
+    .from("source_usage")
+    .select("id")
+    .eq("id", params.usageId)
+    .eq("client_id", params.clientId)
+    .eq("source_id", params.sourceId)
+    .eq("source_type", params.sourceType)
+    .eq("channel", "linkedin_post")
+    .eq("content_idea_id", params.contentIdeaId)
+    .eq("status", "reserved")
+    .maybeSingle<{ id: string }>();
+
+  return !error && data?.id === params.usageId;
+}
+
+/**
+ * Commit one direct Content Bank assignment. Repeated success recovery is
+ * idempotent only when the same usage row already points at the same post.
+ */
+export async function commitContentBankPostUsage(
+  params: {
+    clientId: string;
+    usageId: string;
+    sourceId: string;
+    sourceType: SourceType;
+    contentIdeaId: string;
+    postId: string;
+  },
+  customClient?: SupabaseAnyClient,
+): Promise<{ ok: boolean }> {
+  const supabase = customClient ?? (await createClient());
+  const { data, error } = await supabase
+    .from("source_usage")
+    .update({
+      status: "used",
+      post_id: params.postId,
+      content_idea_id: params.contentIdeaId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.usageId)
+    .eq("client_id", params.clientId)
+    .eq("source_id", params.sourceId)
+    .eq("source_type", params.sourceType)
+    .eq("channel", "linkedin_post")
+    .eq("content_idea_id", params.contentIdeaId)
+    .eq("status", "reserved")
+    .select("id")
+    .maybeSingle<{ id: string }>();
+
+  if (!error && data?.id === params.usageId) return { ok: true };
+  if (error) return { ok: false };
+
+  const existing = await supabase
+    .from("source_usage")
+    .select("id")
+    .eq("id", params.usageId)
+    .eq("client_id", params.clientId)
+    .eq("source_id", params.sourceId)
+    .eq("source_type", params.sourceType)
+    .eq("channel", "linkedin_post")
+    .eq("content_idea_id", params.contentIdeaId)
+    .eq("post_id", params.postId)
+    .in("status", ["used", "published"])
+    .maybeSingle<{ id: string }>();
+
+  return { ok: !existing.error && existing.data?.id === params.usageId };
 }
 
 /**

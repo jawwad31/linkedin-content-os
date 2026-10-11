@@ -2,6 +2,7 @@
 
 import {
   cancelCalendarSlots,
+  checkCalendarSourceAssignment,
   commitCalendarPlan,
   previewCalendarPlan,
   resetMonthToDefaults,
@@ -59,8 +60,17 @@ export async function commitCalendarPlanAction(
   monthKey: string,
   selection: unknown,
   confirmReplace: boolean,
+  expectedPlanRevision: number,
 ) {
-  return commitCalendarPlan(clientId, monthKey, selection, confirmReplace);
+  return commitCalendarPlan(clientId, monthKey, selection, confirmReplace, expectedPlanRevision);
+}
+
+export async function checkCalendarSourceAssignmentAction(
+  clientId: string,
+  monthKey: string,
+  source: unknown,
+) {
+  return checkCalendarSourceAssignment(clientId, monthKey, source);
 }
 
 export async function cancelCalendarSlotsAction(
