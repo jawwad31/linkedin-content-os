@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
-import { canRoleManageIdeas, canRoleDraftPosts, canRoleManageFounderExperiences } from "@/lib/access/roles";
+import { canRoleManageIdeas, canRoleDraftPosts, canRoleManageFounderExperiences, canRoleReviewPosts } from "@/lib/access/roles";
 import { StandalonePostForm } from "@/features/posts/generate/standalone-post-form";
 import {
   standaloneContentBankSourceSchema,
@@ -11,7 +11,8 @@ import {
 } from "@/features/posts/generate/standalone-brief-schema";
 import { createClient } from "@/lib/supabase/server";
 import { getReviewPosts } from "@/features/posts/review/queries";
-import { PostsView } from "@/features/posts/posts-view";
+import { PostsLanding } from "@/features/posts/posts-landing";
+import { getDraftingEntries } from "@/features/calendar/queries";
 import { getServerUser } from "@/lib/supabase/session";
 import { getContentBankEntry } from "@/features/content-bank/queries";
 import { CONTENT_BANK_CATEGORY_LABELS, type ContentBankEntry } from "@/features/content-bank/schemas";
@@ -84,7 +85,7 @@ export default async function PostsPage({
     );
   }
 
-  const postsResult = await getReviewPosts(clientId);
+  const [postsResult, drafting] = await Promise.all([getReviewPosts(clientId), getDraftingEntries(clientId)]);
   const canCreate = canRoleManageIdeas(access.role, access.permissions) && canRoleDraftPosts(access.role, access.permissions);
   let documents: StandaloneDocumentOption[] = [];
   let documentsUnavailable = false;
@@ -120,7 +121,7 @@ export default async function PostsPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Posts"
-        description="Review, edit, approve, reject and inspect generated LinkedIn posts."
+        description="What needs you first: posts to review, posts ready to publish by hand, and drafts in progress."
       />
 
       {canCreate ? <StandalonePostForm
@@ -134,7 +135,13 @@ export default async function PostsPage({
       /> : null}
 
       {postsResult.ok ? (
-        <PostsView clientId={clientId} posts={postsResult.posts} role={access.role} />
+        <PostsLanding
+          clientId={clientId}
+          posts={postsResult.posts}
+          drafting={drafting}
+          role={access.role}
+          canReview={canRoleReviewPosts(access.role, access.permissions)}
+        />
       ) : (
         <div className="rounded-card border border-border-grey bg-white p-6 text-small text-danger-strong">
           We could not load post drafts. Please try again.

@@ -511,3 +511,53 @@ export async function getScheduledCounts(
   }
   return counts;
 }
+
+export type DraftingEntry = { slotId: string; title: string; date: string | null };
+
+/** Entries a draft is being written for right now, across every month (for "In progress"). */
+export async function getDraftingEntries(clientId: string): Promise<DraftingEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("calendar_slots")
+    .select("id, source_id, source_type, scheduled_date")
+    .eq("client_id", clientId)
+    .in("status", ["queued", "drafting"])
+    .limit(50)
+    .returns<
+      { id: string; source_id: string | null; source_type: SourceKind | null; scheduled_date: string | null }[]
+    >();
+  if (error || !data) return [];
+
+  const idsOf = (kind: SourceKind) =>
+    data.filter((slot) => slot.source_type === kind && slot.source_id).map((slot) => slot.source_id as string);
+  const experienceIds = idsOf("founder_experience");
+  const resourceIds = idsOf("content_resource");
+  const [experiences, resources] = await Promise.all([
+    experienceIds.length
+      ? supabase
+          .from("founder_experiences")
+          .select("id, title")
+          .eq("client_id", clientId)
+          .in("id", experienceIds)
+          .returns<{ id: string; title: string }[]>()
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    resourceIds.length
+      ? supabase
+          .from("content_resources")
+          .select("id, title")
+          .eq("client_id", clientId)
+          .in("id", resourceIds)
+          .returns<{ id: string; title: string }[]>()
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+  ]);
+  const titles = new Map<string, string>();
+  for (const row of [...(experiences.data ?? []), ...(resources.data ?? [])]) titles.set(row.id, row.title);
+
+  return data
+    .map((slot) => ({
+      slotId: slot.id,
+      title: (slot.source_id && titles.get(slot.source_id)) || "Untitled entry",
+      date: slot.scheduled_date,
+    }))
+    .sort((a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999"));
+}

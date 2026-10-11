@@ -8,6 +8,7 @@ import {
   parseQaWarningCodes,
   type QaWarningCode,
 } from "@/lib/ai/playbooks/qa-warnings";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ReviewPostStatus =
@@ -49,6 +50,10 @@ export type ReviewPost = {
   approvedAt: string | null;
   publishedAt: string | null;
   createdAt: string;
+  /** Who approved the current version, and who last edited it (null for older posts). */
+  approvedByName?: string | null;
+  lastEditedByName?: string | null;
+  linkedinUrl?: string | null;
   idea: ReviewPostIdea | null;
 };
 
@@ -76,7 +81,36 @@ type ReviewPostRow = {
   approved_at: string | null;
   published_at: string | null;
   created_at: string;
+  approved_by?: string | null;
+  last_edited_by?: string | null;
+  linkedin_url?: string | null;
 };
+
+const POST_COLUMNS =
+  "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, allocation_bucket, post_type, funnel_stage, intended_reader, primary_takeaway, content_pillar, draft_version, approved_draft_version, edit_note, approved_at, published_at, created_at";
+const POST_COLUMNS_WITH_ACTORS = `${POST_COLUMNS}, approved_by, last_edited_by, linkedin_url`;
+
+/** True when the new columns have not been added to this database yet. */
+function isMissingColumn(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
+}
+
+/** A person's display name for "approved by" lines; only ever asked for ids on this account's posts. */
+async function actorNames(ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(ids.filter((id): id is string => typeof id === "string")));
+  const names = new Map<string, string>();
+  if (unique.length === 0) return names;
+  const { data } = await createAdminClient()
+    .from("profiles")
+    .select("id, name, email")
+    .in("id", unique)
+    .returns<{ id: string; name: string | null; email: string | null }[]>();
+  for (const row of data ?? []) {
+    const label = row.name?.trim() || row.email?.split("@")[0] || null;
+    if (label) names.set(row.id, label);
+  }
+  return names;
+}
 
 type ContentIdeaRow = {
   id: string;
@@ -121,17 +155,18 @@ export async function getReviewPosts(
 ): Promise<ReviewPostsResult> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select(
-      "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, allocation_bucket, post_type, funnel_stage, intended_reader, primary_takeaway, content_pillar, draft_version, approved_draft_version, edit_note, approved_at, published_at, created_at",
-    )
-    .eq("client_id", clientId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .returns<ReviewPostRow[]>();
+  const load = (columns: string) =>
+    supabase
+      .from("posts")
+      .select(columns)
+      .eq("client_id", clientId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .returns<ReviewPostRow[]>();
+  let { data, error } = await load(POST_COLUMNS_WITH_ACTORS);
+  if (isMissingColumn(error)) ({ data, error } = await load(POST_COLUMNS));
 
-  if (error) return { ok: false };
+  if (error || !data) return { ok: false };
 
   const ideaIds = Array.from(
     new Set(
@@ -194,6 +229,7 @@ export async function getReviewPosts(
         approvedAt: row.approved_at,
         publishedAt: row.published_at,
         createdAt: row.created_at,
+        linkedinUrl: row.linkedin_url ?? null,
         idea: row.content_idea_id
           ? (ideaById.get(row.content_idea_id) ?? null)
           : null,
@@ -220,6 +256,23 @@ type ClientIdentityRow = {
  * Fetch a single post by both client_id and post_id to enforce access scoping
  * and block cross-client access.
  */
+async function loadOne(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  postId: string,
+) {
+  const query = (columns: string) =>
+    supabase
+      .from("posts")
+      .select(columns)
+      .eq("client_id", clientId)
+      .eq("id", postId)
+      .is("deleted_at", null)
+      .maybeSingle<ReviewPostRow>();
+  const result = await query(POST_COLUMNS_WITH_ACTORS);
+  return isMissingColumn(result.error) ? query(POST_COLUMNS) : result;
+}
+
 export async function getReviewPost(
   clientId: string,
   postId: string,
@@ -227,15 +280,7 @@ export async function getReviewPost(
   const supabase = await createClient();
 
   const [{ data: row, error }, { data: clientRow }] = await Promise.all([
-    supabase
-      .from("posts")
-      .select(
-        "id, content_idea_id, final_post, buyer_belief_shift, proof_notes, risk_notes, cta_intent, format_recommendation, qa_result, source_context_used, status, allocation_bucket, post_type, funnel_stage, intended_reader, primary_takeaway, content_pillar, draft_version, approved_draft_version, edit_note, approved_at, published_at, created_at",
-      )
-      .eq("client_id", clientId)
-      .eq("id", postId)
-      .is("deleted_at", null)
-      .maybeSingle<ReviewPostRow>(),
+    loadOne(supabase, clientId, postId),
     supabase
       .from("clients")
       .select("name, founder_name")
@@ -275,6 +320,7 @@ export async function getReviewPost(
   }
 
   const split = splitPost(row.final_post);
+  const names = await actorNames([row.approved_by, row.last_edited_by]);
 
   return {
     ok: true,
@@ -307,6 +353,9 @@ export async function getReviewPost(
       approvedAt: row.approved_at,
       publishedAt: row.published_at,
       createdAt: row.created_at,
+      approvedByName: row.approved_by ? (names.get(row.approved_by) ?? null) : null,
+      lastEditedByName: row.last_edited_by ? (names.get(row.last_edited_by) ?? null) : null,
+      linkedinUrl: row.linkedin_url ?? null,
       idea,
     },
   };

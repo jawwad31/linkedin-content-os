@@ -19,9 +19,11 @@ import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
 import { getReviewPost, type ReviewPostStatus } from "@/features/posts/review/queries";
 import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
 import { PostReviewActions } from "@/features/posts/review/post-review-actions";
+import { PublishHandoff } from "@/features/posts/review/publish-handoff";
 import {
   canRoleDraftPosts,
   canRoleManageWorkflowReview,
+  canRolePublishPosts,
   canRoleReviewPosts,
 } from "@/lib/access/roles";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
@@ -330,6 +332,8 @@ export default async function PostReviewPage({
   const { post, client } = postResult;
   const canReview = canRoleReviewPosts(access.role, access.permissions);
   const canRedraft = canRoleDraftPosts(access.role, access.permissions);
+  const canPublish = canRolePublishPosts(access.role, access.permissions);
+  const version = post.draftVersion ?? 1;
   const canDelete = canRoleManageWorkflowReview(access.role);
   const sourceContext = compactJson(post.sourceContextUsed);
   const displayName = client.founderName ?? client.name;
@@ -364,18 +368,23 @@ export default async function PostReviewPage({
               </Badge>
             ) : null}
             <span className="text-caption font-mono text-muted-foreground">
-              v{post.draftVersion ?? 1}
+              v{version}
             </span>
           </div>
+          <p className="mt-1 text-small text-muted-foreground">
+            Version {version}
+            {post.lastEditedByName ? ` · Edited by ${post.lastEditedByName}` : ""}
+            {post.status === "approved" && post.approvedAt
+              ? ` · Approved${post.approvedByName ? ` by ${post.approvedByName}` : ""}, ${formatUtcDate(post.approvedAt)}`
+              : post.status === "review" || post.status === "needs_edit" ? " · Not approved" : ""}
+            {post.status === "published" && post.publishedAt ? ` · Published ${formatUtcDate(post.publishedAt)}` : ""}
+          </p>
           {post.draftVersion && post.approvedDraftVersion && post.draftVersion !== post.approvedDraftVersion ? (
             <div className="mt-2 flex items-center gap-2 rounded-control bg-warning/10 border border-warning/30 px-3 py-2 text-caption text-warning-strong font-medium">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>Draft updated after approval. Renewed review is required before publishing.</span>
             </div>
           ) : null}
-          <p className="mt-1 max-w-3xl text-small text-muted-foreground">
-            Inspect and review this post&apos;s workflow status and content details.
-          </p>
           {post.idea ? (
             <p className="mt-2 max-w-3xl break-words text-small text-muted-foreground">
               <span className="font-medium text-near-black">
@@ -420,12 +429,13 @@ export default async function PostReviewPage({
             </div>
           </div>
 
-          {/* Review actions form panel at the bottom of the preview */}
-          {canReview || canRedraft ? (
+          {/* Review decision: approve names the exact version that was read. */}
+          {post.status === "published" || post.status === "approved" ? null : canReview || canRedraft ? (
             <PostReviewActions
               clientId={clientId}
               postId={post.id}
               status={post.status}
+              version={version}
               canReview={canReview}
               canRedraft={canRedraft}
             />
@@ -435,6 +445,33 @@ export default async function PostReviewPage({
             </div>
           )}
         </div>
+
+        {post.status === "approved" ? (
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+            <PublishHandoff
+              clientId={clientId}
+              postId={post.id}
+              text={post.finalPost}
+              version={version}
+              canPublish={canPublish}
+            />
+            {canReview ? (
+              <p className="text-caption text-muted-foreground">
+                Editing withdraws approval of version {version}.{" "}
+                <Link href={`/client/${clientId}/posts/${post.id}/edit`} className="text-brand-purple underline">Edit this post</Link>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {post.status === "published" && post.linkedinUrl ? (
+          <p className="text-small text-near-black lg:col-span-2">
+            Published on LinkedIn:{" "}
+            <a href={post.linkedinUrl} target="_blank" rel="noopener noreferrer" className="break-all text-brand-purple underline">
+              {post.linkedinUrl}
+            </a>
+          </p>
+        ) : null}
 
         {/* Right column: Post metadata (~35% on desktop) */}
         <div className="flex min-w-0 flex-col gap-4">

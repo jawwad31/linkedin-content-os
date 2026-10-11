@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CheckCircle2, PenSquare, RefreshCw, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,193 +11,246 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ReviewPostStatus } from "./queries";
 import { EDIT_NOTE_MAX_LENGTH } from "./schemas";
 
-const GENERIC_ERROR_COPY = "Could not update this post. Please try again.";
+const GENERIC_ERROR_COPY = "Could not update this post. Nothing was changed. Please try again.";
+const CONNECTION_ERROR_COPY =
+  "The connection was interrupted, so the result is unknown. Reload the post to see its current state before trying again.";
 
 type ActionName = "approve" | "needs-edit" | "redraft" | "reject";
+type NoteAction = "needs-edit" | "reject";
 
 type RequestState =
   | { status: "idle" }
   | { status: "pending"; action: ActionName }
-  | { status: "error"; message: string }
+  | { status: "error"; message: string; stale?: boolean }
   | { status: "success"; message: string };
 
 const IDLE: RequestState = { status: "idle" };
 
-function statusMessage(action: ActionName): string {
-  if (action === "approve") return "Post approved.";
-  if (action === "needs-edit") return "Post marked needs edit.";
+function statusMessage(action: ActionName, version: number): string {
+  if (action === "approve") return `Version ${version} approved.`;
+  if (action === "needs-edit") return "Edits requested.";
   if (action === "redraft") return "Post redrafted and returned to review.";
-  return "Post rejected.";
+  return "Post rejected. Its entry is available again.";
 }
 
+const NOTE_COPY: Record<NoteAction, { label: string; placeholder: string; submit: string; pending: string }> = {
+  "needs-edit": {
+    label: "What needs to change?",
+    placeholder: "One line on the edit needed before this can be approved.",
+    submit: "Send edit request",
+    pending: "Sending...",
+  },
+  reject: {
+    label: "Why is this rejected?",
+    placeholder: "One line on why this post will not be used.",
+    submit: "Reject post",
+    pending: "Rejecting...",
+  },
+};
+
+/**
+ * The reviewer's decision. Approval names the exact version that was read; a newer
+ * version is refused. Request edits and Reject each ask for a one-line note.
+ */
 export function PostReviewActions({
   clientId,
   postId,
   status,
+  version,
   canReview,
   canRedraft: hasRedraftPermission,
 }: {
   clientId: string;
   postId: string;
   status: ReviewPostStatus;
+  version: number;
   canReview: boolean;
   canRedraft: boolean;
 }) {
   const router = useRouter();
-  const [editNote, setEditNote] = useState("");
+  const [noteAction, setNoteAction] = useState<NoteAction | null>(null);
+  const [note, setNote] = useState("");
   const [state, setState] = useState<RequestState>(IDLE);
   const isPending = state.status === "pending";
   const canApprove = canReview && (status === "review" || status === "needs_edit");
   const canNeedsEdit = canReview && status === "review";
   const canRedraft = hasRedraftPermission && status === "needs_edit";
   const canReject = canReview && (status === "review" || status === "needs_edit");
+  const canEdit = canReview && status !== "published" && status !== "rejected";
 
-  async function submitAction(action: ActionName) {
-    const trimmedNote = editNote.trim();
-    if (action === "needs-edit" && trimmedNote.length === 0) {
-      setState({ status: "error", message: "Edit note is required." });
-      return;
-    }
-
+  async function submit(action: ActionName, body?: Record<string, unknown>) {
     setState({ status: "pending", action });
-
     try {
-      const response = await fetch(
-        `/api/client/${clientId}/posts/${postId}/${action}`,
-        {
-          method: "POST",
-          headers:
-            action === "needs-edit"
-              ? { "Content-Type": "application/json" }
-              : undefined,
-          body:
-            action === "needs-edit"
-              ? JSON.stringify({ editNote: trimmedNote })
-              : undefined,
-        },
-      );
+      const response = await fetch(`/api/client/${clientId}/posts/${postId}/${action}`, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
       const payload = await response.json();
 
       if (!payload.success) {
         setState({
           status: "error",
-          message:
-            typeof payload?.error?.message === "string"
-              ? payload.error.message
-              : GENERIC_ERROR_COPY,
+          message: typeof payload?.error?.message === "string" ? payload.error.message : GENERIC_ERROR_COPY,
+          stale: payload?.error?.code === "STALE_VERSION",
         });
         return;
       }
 
-      setState({ status: "success", message: statusMessage(action) });
-      setEditNote("");
+      setState({ status: "success", message: statusMessage(action, version) });
+      setNote("");
+      setNoteAction(null);
       router.refresh();
     } catch {
-      setState({ status: "error", message: GENERIC_ERROR_COPY });
+      setState({ status: "error", message: CONNECTION_ERROR_COPY, stale: true });
     }
+  }
+
+  function submitNote() {
+    if (!noteAction) return;
+    const trimmed = note.trim();
+    if (trimmed.length === 0) {
+      setState({ status: "error", message: "Add a short note first." });
+      return;
+    }
+    void submit(noteAction, noteAction === "needs-edit" ? { editNote: trimmed } : { note: trimmed });
   }
 
   return (
     <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
-      {canReview ? <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor={`edit-note-${postId}`}
-            className="text-caption font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            Edit Note
-          </label>
-          <span className="font-mono text-caption text-muted-foreground">
-            {editNote.length}/{EDIT_NOTE_MAX_LENGTH}
-          </span>
+      {noteAction ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label
+              htmlFor={`review-note-${postId}`}
+              className="text-small font-medium text-near-black"
+            >
+              {NOTE_COPY[noteAction].label}
+            </label>
+            <span className="font-mono text-caption text-muted-foreground">
+              {note.length}/{EDIT_NOTE_MAX_LENGTH}
+            </span>
+          </div>
+          <Textarea
+            id={`review-note-${postId}`}
+            value={note}
+            onChange={(event) => {
+              setNote(event.target.value);
+              if (state.status !== "idle") setState(IDLE);
+            }}
+            maxLength={EDIT_NOTE_MAX_LENGTH}
+            rows={2}
+            disabled={isPending}
+            placeholder={NOTE_COPY[noteAction].placeholder}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={noteAction === "reject" ? "destructive" : "brand"}
+              disabled={isPending}
+              onClick={submitNote}
+            >
+              {isPending ? NOTE_COPY[noteAction].pending : NOTE_COPY[noteAction].submit}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => { setNoteAction(null); setNote(""); setState(IDLE); }}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
-        <Textarea
-          id={`edit-note-${postId}`}
-          value={editNote}
-          onChange={(event) => {
-            setEditNote(event.target.value);
-            if (state.status !== "idle") setState(IDLE);
-          }}
-          maxLength={EDIT_NOTE_MAX_LENGTH}
-          rows={3}
-          disabled={!canNeedsEdit || isPending}
-          placeholder="Add the edit needed before this post can be approved."
-        />
-      </div> : null}
-
-      {state.status === "error" || state.status === "success" ? (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          className={
-            state.status === "error"
-              ? "text-small text-danger-strong"
-              : "text-small text-success-strong"
-          }
-        >
-          {state.message}
-        </p>
       ) : null}
 
-      <div className="flex flex-col gap-3 border-t border-border-grey pt-3 sm:flex-row sm:items-center sm:justify-between">
-        {canReview ? (
+      {state.status === "error" || state.status === "success" ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p
+            role={state.status === "error" ? "alert" : "status"}
+            className={state.status === "error" ? "text-small text-danger-strong" : "text-small text-success-strong"}
+          >
+            {state.message}
+          </p>
+          {state.status === "error" && state.stale ? (
+            <Button type="button" size="sm" variant="outline" onClick={() => router.refresh()}>
+              Reload post
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canReview ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Button
             type="button"
-            variant="secondary"
+            variant="brand"
+            size="sm"
+            disabled={!canApprove || isPending}
+            onClick={() => void submit("approve", { version })}
+            className="w-full sm:w-auto"
+          >
+            <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+            {state.status === "pending" && state.action === "approve" ? "Approving..." : `Approve version ${version}`}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
             disabled={!canNeedsEdit || isPending}
-            onClick={() => submitAction("needs-edit")}
-            className="w-full rounded-full sm:w-auto"
+            onClick={() => { setNoteAction("needs-edit"); setState(IDLE); }}
+            className="w-full sm:w-auto"
           >
             <PenSquare aria-hidden="true" className="h-4 w-4" />
-            {state.status === "pending" && state.action === "needs-edit"
-              ? "Saving..."
-              : "Needs Edit"}
+            Request edits
           </Button>
-        ) : null}
-        {canRedraft ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={isPending}
-            onClick={() => submitAction("redraft")}
-            className="w-full rounded-full sm:w-auto"
-          >
-            <RefreshCw aria-hidden="true" className="h-4 w-4" />
-            {state.status === "pending" && state.action === "redraft"
-              ? "Redrafting..."
-              : "Redraft"}
-          </Button>
-        ) : null}
-        {canReview ? <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             disabled={!canReject || isPending}
-            onClick={() => submitAction("reject")}
-            className="flex-1 rounded-full text-danger-strong hover:bg-danger/10 hover:text-danger-strong sm:flex-none"
+            onClick={() => { setNoteAction("reject"); setState(IDLE); }}
+            className="w-full text-danger-strong hover:bg-danger/10 hover:text-danger-strong sm:w-auto"
           >
             <XCircle aria-hidden="true" className="h-4 w-4" />
-            {state.status === "pending" && state.action === "reject"
-              ? "Rejecting..."
-              : "Reject"}
+            Reject
           </Button>
-          <Button
-            type="button"
-            variant="success"
-            size="sm"
-            disabled={!canApprove || isPending}
-            onClick={() => submitAction("approve")}
-            className="flex-1 rounded-full px-6 sm:flex-none"
-          >
-            <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-            {state.status === "pending" && state.action === "approve"
-              ? "Approving..."
-              : "Approve"}
-          </Button>
-        </div> : null}
-      </div>
+          {canEdit ? (
+            <Link
+              href={`/client/${clientId}/posts/${postId}/edit`}
+              className="inline-flex h-9 items-center justify-center rounded-control border border-border-grey bg-white px-4 text-small font-medium text-near-black hover:bg-soft-white"
+            >
+              Edit
+            </Link>
+          ) : null}
+          {canRedraft ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isPending}
+              onClick={() => void submit("redraft")}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+              {state.status === "pending" && state.action === "redraft" ? "Redrafting..." : "Redraft"}
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-small text-muted-foreground">
+          You cannot approve posts. Ask an account admin to add the Review capability.
+        </p>
+      )}
+
+      {canReview ? (
+        <p className="text-caption text-muted-foreground">
+          Approval applies to version {version} only. Request edits and Reject each ask for a one-line note.
+          {canRedraft ? " Redraft rewrites the post from your last edit note." : ""}
+        </p>
+      ) : null}
     </div>
   );
 }

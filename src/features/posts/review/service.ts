@@ -14,9 +14,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
 import {
+  approvePostRequestSchema,
+  editPostRequestSchema,
+  markPublishedRequestSchema,
   needsEditRequestSchema,
-  editPostContentSchema,
-  type EditPostContentInput,
+  rejectPostRequestSchema,
 } from "./schemas";
 import type { ReviewPostStatus } from "./queries";
 import {
@@ -81,6 +83,23 @@ const ONLY_APPROVED_CAN_PUBLISH = {
   code: "VALIDATION_ERROR",
   message: "Only approved posts can be marked as published.",
 };
+
+const STALE_VERSION = {
+  ok: false as const,
+  code: "STALE_VERSION",
+  message: "This post changed while you were looking at it. Reload to see the latest version.",
+};
+
+const NOT_EDITABLE = {
+  ok: false as const,
+  code: "INVALID_STATE",
+  message: "A published or rejected post cannot be edited.",
+};
+
+/** The code PostgREST and Postgres return when a column does not exist yet. */
+function isMissingColumn(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
+}
 
 const STALE_APPROVAL = {
   ok: false as const,
@@ -185,6 +204,7 @@ async function updatePostStatus(input: {
   approvedDraftVersion?: number;
 }): Promise<ServiceResult<Record<string, never>>> {
   const supabase = await createClient();
+  const approvedBy = input.nextStatus === "approved" ? input.userId : null;
 
   const updates: Record<string, unknown> = {
     status: input.nextStatus,
@@ -202,16 +222,27 @@ async function updatePostStatus(input: {
     }
   }
 
-  const { data, error } = await supabase
-    .from("posts")
-    .update(updates)
-    .eq("id", input.postId)
-    .eq("client_id", input.clientId)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle<{ id: string }>();
+  const run = (withApprover: boolean) => {
+    let query = supabase
+      .from("posts")
+      .update(withApprover && approvedBy ? { ...updates, approved_by: approvedBy } : updates)
+      .eq("id", input.postId)
+      .eq("client_id", input.clientId)
+      .is("deleted_at", null);
+    // Approval is atomic with the version the reviewer read: if the draft moved on,
+    // no row matches and nothing is approved.
+    if (input.nextStatus === "approved" && input.approvedDraftVersion) {
+      query = query.eq("draft_version", input.approvedDraftVersion);
+    }
+    return query.select("id").maybeSingle<{ id: string }>();
+  };
 
-  if (error || !data) return GENERIC_FAILURE;
+  let { data, error } = await run(true);
+  // Before the approver column exists, approve without recording who did.
+  if (isMissingColumn(error) && approvedBy) ({ data, error } = await run(false));
+
+  if (error) return GENERIC_FAILURE;
+  if (!data) return input.nextStatus === "approved" ? STALE_VERSION : GENERIC_FAILURE;
 
   await auditPostStatusChange({
     clientId: input.clientId,
@@ -256,11 +287,16 @@ async function getAuthorizedPostForAction(
 export async function approvePost(
   clientId: string,
   postId: string,
+  input: unknown,
 ): Promise<ServiceResult<Record<string, never>>> {
+  const parsed = approvePostRequestSchema.safeParse(input);
+  if (!parsed.success) return INVALID_INPUT;
+
   const result = await getAuthorizedPostForAction(clientId, postId, "approve");
   if (!result.ok) return result.failure;
 
-  const currentVersion = result.post.draft_version ?? 1;
+  // Approval applies to the version the reviewer read, never to a newer one.
+  if ((result.post.draft_version ?? 1) !== parsed.data.version) return STALE_VERSION;
 
   return updatePostStatus({
     clientId: result.auth.clientId,
@@ -269,7 +305,7 @@ export async function approvePost(
     previousStatus: result.post.status,
     nextStatus: "approved",
     action: "post_approved",
-    approvedDraftVersion: currentVersion,
+    approvedDraftVersion: parsed.data.version,
   });
 }
 
@@ -298,18 +334,53 @@ export async function markPostNeedsEdit(
 export async function rejectPost(
   clientId: string,
   postId: string,
+  input: unknown,
 ): Promise<ServiceResult<Record<string, never>>> {
+  const parsed = rejectPostRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ...INVALID_INPUT, message: parsed.error.issues[0]?.message ?? INVALID_INPUT.message };
+  }
+
   const result = await getAuthorizedPostForAction(clientId, postId, "reject");
   if (!result.ok) return result.failure;
 
-  return updatePostStatus({
+  // One transaction: record the note, reject the post and free its unpublished
+  // reservation, so a single-use entry is never left held by a rejected post.
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("reject_post", {
+    p_client_id: result.auth.clientId,
+    p_post_id: result.auth.postId,
+    p_note: parsed.data.note,
+  });
+  const outcome = data as { ok?: boolean; code?: string; freed?: number } | null;
+  if (error || !outcome) return GENERIC_FAILURE;
+  if (!outcome.ok) {
+    if (outcome.code === "FORBIDDEN") return REVIEW_FORBIDDEN;
+    if (outcome.code === "NOT_FOUND" || outcome.code === "INVALID_STATE") return POST_NOT_AVAILABLE;
+    if (outcome.code === "VALIDATION_ERROR") return INVALID_INPUT;
+    return GENERIC_FAILURE;
+  }
+
+  await writeAuditLog({
     clientId: result.auth.clientId,
     userId: result.auth.userId,
-    postId: result.auth.postId,
-    previousStatus: result.post.status,
-    nextStatus: "rejected",
     action: "post_rejected",
+    metadata: {
+      postId: result.auth.postId,
+      previousStatus: result.post.status,
+      nextStatus: "rejected",
+      hasEditNote: true,
+      entriesFreed: outcome.freed ?? 0,
+    },
   });
+
+  revalidatePath(`/client/${result.auth.clientId}/publish`);
+  revalidatePath(`/client/${result.auth.clientId}/posts/${result.auth.postId}/review`);
+  revalidatePath(`/client/${result.auth.clientId}/posts`);
+  revalidatePath(`/client/${result.auth.clientId}/content-bank`);
+  revalidatePath(`/client/${result.auth.clientId}/calendar`);
+
+  return { ok: true, data: {} };
 }
 
 export async function archivePost(
@@ -357,7 +428,20 @@ export async function archivePost(
 export async function markPostPublished(
   clientId: string,
   postId: string,
+  input: unknown,
 ): Promise<ServiceResult<Record<string, never>>> {
+  const parsed = markPublishedRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ...INVALID_INPUT, message: parsed.error.issues[0]?.message ?? INVALID_INPUT.message };
+  }
+
+  // A date a day ahead of UTC covers every timezone; later than that is a typo.
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const publishedAt = new Date(`${parsed.data.publishedOn}T12:00:00.000Z`);
+  if (Number.isNaN(publishedAt.getTime()) || parsed.data.publishedOn > tomorrow) {
+    return { ...INVALID_INPUT, message: "Choose the day the post was published; it cannot be in the future." };
+  }
+
   const auth = await authorizeMutation(clientId, postId, "publish");
   if (!auth.ok) return auth.failure;
 
@@ -375,17 +459,23 @@ export async function markPostPublished(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("posts")
-    .update({
-      status: "published",
-      published_at: new Date().toISOString(),
-    })
-    .eq("id", auth.postId)
-    .eq("client_id", auth.clientId)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle<{ id: string }>();
+  const run = (withUrl: boolean) =>
+    supabase
+      .from("posts")
+      .update({
+        status: "published",
+        published_at: publishedAt.toISOString(),
+        ...(withUrl && parsed.data.linkedinUrl ? { linkedin_url: parsed.data.linkedinUrl } : {}),
+      })
+      .eq("id", auth.postId)
+      .eq("client_id", auth.clientId)
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+  let { data, error } = await run(true);
+  if (isMissingColumn(error) && parsed.data.linkedinUrl) ({ data, error } = await run(false));
 
   if (error || !data) return GENERIC_FAILURE;
 
@@ -404,6 +494,7 @@ export async function markPostPublished(
   });
 
   revalidatePath(`/client/${auth.clientId}/publish`);
+  revalidatePath(`/client/${auth.clientId}/posts`);
   revalidatePath(`/client/${auth.clientId}/posts/${auth.postId}/review`);
 
   return { ok: true, data: {} };
@@ -417,43 +508,37 @@ export async function markPostPublished(
 export async function editPostContent(
   clientId: string,
   postId: string,
-  input: EditPostContentInput,
-): Promise<ServiceResult<{ postId: string; approvalInvalidated: boolean }>> {
+  input: unknown,
+): Promise<ServiceResult<{ postId: string; approvalInvalidated: boolean; version: number }>> {
   const auth = await authorizeMutation(clientId, postId, "review");
   if (!auth.ok) return auth.failure;
 
-  const parsed = editPostContentSchema.safeParse(input);
+  const parsed = editPostRequestSchema.safeParse(input);
   if (!parsed.success) return INVALID_INPUT;
+  const { expectedVersion, ...changes } = parsed.data;
 
   const post = await getPostStatus(auth.clientId, auth.postId);
   if (!post) return POST_NOT_AVAILABLE;
+  if (post.status === "published" || post.status === "rejected") return NOT_EDITABLE;
+
+  // The editor names the version it opened; a newer one is never overwritten.
+  const currentVersion = post.draft_version ?? 1;
+  if (currentVersion !== expectedVersion) return STALE_VERSION;
 
   const wasApproved = post.status === "approved";
-  const nextDraftVersion = (post.draft_version ?? 1) + 1;
+  const nextDraftVersion = currentVersion + 1;
 
   const updates: Record<string, unknown> = {
     draft_version: nextDraftVersion,
     updated_at: new Date().toISOString(),
   };
 
-  if (parsed.data.finalPost !== undefined) {
-    updates.final_post = parsed.data.finalPost;
-  }
-  if (parsed.data.postType !== undefined) {
-    updates.post_type = parsed.data.postType;
-  }
-  if (parsed.data.funnelStage !== undefined) {
-    updates.funnel_stage = parsed.data.funnelStage;
-  }
-  if (parsed.data.intendedReader !== undefined) {
-    updates.intended_reader = parsed.data.intendedReader;
-  }
-  if (parsed.data.primaryTakeaway !== undefined) {
-    updates.primary_takeaway = parsed.data.primaryTakeaway;
-  }
-  if (parsed.data.contentPillar !== undefined) {
-    updates.content_pillar = parsed.data.contentPillar;
-  }
+  if (changes.finalPost !== undefined) updates.final_post = changes.finalPost;
+  if (changes.postType !== undefined) updates.post_type = changes.postType;
+  if (changes.funnelStage !== undefined) updates.funnel_stage = changes.funnelStage;
+  if (changes.intendedReader !== undefined) updates.intended_reader = changes.intendedReader;
+  if (changes.primaryTakeaway !== undefined) updates.primary_takeaway = changes.primaryTakeaway;
+  if (changes.contentPillar !== undefined) updates.content_pillar = changes.contentPillar;
 
   // If currently approved, invalidate approval and revert to review!
   if (wasApproved) {
@@ -463,14 +548,22 @@ export async function editPostContent(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("posts")
-    .update(updates)
-    .eq("id", auth.postId)
-    .eq("client_id", auth.clientId)
-    .is("deleted_at", null);
+  const run = (withEditor: boolean) =>
+    supabase
+      .from("posts")
+      .update(withEditor ? { ...updates, last_edited_by: auth.userId } : updates)
+      .eq("id", auth.postId)
+      .eq("client_id", auth.clientId)
+      .eq("draft_version", currentVersion)
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+  let { data, error } = await run(true);
+  if (isMissingColumn(error)) ({ data, error } = await run(false));
 
   if (error) return GENERIC_FAILURE;
+  if (!data) return STALE_VERSION;
 
   await writeAuditLog({
     clientId: auth.clientId,
@@ -480,14 +573,15 @@ export async function editPostContent(
       : "post_content_edited",
     metadata: {
       postId: auth.postId,
-      previousVersion: post.draft_version ?? 1,
+      previousVersion: currentVersion,
       newVersion: nextDraftVersion,
       approvalInvalidated: wasApproved,
-      editedFields: Object.keys(parsed.data),
+      editedFields: Object.keys(changes),
     },
   });
 
   revalidatePath(`/client/${auth.clientId}/posts/${auth.postId}/review`);
+  revalidatePath(`/client/${auth.clientId}/posts`);
   revalidatePath(`/client/${auth.clientId}/publish`);
 
   return {
@@ -495,6 +589,7 @@ export async function editPostContent(
     data: {
       postId: auth.postId,
       approvalInvalidated: wasApproved,
+      version: nextDraftVersion,
     },
   };
 }

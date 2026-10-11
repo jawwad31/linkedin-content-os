@@ -24,7 +24,7 @@ export async function POST(
   });
   if (rateLimited) return rateLimited;
 
-  const result = await markPostPublished(clientId, postId);
+  const result = await markPostPublished(clientId, postId, await request.json().catch(() => null));
 
   if (!result.ok) {
     return apiFailure(
