@@ -12,7 +12,8 @@ Jawad chose the Avelune Collective design system as the visual target for the re
 - **Shape and space:** 5px controls (38px tall; 30px small), 12px cards with a hairline border and `shadow-xs`, 18px dialogs, 4px spacing grid, 248px app rail, 1280px content cap.
 - **Icons:** lucide (kept for weight and speed) instead of the Material Symbols icon font used in the mockups.
 - **Navigation:** six items (Content Bank, Calendar, Posts, Newsletter, Research, Settings) on a light rail; Overview, Ideas and Publish are gone from the rail. Overview and Publish redirect to Posts; the Ideas page is still reachable by link until research findings flow through the Content Bank.
-- **Not yet built:** the 60px top bar with breadcrumb, the Posts count badge in the rail, the "Advanced" links, and the Newsletter, Research and Settings screens restyled beyond the shared components.
+- **Top bar and rail count (built):** on large screens `PageHeader` is the 60px white top bar (title left, the page's one primary action right, hairline edge to edge); the description sits under it. Agency pages and phones keep the plain heading row. The Posts rail item shows a violet count of posts waiting on a person (review, needs edits, approved).
+- **Not yet built:** breadcrumbs on detail pages, the "Advanced" links, and the Newsletter, Research and Settings screens restyled beyond the shared components.
 
 ## Authority
 

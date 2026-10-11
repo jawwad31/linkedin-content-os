@@ -12,6 +12,7 @@ export function AppShell({
   role,
   permissions,
   accessibleClientCount,
+  postsNeedingYou,
   children,
 }: {
   clientId: string;
@@ -19,6 +20,7 @@ export function AppShell({
   role: EffectiveClientRole;
   permissions: ClientPermission[];
   accessibleClientCount: number;
+  postsNeedingYou: number;
   children: ReactNode;
 }) {
   const showResearch = canRoleContributeResearch(role, permissions);
@@ -31,6 +33,7 @@ export function AppShell({
         role={role}
         accessibleClientCount={accessibleClientCount}
         showResearch={showResearch}
+        postsNeedingYou={postsNeedingYou}
       />
       <AppSidebar
         clientId={clientId}
@@ -38,9 +41,13 @@ export function AppShell({
         role={role}
         accessibleClientCount={accessibleClientCount}
         showResearch={showResearch}
+        postsNeedingYou={postsNeedingYou}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="w-full flex-1 bg-background p-4 sm:p-6 lg:px-8 lg:py-6">
+        <main
+          data-client-shell
+          className="group/shell w-full flex-1 overflow-x-clip bg-background p-4 sm:p-6 lg:px-8 lg:pb-6 lg:pt-0"
+        >
           <div className="mx-auto w-full max-w-[1280px]">{children}</div>
         </main>
       </div>

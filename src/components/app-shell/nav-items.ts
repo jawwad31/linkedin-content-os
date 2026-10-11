@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { CalendarDays, FileText, Layers, Mail, Radar, Settings } from "lucide-react";
 
 export type NavItem = {
+  id: "content-bank" | "calendar" | "posts" | "newsletter" | "research" | "settings";
   label: string;
   href: string;
   icon: LucideIcon;
@@ -20,12 +21,12 @@ export function getNavItems(
   const base = `/client/${clientId}`;
 
   return [
-    { label: "Content Bank", href: `${base}/content-bank`, icon: Layers },
-    { label: "Calendar", href: `${base}/calendar`, icon: CalendarDays },
-    { label: "Posts", href: `${base}/posts`, icon: FileText },
-    { label: "Newsletter", href: `${base}/newsletter`, icon: Mail },
-    ...(showResearch ? [{ label: "Research", href: `${base}/research`, icon: Radar }] : []),
-    { label: "Settings", href: `${base}/settings`, icon: Settings },
+    { id: "content-bank", label: "Content Bank", href: `${base}/content-bank`, icon: Layers },
+    { id: "calendar", label: "Calendar", href: `${base}/calendar`, icon: CalendarDays },
+    { id: "posts", label: "Posts", href: `${base}/posts`, icon: FileText },
+    { id: "newsletter", label: "Newsletter", href: `${base}/newsletter`, icon: Mail },
+    ...(showResearch ? [{ id: "research" as const, label: "Research", href: `${base}/research`, icon: Radar }] : []),
+    { id: "settings", label: "Settings", href: `${base}/settings`, icon: Settings },
   ];
 }
 

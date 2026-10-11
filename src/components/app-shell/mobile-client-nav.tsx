@@ -21,12 +21,14 @@ export function MobileClientNav({
   role,
   accessibleClientCount,
   showResearch,
+  postsNeedingYou,
 }: {
   clientId: string;
   clientName: string;
   role: EffectiveClientRole;
   accessibleClientCount: number;
   showResearch: boolean;
+  postsNeedingYou: number;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -105,6 +107,14 @@ export function MobileClientNav({
                   >
                     <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
                     <span className="min-w-0 break-words">{item.label}</span>
+                    {item.id === "posts" && postsNeedingYou > 0 ? (
+                      <span
+                        className="ml-auto rounded-full bg-violet-700 px-1.5 font-mono text-caption font-medium leading-5 text-white"
+                        aria-label={`${postsNeedingYou} ${postsNeedingYou === 1 ? "post needs" : "posts need"} you`}
+                      >
+                        {postsNeedingYou}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

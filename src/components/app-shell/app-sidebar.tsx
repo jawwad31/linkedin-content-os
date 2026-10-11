@@ -23,12 +23,14 @@ export function AppSidebar({
   role,
   accessibleClientCount,
   showResearch,
+  postsNeedingYou,
 }: {
   clientId: string;
   clientName: string;
   role: EffectiveClientRole;
   accessibleClientCount: number;
   showResearch: boolean;
+  postsNeedingYou: number;
 }) {
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col border-r border-border-subtle bg-white lg:sticky lg:top-0 lg:flex lg:h-screen">
@@ -39,7 +41,7 @@ export function AppSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto pt-1">
-        <AppNav clientId={clientId} showResearch={showResearch} />
+        <AppNav clientId={clientId} showResearch={showResearch} postsNeedingYou={postsNeedingYou} />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border-subtle p-4">

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell/app-shell";
 import { getClientShellAccess } from "@/lib/access/client-access";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ClientLayout({
   children,
@@ -19,6 +20,14 @@ export default async function ClientLayout({
     notFound();
   }
 
+  // Posts waiting on a person (review, needs edits, approved and ready to publish by hand).
+  // A failed count only hides the badge; it must never break the page.
+  const { count } = await (await createClient())
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", access.clientId)
+    .in("status", ["review", "needs_edit", "approved"]);
+
   return (
     <AppShell
       clientId={access.clientId}
@@ -26,6 +35,7 @@ export default async function ClientLayout({
       role={access.role}
       permissions={access.permissions}
       accessibleClientCount={access.accessibleClientCount}
+      postsNeedingYou={count ?? 0}
     >
       {children}
     </AppShell>
