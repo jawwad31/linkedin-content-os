@@ -4,12 +4,61 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Visual system: Avelune Collective design tokens (ui-reference/_ds/.../tokens/*.css),
+ * mapped onto the class names the app already uses. Cyan is the one primary action
+ * per screen and never carries white text; violet is secondary emphasis. Neutrals are
+ * the ink ramp. Product density: 14px body, 5px controls, 12px cards, hairline borders.
+ * Where a token would fail contrast for small text, a darker step of the same hue is
+ * used and noted below.
+ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-roboto-flex), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono);
-  --font-heading: var(--font-roboto-flex), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-google-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-google-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Brand ramps (override Tailwind's default cyan and violet). */
+  --color-cyan-50: var(--cyan-50);
+  --color-cyan-100: var(--cyan-100);
+  --color-cyan-200: var(--cyan-200);
+  --color-cyan-300: var(--cyan-300);
+  --color-cyan-400: var(--cyan-400);
+  --color-cyan-500: var(--cyan-500);
+  --color-cyan-600: var(--cyan-600);
+  --color-cyan-700: var(--cyan-700);
+  --color-cyan-800: var(--cyan-800);
+  --color-cyan-900: var(--cyan-900);
+  --color-violet-50: var(--violet-50);
+  --color-violet-100: var(--violet-100);
+  --color-violet-200: var(--violet-200);
+  --color-violet-300: var(--violet-300);
+  --color-violet-400: var(--violet-400);
+  --color-violet-500: var(--violet-500);
+  --color-violet-600: var(--violet-600);
+  --color-violet-700: var(--violet-700);
+  --color-violet-800: var(--violet-800);
+  --color-violet-900: var(--violet-900);
+
+  /* Semantic names. */
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-primary-hover: var(--accent-primary-hover);
+  --color-accent-primary-press: var(--accent-primary-press);
+  --color-accent-primary-soft: var(--accent-primary-soft);
+  --color-on-accent-primary: var(--on-accent-primary);
+  --color-accent-secondary: var(--accent-secondary-solid);
+  --color-accent-secondary-hover: var(--accent-secondary-solid-hover);
+  --color-accent-secondary-soft: var(--accent-secondary-soft);
+  --color-link: var(--text-link);
+  --color-link-hover: var(--text-link-hover);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+
+  /* Legacy names, kept so every existing screen picks up the new palette. */
   --color-brand-orange: var(--brand-orange);
   --color-brand-purple: var(--brand-purple);
   --color-primary-dark: var(--primary-dark);
@@ -37,29 +86,33 @@
   --color-warning-strong: var(--warning-strong);
   --color-danger-strong: var(--danger-strong);
   --color-info-strong: var(--info-strong);
-  --radius-control: 0.5rem;
-  --radius-btn: 0.625rem;
-  --radius-card: 0.875rem;
-  --radius-dialog: 1.375rem;
+
+  /* Shape: 5px controls, 12px cards, 18px overlays. */
+  --radius-control: 5px;
+  --radius-btn: 5px;
+  --radius-card: 12px;
+  --radius-dialog: 18px;
+
+  /* Type: 14px product body (Avelune --fs-sm), 13px small, 12px caption. */
   --text-display-xl: 3.5625rem;
   --text-display-xl--line-height: 4rem;
   --text-display-l: 2.8125rem;
   --text-display-l--line-height: 3.25rem;
   --text-display-m: 2.25rem;
   --text-display-m--line-height: 2.75rem;
-  --text-page-title: 2rem;
-  --text-page-title--line-height: 2.5rem;
-  --text-page-title-mobile: 1.75rem;
-  --text-page-title-mobile--line-height: 2.25rem;
-  --text-section-title: 1.5rem;
-  --text-section-title--line-height: 2rem;
-  --text-card-title: 1.375rem;
-  --text-card-title--line-height: 1.75rem;
-  --text-body-lg: 1.125rem;
-  --text-body-lg--line-height: 1.75rem;
-  --text-body: 1rem;
-  --text-body--line-height: 1.5rem;
-  --text-small: 0.875rem;
+  --text-page-title: 1.625rem;
+  --text-page-title--line-height: 2rem;
+  --text-page-title-mobile: 1.375rem;
+  --text-page-title-mobile--line-height: 1.75rem;
+  --text-section-title: 1.3125rem;
+  --text-section-title--line-height: 1.75rem;
+  --text-card-title: 1.125rem;
+  --text-card-title--line-height: 1.5rem;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.375rem;
+  --text-small: 0.8125rem;
   --text-small--line-height: 1.25rem;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
@@ -102,80 +155,151 @@
 }
 
 :root {
-  /* Brand core (design.md §4.1) */
-  --brand-orange: #f84e28;
-  --brand-purple: #c43eea;
-  --primary-dark: #b22300;
-  --secondary-dark: #9600c7;
-  --tertiary: #613ed3;
-  --near-black: #0a0a0b;
+  /* Avelune ramps (tokens/colors.css). */
+  --cyan-50: #eafdff;
+  --cyan-100: #cdf9fe;
+  --cyan-200: #9bf1fb;
+  --cyan-300: #5ce7f7;
+  --cyan-400: #22e0f5;
+  --cyan-500: #07dbf2;
+  --cyan-600: #06b4c7;
+  --cyan-700: #088a99;
+  --cyan-800: #0a606a;
+  --cyan-900: #0a3d44;
+  --violet-50: #f7f2fe;
+  --violet-100: #efe6fc;
+  --violet-200: #ddc9f7;
+  --violet-300: #c6a6f0;
+  --violet-400: #b991ec;
+  --violet-500: #ac81e9;
+  --violet-600: #8e5fd4;
+  --violet-700: #6e44ae;
+  --violet-800: #4d2f7c;
+  --violet-900: #2f1c4c;
+  --ink-0: #ffffff;
+  --ink-25: #fafafa;
+  --ink-50: #f4f4f4;
+  --ink-100: #ebebeb;
+  --ink-200: #d9d9d9;
+  --ink-300: #bdbdbd;
+  --ink-400: #949494;
+  --ink-500: #6e6e6e;
+  --ink-600: #4f4f4f;
+  --ink-700: #3a3a3a;
+  --ink-800: #2e2e2e;
+  --ink-850: #262626;
+  --ink-900: #1c1c1c;
+  --ink-950: #131313;
+  --green-500: #11c08a;
+  --green-600: #0e9c6f;
+  --amber-500: #f2b307;
+  --amber-600: #c89104;
+  --red-500: #f2455e;
+  --red-600: #ce2e45;
 
-  /* Warm tonal surface system (design.md §4.1) */
-  --surface: #fdf8f7;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #fff0ed;
-  --surface-container: #ffe9e4;
-  --surface-container-high: #ffe2db;
-  --surface-container-highest: #fadcd5;
-  --surface-variant: #f4e0db;
+  /* Semantic aliases, light surface (tokens/colors.css). */
+  --surface-page: var(--ink-0);
+  --surface-sunken: var(--ink-50);
+  --surface-card: var(--ink-0);
+  --surface-hover: var(--ink-50);
+  --surface-active: var(--ink-100);
+  --border-subtle: var(--ink-100);
+  --border-default: var(--ink-200);
+  --border-strong: var(--ink-300);
+  --accent-primary: var(--cyan-500);
+  --accent-primary-hover: var(--cyan-600);
+  --accent-primary-press: var(--cyan-700);
+  --accent-primary-soft: var(--cyan-50);
+  --on-accent-primary: var(--ink-850);
+  --accent-secondary-soft: var(--violet-50);
+  /*
+   * Solid violet carries white text, so it uses violet-700 (6.8:1). The system's
+   * violet-500 gives white only 3:1, which fails for small text.
+   */
+  --accent-secondary-solid: var(--violet-700);
+  --accent-secondary-solid-hover: var(--violet-800);
+  /*
+   * Links use cyan-800 (7.3:1 on white). The system's cyan-700 gives 4.1:1, just under
+   * AA for small text; cyan-700 is kept for icons and large text.
+   */
+  --text-link: var(--cyan-800);
+  --text-link-hover: var(--cyan-900);
 
-  /* Outline and text */
-  --outline: #79747e;
-  --outline-variant: #e4beb5;
-  --on-surface: #1c1b1d;
-  --on-surface-variant: #5b403a;
+  /* Legacy names mapped onto the palette. Text-colored uses are rewritten to
+     text-link; these values serve tints, borders, rings and icons. */
+  --brand-orange: var(--cyan-500);
+  --brand-purple: var(--cyan-500);
+  --primary-dark: var(--cyan-800);
+  --secondary-dark: var(--violet-700);
+  --tertiary: var(--violet-600);
+  --near-black: var(--ink-850);
 
-  /* Semantic statuses */
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #2563eb;
-  /* Darkened status text for AA contrast on tinted chip backgrounds */
+  /* Surfaces (all neutral). */
+  --surface: var(--ink-25);
+  --surface-container-lowest: var(--ink-0);
+  --surface-container-low: var(--ink-50);
+  --surface-container: var(--ink-100);
+  --surface-container-high: var(--ink-100);
+  --surface-container-highest: var(--ink-200);
+  --surface-variant: var(--ink-100);
+
+  --outline: var(--ink-500);
+  --outline-variant: var(--ink-200);
+  --on-surface: var(--ink-850);
+  --on-surface-variant: var(--ink-500);
+
+  /* Status. */
+  --success: var(--green-500);
+  --warning: var(--amber-500);
+  --danger: var(--red-500);
+  --info: var(--cyan-600);
+  /* Darkened status text for AA contrast on tinted chip backgrounds. */
   --success-strong: color-mix(in srgb, var(--success) 55%, var(--near-black));
   --warning-strong: color-mix(in srgb, var(--warning) 55%, var(--near-black));
   --danger-strong: color-mix(in srgb, var(--danger) 60%, var(--near-black));
   --info-strong: color-mix(in srgb, var(--info) 70%, var(--near-black));
 
-  /* Signature gradient mid stops (design.md §4.2) */
-  --gradient-brand-mid-1: #ff6b3d;
-  --gradient-brand-mid-2: #d63d8d;
+  --soft-white: var(--ink-50);
+  --border-grey: var(--border-subtle);
 
-  /* Legacy aliases: existing components keep working, now on warm values */
-  --soft-white: var(--surface-container-low);
-  --border-grey: var(--outline-variant);
-
-  --background: #fff8f6;
+  --background: var(--ink-50);
   --foreground: var(--near-black);
-  --card: var(--surface-container-lowest);
+  --card: var(--ink-0);
   --card-foreground: var(--near-black);
-  --popover: var(--surface-container-lowest);
+  --popover: var(--ink-0);
   --popover-foreground: var(--near-black);
-  --primary: var(--near-black);
-  --primary-foreground: var(--surface-container-lowest);
-  --secondary: var(--surface-container-low);
+  --primary: var(--accent-primary);
+  --primary-foreground: var(--on-accent-primary);
+  --secondary: var(--ink-50);
   --secondary-foreground: var(--near-black);
-  --muted: var(--surface-container-low);
-  --muted-foreground: var(--on-surface-variant);
-  --accent: var(--surface-container);
+  --muted: var(--ink-50);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--ink-100);
   --accent-foreground: var(--near-black);
-  --destructive: var(--danger);
-  --border: var(--outline-variant);
-  --input: var(--outline-variant);
-  --ring: var(--brand-orange);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --destructive: var(--red-600);
+  --border: var(--border-subtle);
+  --input: var(--border-default);
+  --ring: var(--cyan-500);
+  --chart-1: var(--cyan-500);
+  --chart-2: var(--violet-500);
+  --chart-3: var(--cyan-700);
+  --chart-4: var(--violet-300);
+  --chart-5: var(--ink-500);
+  --radius: 0.5rem;
+  --sidebar: var(--ink-0);
+  --sidebar-foreground: var(--near-black);
+  --sidebar-primary: var(--accent-primary);
+  --sidebar-primary-foreground: var(--on-accent-primary);
+  --sidebar-accent: var(--accent-primary-soft);
+  --sidebar-accent-foreground: var(--near-black);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--cyan-500);
+
+  --shadow-xs: 0 1px 2px rgba(19, 19, 19, 0.06);
+  --shadow-sm: 0 1px 3px rgba(19, 19, 19, 0.07), 0 1px 1px rgba(19, 19, 19, 0.04);
+  --shadow-md: 0 4px 12px rgba(19, 19, 19, 0.08), 0 1px 3px rgba(19, 19, 19, 0.05);
+  --shadow-lg: 0 14px 34px rgba(19, 19, 19, 0.11), 0 3px 8px rgba(19, 19, 19, 0.06);
+  --focus-ring: 0 0 0 3px color-mix(in oklch, var(--cyan-500) 45%, transparent);
 }
 
 .dark {
@@ -218,51 +342,53 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
   }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.018em;
+  }
+  ::selection {
+    background: var(--cyan-200);
+    color: var(--ink-850);
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
 @layer utilities {
+  /* Kept by name for the existing avatars and meters; solid violet, no gradient. */
   .bg-gradient-brand {
-    background-image: linear-gradient(
-      90deg,
-      var(--brand-orange) 0%,
-      var(--gradient-brand-mid-1) 30%,
-      var(--gradient-brand-mid-2) 65%,
-      var(--brand-purple) 100%
-    );
+    background-image: none;
+    background-color: var(--violet-700);
   }
 
   .bg-radial-brand {
-    background-image:
-      radial-gradient(
-        circle at 15% 0%,
-        color-mix(in srgb, var(--brand-orange) 8%, transparent),
-        transparent 55%
-      ),
-      radial-gradient(
-        circle at 100% 100%,
-        color-mix(in srgb, var(--brand-purple) 7%, transparent),
-        transparent 55%
-      );
+    background-image: none;
   }
 
   .hover-lift {
     transition:
-      transform 150ms ease,
-      box-shadow 150ms ease,
-      border-color 150ms ease;
+      transform 140ms cubic-bezier(0.2, 0.6, 0.25, 1),
+      box-shadow 140ms cubic-bezier(0.2, 0.6, 0.25, 1),
+      border-color 140ms cubic-bezier(0.2, 0.6, 0.25, 1);
   }
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px -12px
-      color-mix(in srgb, var(--near-black) 18%, transparent);
+    box-shadow: var(--shadow-lg);
   }
   .m3-pattern {
-    background-image: radial-gradient(color-mix(in srgb, var(--brand-orange) 10%, transparent) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-image: none;
   }
 }
 
@@ -274,9 +400,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--outline-variant);
+  background: var(--ink-200);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--outline) 45%, var(--outline-variant));
+  background: var(--ink-300);
 }

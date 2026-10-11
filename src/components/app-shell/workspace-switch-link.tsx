@@ -24,8 +24,8 @@ export function WorkspaceSwitchLink({
   const label = "Switch workspace";
   const className =
     variant === "dark"
-      ? "mt-1 rounded-full border border-white/10 px-3 py-1.5 text-center text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black"
-      : "rounded-full border border-border-grey px-4 py-2 text-small font-medium text-near-black transition-colors hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2";
+      ? "mt-1 rounded-btn border border-white/10 px-3 py-1.5 text-center text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
+      : "rounded-btn border border-border-default px-3 py-1.5 text-center text-small font-medium text-near-black transition-colors hover:border-border-strong hover:bg-surface-hover focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]";
 
   return (
     <Link href={href} className={className} onClick={onClick}>

@@ -1,84 +1,35 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  CalendarDays,
-  LayoutDashboard,
-  Lightbulb,
-  Radar,
-  Send,
-  Settings,
-  FileText,
-  Layers,
-} from "lucide-react";
+import { CalendarDays, FileText, Layers, Mail, Radar, Settings } from "lucide-react";
 
 export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  accent: "orange" | "purple";
 };
 
 /**
- * Single source of truth for sidebar nav links and the header's
- * current-page title lookup. Route hrefs stay on their existing paths
- * (e.g. "Settings" still points at /settings) — only the user-facing label
- * changes here. `accent` drives the active-pill color per design.md §9.1:
- * orange for operational sections, purple for intelligence/distribution.
+ * Single source of truth for the sidebar and the phone menu. Six items: Content Bank,
+ * Calendar, Posts, Newsletter, Research and Settings. Research is hidden from people
+ * without the Research capability; everything else is shown to every member.
  */
-export function getNavItems(clientId: string): NavItem[] {
+export function getNavItems(
+  clientId: string,
+  options: { showResearch?: boolean } = {},
+): NavItem[] {
+  const { showResearch = true } = options;
+  const base = `/client/${clientId}`;
+
   return [
-    {
-      label: "Overview",
-      href: `/client/${clientId}/dashboard`,
-      icon: LayoutDashboard,
-      accent: "orange",
-    },
-    {
-      label: "Content Bank",
-      href: `/client/${clientId}/content-bank`,
-      icon: Layers,
-      accent: "purple",
-    },
-    {
-      label: "Research",
-      href: `/client/${clientId}/research`,
-      icon: Radar,
-      accent: "purple",
-    },
-    {
-      label: "Calendar",
-      href: `/client/${clientId}/calendar`,
-      icon: CalendarDays,
-      accent: "orange",
-    },
-    {
-      label: "Ideas",
-      href: `/client/${clientId}/ideas`,
-      icon: Lightbulb,
-      accent: "purple",
-    },
-    {
-      label: "Posts",
-      href: `/client/${clientId}/posts`,
-      icon: FileText,
-      accent: "orange",
-    },
-    {
-      label: "Publish",
-      href: `/client/${clientId}/publish`,
-      icon: Send,
-      accent: "purple",
-    },
-    {
-      label: "Newsletter",
-      href: `/client/${clientId}/newsletter`,
-      icon: FileText,
-      accent: "purple",
-    },
-    {
-      label: "Settings",
-      href: `/client/${clientId}/settings`,
-      icon: Settings,
-      accent: "orange",
-    },
+    { label: "Content Bank", href: `${base}/content-bank`, icon: Layers },
+    { label: "Calendar", href: `${base}/calendar`, icon: CalendarDays },
+    { label: "Posts", href: `${base}/posts`, icon: FileText },
+    { label: "Newsletter", href: `${base}/newsletter`, icon: Mail },
+    ...(showResearch ? [{ label: "Research", href: `${base}/research`, icon: Radar }] : []),
+    { label: "Settings", href: `${base}/settings`, icon: Settings },
   ];
+}
+
+/** A nav item is active on its own page and on every page beneath it. */
+export function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

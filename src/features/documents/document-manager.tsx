@@ -187,7 +187,7 @@ export function DocumentManager({
         <Card className="border-2 border-brand-orange/40 bg-surface-container-lowest shadow-md">
           <CardHeader>
             <CardTitle className="text-card-title flex items-center gap-2">
-              <FileCode className="h-5 w-5 text-brand-orange" />
+              <FileCode className="h-5 w-5 text-link" />
               Upload Supporting Document
             </CardTitle>
             <p className="text-caption text-muted-foreground">
@@ -341,7 +341,7 @@ export function DocumentManager({
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-brand-orange" />
+                    <FileText className="h-4 w-4 text-link" />
                     <span className="font-semibold text-small truncate max-w-xs">
                       {doc.filename}
                     </span>
@@ -380,7 +380,7 @@ export function DocumentManager({
                   <button
                     type="button"
                     onClick={() => setPreviewDoc(doc)}
-                    className="inline-flex items-center gap-1 text-caption font-medium text-brand-orange hover:underline"
+                    className="inline-flex items-center gap-1 text-caption font-medium text-link hover:underline"
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Preview

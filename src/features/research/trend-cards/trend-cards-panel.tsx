@@ -216,13 +216,13 @@ export function TrendCardsPanel({
                       <CardSection
                         label="ICP Relevance"
                         text={card.relevanceToIcp}
-                        labelClassName="text-brand-purple"
+                        labelClassName="text-link"
                       />
                       <CardSection label="Why It Matters" text={card.whyItMatters} />
                       <CardSection
                         label="Suggested Content Angle"
                         text={card.contentAngle}
-                        labelClassName="text-brand-orange"
+                        labelClassName="text-link"
                       />
                     </div>
 
@@ -238,7 +238,7 @@ export function TrendCardsPanel({
                               href={source.url}
                               target="_blank"
                               rel="noreferrer noopener"
-                              className="rounded-control border border-border-grey bg-white px-2.5 py-1.5 text-small text-brand-orange underline-offset-2 hover:underline"
+                              className="rounded-control border border-border-grey bg-white px-2.5 py-1.5 text-small text-link underline-offset-2 hover:underline"
                             >
                               {source.title}
                             </a>

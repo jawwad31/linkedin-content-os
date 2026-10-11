@@ -51,7 +51,7 @@ export function DatePickerGrid({
                   "flex min-h-12 flex-col items-center justify-center rounded-control border px-1 py-1 text-small",
                   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple",
                   isSelected
-                    ? "border-brand-purple bg-brand-purple text-white"
+                    ? "border-cyan-500 bg-accent-primary font-semibold text-on-accent-primary"
                     : "border-border-grey bg-white text-near-black hover:bg-soft-white",
                   cell.date === today && !isSelected ? "font-bold" : "",
                   past ? "cursor-not-allowed opacity-40" : "",
@@ -59,7 +59,7 @@ export function DatePickerGrid({
               >
                 <span>{cell.day}</span>
                 {count > 0 ? (
-                  <span className={cn("text-caption", isSelected ? "text-white" : "text-muted-foreground")}>
+                  <span className={cn("text-caption", isSelected ? "text-on-accent-primary" : "text-muted-foreground")}>
                     {count} {count === 1 ? "post" : "posts"}
                   </span>
                 ) : null}

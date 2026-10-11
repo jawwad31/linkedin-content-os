@@ -34,7 +34,7 @@ export async function resolveAuthenticatedDestination(
   const clientIds = Array.from(new Set(accessRows.map((row) => row.client_id)));
 
   if (clientIds.length === 1) {
-    return `/client/${clientIds[0]}/dashboard`;
+    return `/client/${clientIds[0]}/posts`;
   }
 
   if (clientIds.length > 1) {

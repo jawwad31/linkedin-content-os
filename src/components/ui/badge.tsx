@@ -3,19 +3,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/** Pill with a hairline border in its own hue, as in the design system. */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-caption font-medium",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-caption font-medium",
   {
     variants: {
       variant: {
-        neutral: "bg-soft-white text-near-black border border-border-grey",
-        success: "bg-success/10 text-success-strong",
-        warning: "bg-warning/10 text-warning-strong",
-        danger: "bg-danger/10 text-danger-strong",
-        info: "bg-info/10 text-info-strong",
-        "accent-orange": "bg-brand-orange/10 text-primary-dark",
-        "accent-purple": "bg-brand-purple/10 text-secondary-dark",
-        outline: "border border-border-grey text-near-black",
+        neutral: "border-border-default bg-surface-sunken text-muted-foreground",
+        success: "border-success/35 bg-success/10 text-success-strong",
+        warning: "border-warning/40 bg-warning/10 text-warning-strong",
+        danger: "border-danger/35 bg-danger/10 text-danger-strong",
+        info: "border-cyan-500/35 bg-accent-primary-soft text-link",
+        "accent-orange": "border-cyan-500/35 bg-accent-primary-soft text-link",
+        "accent-purple": "border-violet-500/35 bg-accent-secondary-soft text-secondary-dark",
+        outline: "border-border-default bg-transparent text-near-black",
       },
     },
     defaultVariants: {

@@ -52,7 +52,7 @@ export default async function SetupPage({
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+                <FileText aria-hidden="true" className="h-5 w-5 text-link" />
                 <CardTitle>Supporting Documents & Evidence</CardTitle>
               </div>
               <CardDescription>
@@ -69,7 +69,7 @@ export default async function SetupPage({
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Users aria-hidden="true" className="h-5 w-5 text-brand-purple" />
+                  <Users aria-hidden="true" className="h-5 w-5 text-link" />
                   <CardTitle>Team Access</CardTitle>
                 </div>
                 <CardDescription>

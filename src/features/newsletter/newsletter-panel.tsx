@@ -218,7 +218,7 @@ export function NewsletterPanel(props: Props) {
         <CardContent className="flex flex-col gap-3">
           {props.canSelect && props.canDraft ? (
             <Link
-              className="text-small font-medium text-brand-purple underline"
+              className="text-small font-medium text-link underline"
               href={`/client/${props.clientId}/newsletter?new=true`}
             >
               New edition
@@ -678,7 +678,7 @@ export function NewsletterPanel(props: Props) {
                               href={link.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="mt-2 block break-all text-caption text-brand-purple underline"
+                              className="mt-2 block break-all text-caption text-link underline"
                             >
                               {String(link.title ?? link.url)}
                             </a>
@@ -696,7 +696,7 @@ export function NewsletterPanel(props: Props) {
                             {new Date(use.created_at).toLocaleDateString()}{" "}
                             {use.newsletter_id ? (
                               <Link
-                                className="text-brand-purple underline"
+                                className="text-link underline"
                                 href={`/client/${props.clientId}/newsletter?edition=${use.newsletter_id}`}
                               >
                                 Open edition
@@ -707,7 +707,7 @@ export function NewsletterPanel(props: Props) {
                       </ul>
                     ) : null}
                     <Link
-                      className="text-caption text-brand-purple underline"
+                      className="text-caption text-link underline"
                       href={`/client/${props.clientId}/${s.source_type === "research_finding" ? "research?tab=briefings" : "content-bank"}`}
                     >
                       Open source
@@ -819,7 +819,7 @@ export function NewsletterPanel(props: Props) {
                       href={props.edition.publication_url!}
                       rel="noopener noreferrer"
                       target="_blank"
-                      className="break-all text-brand-purple underline"
+                      className="break-all text-link underline"
                     >
                       Open LinkedIn edition
                     </a>

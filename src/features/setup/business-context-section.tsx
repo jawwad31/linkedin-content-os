@@ -25,7 +25,7 @@ export async function BusinessContextSection({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+          <FileText aria-hidden="true" className="h-5 w-5 text-link" />
           <CardTitle>Business Context</CardTitle>
         </div>
         <CardDescription>

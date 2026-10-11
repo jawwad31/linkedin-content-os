@@ -1,19 +1,25 @@
 import type { Metadata } from "next";
-import { Roboto_Flex, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const robotoFlex = Roboto_Flex({
-  variable: "--font-roboto-flex",
-  subsets: ["latin"],
+// Google Sans (Avelune brand typeface, OFL) as a 30 KB Latin, weight 400-700 subset
+// of the supplied variable font; the full file is 4.8 MB and stays out of the app.
+const googleSans = localFont({
+  src: "./fonts/google-sans-latin.woff2",
+  variable: "--font-google-sans",
+  weight: "400 700",
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
-  title: "AIXelerate Content OS",
+  title: "Virel",
   description:
     "ICP-first LinkedIn content operating system for B2B operators and founders.",
 };
@@ -26,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${robotoFlex.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${googleSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>

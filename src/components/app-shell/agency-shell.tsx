@@ -25,7 +25,7 @@ export function AgencyShell({
             A
           </span>
           <span className="text-small font-heading font-semibold">
-            AIXelerate Content OS
+            Virel
           </span>
         </div>
 

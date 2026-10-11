@@ -261,7 +261,7 @@ export function CalendarView({
                 <span className="flex items-center gap-2">
                   <Badge variant="outline">{bucketLabel(slot.bucket)}</Badge>
                   {slot.postId ? (
-                    <Link href={`/client/${clientId}/posts/${slot.postId}/review`} className="text-small text-brand-purple underline">
+                    <Link href={`/client/${clientId}/posts/${slot.postId}/review`} className="text-small text-link underline">
                       Open post
                     </Link>
                   ) : isRemovable(slot) ? (
@@ -364,7 +364,7 @@ function SlotPanel({
         {slot.postId ? (
           <Link
             href={`/client/${clientId}/posts/${slot.postId}/review`}
-            className="inline-flex h-9 items-center rounded-control bg-brand-purple px-4 text-small font-medium text-white"
+            className="inline-flex h-9 items-center rounded-control bg-accent-primary px-4 text-small font-medium text-on-accent-primary hover:bg-accent-primary-hover"
           >
             Open post
           </Link>

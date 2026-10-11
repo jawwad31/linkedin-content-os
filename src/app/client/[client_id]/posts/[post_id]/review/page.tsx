@@ -126,7 +126,7 @@ function BuyerBeliefShiftCard({ value }: { value: string | null }) {
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border-grey bg-soft-white p-5">
       <div className="flex items-center gap-2">
-        <Repeat aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-purple" />
+        <Repeat aria-hidden="true" className="h-4 w-4 shrink-0 text-link" />
         <h3 className="text-small font-semibold text-secondary-dark">
           Buyer Belief Shift
         </h3>
@@ -247,7 +247,7 @@ function FormatRecommendationCard({
       <div className="flex items-center gap-2">
         <LayoutTemplate
           aria-hidden="true"
-          className="h-4 w-4 shrink-0 text-brand-purple"
+          className="h-4 w-4 shrink-0 text-link"
         />
         <h3 className="text-small font-semibold text-secondary-dark">
           Suggested Next Format
@@ -358,7 +358,7 @@ export default async function PostReviewPage({
               {STATUS_LABELS[post.status] ?? post.status}
             </Badge>
             {post.funnelStage ? (
-              <Badge variant="outline" className="text-brand-purple border-brand-purple/30">
+              <Badge variant="outline" className="text-link border-brand-purple/30">
                 {post.funnelStage} Stage
               </Badge>
             ) : null}
@@ -458,7 +458,7 @@ export default async function PostReviewPage({
             {canReview ? (
               <p className="text-caption text-muted-foreground">
                 Editing withdraws approval of version {version}.{" "}
-                <Link href={`/client/${clientId}/posts/${post.id}/edit`} className="text-brand-purple underline">Edit this post</Link>
+                <Link href={`/client/${clientId}/posts/${post.id}/edit`} className="text-link underline">Edit this post</Link>
               </p>
             ) : null}
           </div>
@@ -467,7 +467,7 @@ export default async function PostReviewPage({
         {post.status === "published" && post.linkedinUrl ? (
           <p className="text-small text-near-black lg:col-span-2">
             Published on LinkedIn:{" "}
-            <a href={post.linkedinUrl} target="_blank" rel="noopener noreferrer" className="break-all text-brand-purple underline">
+            <a href={post.linkedinUrl} target="_blank" rel="noopener noreferrer" className="break-all text-link underline">
               {post.linkedinUrl}
             </a>
           </p>

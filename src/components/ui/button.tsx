@@ -4,36 +4,32 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-btn text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none",
+  "inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors duration-[140ms] ease-[cubic-bezier(.2,.6,.25,1)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] active:translate-y-px disabled:pointer-events-none disabled:opacity-45",
   {
     variants: {
       variant: {
-        // Primary / main CTA — real primary actions only (login, save,
-        // complete setup, generation actions). Solid brand purple, not a
-        // gradient, so every primary action reads as the same one color.
+        // The one primary action per view: Signal Cyan with dark text (cyan never
+        // carries white text).
         brand:
-          "bg-brand-purple !text-white shadow-sm hover:opacity-90 hover:shadow-md active:scale-[0.98]",
-        // Accent orange — important but not global-primary actions.
+          "bg-accent-primary text-on-accent-primary hover:bg-accent-primary-hover active:bg-accent-primary-press",
+        // Second-order emphasis: Halo Violet (solid violet-700 so white text passes).
         "accent-orange":
-          "bg-brand-orange !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
-        // Accent purple — AI/action emphasis where appropriate.
+          "bg-accent-secondary text-white hover:bg-accent-secondary-hover",
         "accent-purple":
-          "bg-brand-purple !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "bg-accent-secondary text-white hover:bg-accent-secondary-hover",
         secondary:
-          "bg-white text-near-black border border-border-grey hover:bg-soft-white",
+          "border border-border-default bg-white text-near-black hover:border-border-strong hover:bg-surface-hover",
         outline:
-          "bg-transparent text-near-black border border-border-grey hover:bg-soft-white",
-        ghost: "bg-transparent text-near-black hover:bg-soft-white",
-        destructive:
-          "bg-danger !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
-        success:
-          "bg-success !text-white shadow-sm hover:opacity-90 active:scale-[0.98]",
+          "border border-border-default bg-transparent text-near-black hover:border-border-strong hover:bg-surface-hover",
+        ghost: "bg-transparent text-near-black hover:bg-surface-hover",
+        destructive: "bg-destructive text-white hover:brightness-95",
+        success: "bg-success text-near-black hover:brightness-95",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3 text-sm",
-        lg: "h-11 px-6 text-body-lg",
-        icon: "h-10 w-10",
+        default: "h-[38px] px-4 text-small",
+        sm: "h-[30px] px-3 text-small",
+        lg: "h-[46px] px-6 text-body-lg",
+        icon: "h-[38px] w-[38px]",
       },
     },
     defaultVariants: {

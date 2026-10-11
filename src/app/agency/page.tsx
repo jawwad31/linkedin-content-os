@@ -53,7 +53,7 @@ export default async function AgencyPage() {
                   Workspaces available through this Agency.
                 </CardDescription>
               </div>
-              <Building2 aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+              <Building2 aria-hidden="true" className="h-5 w-5 text-link" />
             </div>
           </CardHeader>
           <CardContent className="flex items-end justify-between gap-3">
@@ -79,7 +79,7 @@ export default async function AgencyPage() {
                   Accepted Agency Admin members.
                 </CardDescription>
               </div>
-              <Users aria-hidden="true" className="h-5 w-5 text-brand-purple" />
+              <Users aria-hidden="true" className="h-5 w-5 text-link" />
             </div>
           </CardHeader>
           <CardContent className="flex items-end justify-between gap-3">
@@ -105,7 +105,7 @@ export default async function AgencyPage() {
               <div>
                 <CardDescription>Posts awaiting review</CardDescription>
               </div>
-              <FileText aria-hidden="true" className="h-5 w-5 text-brand-orange" />
+              <FileText aria-hidden="true" className="h-5 w-5 text-link" />
             </div>
           </CardHeader>
           <CardContent>

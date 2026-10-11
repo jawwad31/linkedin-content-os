@@ -3,148 +3,91 @@
 import { useRef, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { FileText, Menu, Search, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { LogoutButton } from "@/features/auth/logout-button";
 import type { EffectiveClientRole } from "@/lib/access/roles";
 import { cn } from "@/lib/utils";
 
-import { getNavItems, type NavItem } from "./nav-items";
+import { getNavItems, isNavItemActive } from "./nav-items";
 import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
+/** On a phone the sidebar becomes a menu: a slim header with the page name, and a drawer. */
 export function MobileClientNav({
   clientId,
   clientName,
-  agencyName,
   role,
   accessibleClientCount,
+  showResearch,
 }: {
   clientId: string;
   clientName: string;
-  agencyName: string | null;
   role: EffectiveClientRole;
   accessibleClientCount: number;
+  showResearch: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const params = useParams<{ post_id?: string }>();
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const items: NavItem[] = getNavItems(clientId);
-  if (params?.post_id) {
-    items.push({
-      label: "Post Review",
-      href: pathname,
-      icon: FileText,
-      accent: "orange",
-    });
-  }
-
-  const activeItem = items.find((item) => item.href === pathname);
-  const pageTitle = params?.post_id
-    ? "Post Review"
-    : (activeItem?.label ?? "Overview");
+  const items = getNavItems(clientId, { showResearch });
+  const activeItem = items.find((item) => isNavItemActive(pathname, item.href));
+  const pageTitle = activeItem?.label ?? "Virel";
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border-grey bg-surface-container-low/95 px-4 py-3 backdrop-blur-md lg:hidden">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-caption font-mono text-muted-foreground">
-              {agencyName ? `${agencyName} / ${clientName}` : clientName}
-            </p>
-            <h2 className="truncate font-heading text-body font-semibold text-near-black">
-              {pageTitle}
-            </h2>
-          </div>
-          <Button
-            ref={triggerButtonRef}
-            type="button"
-            size="icon"
-            variant="outline"
-            aria-label="Open Client Workspace navigation"
-            aria-expanded={open}
-            aria-controls="mobile-client-navigation"
-            onClick={() => setOpen(true)}
-            className="shrink-0"
-          >
-            <Menu aria-hidden="true" className="h-5 w-5" />
-          </Button>
+      <header className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-3 border-b border-border-subtle bg-white px-4 lg:hidden">
+        <div className="min-w-0">
+          <p className="truncate text-caption text-muted-foreground">{clientName}</p>
+          <h2 className="truncate font-heading text-body-lg font-semibold leading-tight text-near-black">
+            {pageTitle}
+          </h2>
         </div>
+        <Button
+          ref={triggerButtonRef}
+          type="button"
+          size="icon"
+          variant="outline"
+          aria-label="Open navigation"
+          aria-expanded={open}
+          aria-controls="mobile-client-navigation"
+          onClick={() => setOpen(true)}
+          className="shrink-0"
+        >
+          <Menu aria-hidden="true" className="h-5 w-5" />
+        </Button>
       </header>
 
       <Dialog.Root open={open} onOpenChange={setOpen} modal>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-near-black/50 lg:hidden" />
+          <Dialog.Backdrop className="fixed inset-0 z-50 bg-near-black/55 backdrop-blur-[6px] lg:hidden" />
           <Dialog.Popup
             id="mobile-client-navigation"
-            aria-label="Client Workspace navigation"
+            aria-label="Navigation"
             initialFocus={closeButtonRef}
             finalFocus={triggerButtonRef}
-            className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col gap-5 overflow-y-auto bg-near-black p-5 text-soft-white shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-full max-w-[320px] flex-col gap-4 overflow-y-auto bg-white p-5 shadow-2xl lg:hidden"
           >
             <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-gradient-brand font-heading text-sm font-bold text-white shadow-sm"
-                >
-                  A
-                </span>
-                <span className="truncate text-small font-heading font-semibold">
-                  AIXelerate Content OS
-                </span>
-              </div>
+              <span className="font-heading text-[24px] font-semibold leading-none tracking-[-0.018em] text-near-black">
+                Virel
+              </span>
               <Dialog.Close
                 ref={closeButtonRef}
                 type="button"
                 aria-label="Close navigation"
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "icon" }),
-                  "shrink-0 text-soft-white hover:bg-white/10 hover:text-white",
-                )}
+                className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0")}
               >
                 <X aria-hidden="true" className="h-5 w-5" />
               </Dialog.Close>
             </div>
 
-            <div className="flex flex-col gap-2 rounded-control border border-white/10 bg-white/5 p-3.5">
-              <p className="break-words text-body font-semibold text-soft-white">
-                {clientName}
-              </p>
-              {agencyName ? (
-                <p className="break-words text-caption text-soft-white/50">
-                  Agency: {agencyName}
-                </p>
-              ) : null}
-              <WorkspaceSwitchLink
-                role={role}
-                accessibleClientCount={accessibleClientCount}
-                onClick={() => setOpen(false)}
-              />
-            </div>
-
-            <div className="relative">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-soft-white/40"
-              />
-              <Input
-                type="search"
-                disabled
-                aria-label="Search coming later"
-                placeholder="Search coming later"
-                className="border-white/10 bg-white/5 pl-9 text-caption text-soft-white placeholder:text-soft-white/40"
-              />
-            </div>
-
-            <nav aria-label="Client Workspace navigation" className="flex flex-col gap-1">
+            <nav aria-label="Main" className="flex flex-col gap-0.5">
               {items.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = isNavItemActive(pathname, item.href);
                 const Icon = item.icon;
 
                 return (
@@ -154,11 +97,10 @@ export function MobileClientNav({
                     aria-current={isActive ? "page" : undefined}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-control px-3.5 py-2.5 text-small font-medium text-soft-white/70 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black",
-                      isActive &&
-                        (item.accent === "purple"
-                          ? "bg-secondary-dark font-semibold text-white shadow-sm"
-                          : "bg-primary-dark font-semibold text-white shadow-sm"),
+                      "flex min-h-11 items-center gap-3 rounded-control px-3 text-body transition-colors duration-[140ms] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
+                      isActive
+                        ? "bg-accent-primary-soft font-medium text-near-black"
+                        : "text-muted-foreground hover:bg-surface-hover hover:text-near-black",
                     )}
                   >
                     <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -168,8 +110,15 @@ export function MobileClientNav({
               })}
             </nav>
 
-            <div className="mt-auto border-t border-white/10 pt-4">
-              <LogoutButton className="w-full justify-start text-soft-white/70 hover:bg-white/10 hover:text-soft-white" />
+            <div className="mt-auto flex flex-col gap-2 border-t border-border-subtle pt-4">
+              <p className="break-words text-small text-muted-foreground">{clientName}</p>
+              <WorkspaceSwitchLink
+                role={role}
+                accessibleClientCount={accessibleClientCount}
+                variant="light"
+                onClick={() => setOpen(false)}
+              />
+              <LogoutButton className="w-full justify-start text-muted-foreground" />
             </div>
           </Dialog.Popup>
         </Dialog.Portal>

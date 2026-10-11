@@ -1,3 +1,5 @@
+> **Superseded 2026-10-12.** The table below maps the legacy reference folders. The redesign spec is `Virel Phase 1 Wireframes.dc.html` (wireframes 1a-1i and mockups 3a-5d) with the Avelune tokens in `_ds/`; see `design.md`.
+
 # UI Reference Map
 
 | Reference folder | Production screen | Production route | Coverage | Visual Reference Target (PNG) | Implementation Reference (HTML) |

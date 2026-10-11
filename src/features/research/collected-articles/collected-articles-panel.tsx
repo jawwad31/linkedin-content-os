@@ -97,7 +97,7 @@ function StatusFilterChips({
             onClick={onNavigate}
             className={
               isActive
-                ? "rounded-full bg-brand-orange/10 px-2.5 py-0.5 text-caption font-medium text-brand-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+                ? "rounded-full bg-brand-orange/10 px-2.5 py-0.5 text-caption font-medium text-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
                 : "rounded-full border border-border-grey px-2.5 py-0.5 text-caption font-medium text-muted-foreground hover:bg-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
             }
           >

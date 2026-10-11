@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import type { EffectiveClientRole } from "@/lib/access/roles";
+import { canRoleContributeResearch } from "@/lib/access/roles";
+import type { ClientPermission, EffectiveClientRole } from "@/lib/access/roles";
 
 import { AppSidebar } from "./app-sidebar";
 import { MobileClientNav } from "./mobile-client-nav";
@@ -8,37 +9,39 @@ import { MobileClientNav } from "./mobile-client-nav";
 export function AppShell({
   clientId,
   clientName,
-  agencyName,
   role,
+  permissions,
   accessibleClientCount,
   children,
 }: {
   clientId: string;
   clientName: string;
-  agencyName: string | null;
   role: EffectiveClientRole;
+  permissions: ClientPermission[];
   accessibleClientCount: number;
   children: ReactNode;
 }) {
+  const showResearch = canRoleContributeResearch(role, permissions);
+
   return (
     <div className="lg:flex lg:min-h-screen">
       <MobileClientNav
         clientId={clientId}
         clientName={clientName}
-        agencyName={agencyName}
         role={role}
         accessibleClientCount={accessibleClientCount}
+        showResearch={showResearch}
       />
       <AppSidebar
         clientId={clientId}
         clientName={clientName}
-        agencyName={agencyName}
         role={role}
         accessibleClientCount={accessibleClientCount}
+        showResearch={showResearch}
       />
-      <div className="flex w-full flex-1 flex-col">
-        <main className="w-full flex-1 bg-background p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="w-full flex-1 bg-background p-4 sm:p-6 lg:px-8 lg:py-6">
+          <div className="mx-auto w-full max-w-[1280px]">{children}</div>
         </main>
       </div>
     </div>

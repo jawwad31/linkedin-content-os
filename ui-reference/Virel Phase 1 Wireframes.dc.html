@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/tokens/colors.css">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/tokens/typography.css">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/tokens/shape.css">
+<link rel="stylesheet" href="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/styles.css">
+<script src="_ds/avelune-collective-design-system-b07d2bba-1e40-4f53-9f09-ac16bede7c50/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#ececec;font-family:"Google Sans",system-ui,sans-serif;color:#222}
+a{color:#222}a:hover{color:#000}
+.dv-turn{padding:40px 44px 48px;max-width:1800px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#222;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 22px/1.2 "Google Sans",system-ui,sans-serif}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.1);color:#222;border-radius:5px;text-decoration:none}
+.dv-opt{display:flex;flex-direction:column;gap:14px;margin-top:56px;scroll-margin-top:16px}
+.dv-opt:target .dv-oid{background:#222;color:#fff}
+.dv-next{margin:40px 0 0;font:13px/1.5 system-ui,sans-serif;color:#555}
+.lead{font-size:14px;line-height:1.55;color:#444;max-width:820px;margin:0}
+.ptitle{display:flex;align-items:baseline;gap:10px;font-size:18px;font-weight:600}
+.flow{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.step{width:560px;display:flex;flex-direction:column;gap:8px}
+.step.w{width:640px}.step.n{width:360px}.step.ph{width:300px}
+.sl{display:flex;gap:8px;align-items:baseline;font-size:12px;font-weight:600;color:#444}
+.id{font:600 10.5px ui-monospace,Menlo,monospace;background:#222;color:#fff;border-radius:4px;padding:2px 6px}
+.fr{background:#fff;border:1px solid #888;border-radius:6px;overflow:hidden;font-size:12px;line-height:1.4}
+.app{display:grid;grid-template-columns:118px minmax(0,1fr)}
+.sb{border-right:1px solid #ccc;background:#f4f4f4;padding:12px 8px;display:flex;flex-direction:column;gap:2px;min-height:340px}
+.sb b{padding:4px 8px 12px;font-size:13px}
+.sb i{font-style:normal;padding:5px 8px;border-radius:4px;color:#444}
+.sb i.on{background:#ddd;font-weight:600;color:#111}
+.mn{padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.bar1{padding:8px 12px;border-bottom:1px solid #ccc;background:#f4f4f4;font-weight:600}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hd h3{margin:0;font-size:16px;font-weight:600}
+.btn{border:1px solid #666;border-radius:4px;padding:5px 10px;background:#fff;white-space:nowrap;display:inline-block}
+.btn.p{background:#222;color:#fff;border-color:#222;font-weight:600}
+.btn.x{border-style:dashed;color:#777;border-color:#aaa}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lk{text-decoration:underline;color:#333}
+.tg{border:1px solid #888;border-radius:10px;padding:1px 7px;font-size:11px;white-space:nowrap;display:inline-block}
+.tg.f{background:#ddd}
+.tabs{display:flex;gap:14px;border-bottom:1px solid #ccc;font-size:12px}
+.tabs span{padding:4px 0}.tabs span.on{border-bottom:2px solid #222;font-weight:600}
+.row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #ddd}
+.row .g{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .g b{font-weight:600}
+.mut{color:#666;font-size:11px}
+.bar{height:9px;background:#d4d4d4;border-radius:3px}
+.bar.s{width:45%}.bar.m{width:70%}.bar.l{width:92%}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld label{font-size:11px;color:#555}
+.in{border:1px solid #888;border-radius:4px;padding:6px 8px;min-height:16px;background:#fff}
+.in.t{min-height:46px}.in.tt{min-height:110px}
+.bn{border:1px solid #444;background:#f2f2f2;padding:8px 10px;border-radius:4px;display:flex;gap:8px;align-items:flex-start}
+.bn.d{border-style:dashed}
+.bn b{white-space:nowrap}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.seg{display:flex;border:1px solid #888;border-radius:4px;overflow:hidden}
+.seg span{flex:1;padding:5px 4px;text-align:center;border-right:1px solid #888;font-size:11px}
+.seg span:last-child{border:0}.seg span.on{background:#222;color:#fff}
+.note{border:1px dashed #888;padding:8px 10px;font-size:12px;line-height:1.45;display:grid;grid-template-columns:62px minmax(0,1fr);gap:3px 8px;background:#fafafa}
+.note b{color:#555;font-weight:600}
+.sk .bar{background:#dcdcdc}
+.card{border:1px solid #bbb;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid #ccc;border-left:1px solid #ccc}
+.cal .h{padding:3px 4px;font-size:10px;color:#666;border-right:1px solid #ccc;border-bottom:1px solid #ccc;background:#f4f4f4}
+.cal .c{min-height:50px;padding:3px;border-right:1px solid #ccc;border-bottom:1px solid #ccc;display:flex;flex-direction:column;gap:2px;font-size:10px}
+.cal .c s{text-decoration:none;color:#777}
+.cal .c.t s{font-weight:700;color:#111}
+.cal .c.o{background:#f4f4f4}
+.sp{font-size:9.5px;line-height:1.2;border:1px solid #666;border-radius:3px;padding:2px 3px}
+.sp.r{background:#e4e4e4;border-width:2px}
+.sp.d{border-style:dashed}
+.sp.k{background:#222;color:#fff}
+.sp.q{border-style:dotted;color:#555}
+.phone{width:300px;border:2px solid #666;border-radius:22px;overflow:hidden;background:#fff;font-size:12px;line-height:1.4;display:flex;flex-direction:column}
+.phone .mn{padding:14px}
+.dock{border-top:1px solid #aaa;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f4f4f4}
+.dock .btn{text-align:center}
+.dock .btn.p{grid-column:1/-1}
+.meter{height:8px;border:1px solid #555;border-radius:5px;overflow:hidden}
+.meter i{display:block;height:100%;background:#555}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font-weight:600;color:#555;padding:6px 8px;border-bottom:1px solid #888;vertical-align:bottom}
+.tbl td{padding:7px 8px;border-bottom:1px solid #ddd;vertical-align:top}
+.sheet{background:#fff;border:1px solid #888;border-radius:6px;padding:16px 18px;font-size:13px;line-height:1.5}
+.ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.pop{border:1px solid #666;border-radius:6px;padding:6px;background:#fff;display:flex;flex-direction:column;gap:2px;font-size:12px}
+.pop span{padding:5px 8px;border-radius:4px}.pop span.on{background:#e4e4e4;font-weight:600}.pop hr{border:0;border-top:1px solid #ccc;width:100%;margin:3px 0}
+.chk{display:inline-block;width:10px;height:10px;border:1px solid #444;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.chk.y{background:#222}
+.sw{display:inline-block;width:26px;height:14px;border:1px solid #444;border-radius:8px;position:relative;vertical-align:-3px;margin-right:6px}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:10px;height:10px;border-radius:50%;background:#444}
+.sw.y{background:#444}.sw.y::after{left:13px;background:#fff}
+.twocol{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:14px}
+.pg{max-width:880px;display:flex;flex-direction:column;gap:20px}
+.pgc{background:#fff;border:1px solid #bbb;border-radius:8px;padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.pgc h3{margin:0;font-size:18px;font-weight:600}
+.pgc p{margin:0;font-size:15px;line-height:1.55;color:#333}
+.pgc ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:9px;font-size:15px;line-height:1.55}
+.pgc .ref{font:600 11px ui-monospace,Menlo,monospace;background:#e4e4e4;border-radius:4px;padding:1px 6px;white-space:nowrap}
+.key{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px 16px;align-items:center;font-size:14px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:14px;line-height:1.7}
+.cmp b{display:block;margin-bottom:4px}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t5" style="max-width:none">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Phase 2, part 3: Replan month, newsletter approved, phone Calendar, Team access</span></div>
+<p class="lead">The remaining screens, in the same system. Names and dates are sample content. Settings tab names other than Team access are placeholders until the five profile sections are confirmed.</p>
+<div class="dv-opt" id="5a">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#5a">5a</a>Replan month. Opens from the Calendar screen (<a class="dv-oid" href="#3d">3d</a>). Assumed behavior from <a class="dv-oid" href="#1d">1d</a>, please confirm.</div>
+<div style="width:820px;padding:40px;background:var(--ink-200);border-radius:12px;display:flex;justify-content:center;font-family:var(--font-sans);color:var(--text-primary)">
+<div style="width:680px;background:var(--surface-raised);border:1px solid var(--border-default);border-radius:18px;box-shadow:var(--shadow-lg);padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0;font-family:var(--font-display);font-size:var(--fs-xl);font-weight:600;letter-spacing:var(--ls-heading)">Replan October</h3><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Close" hint-size="38px,38px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="close" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div>
+<p style="margin:0;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--text-secondary)">6 reserved entries. Change any date, then save. Drafting and drafted posts stay where they are.</p>
+<div style="border:1px solid var(--border-subtle);border-radius:8px">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">Pricing is a positioning signal</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 13" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle);background:var(--accent-primary-soft);"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">LinkedIn newsletter changes</span><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);color:var(--cyan-700)">Moved from Oct 15</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 16" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle);"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">Retainer pricing shifts</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 20" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle);"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">Why clients stay</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 22" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle);background:var(--accent-primary-soft);"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">Proposal checklist</span><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);color:var(--cyan-700)">Moved from Oct 22</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 24" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle);"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:var(--fs-sm)">Hiring after growth</span></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" default-value="Oct 27" icon-left="{{ icCal }}" size="sm" hint-size="180px,30px"></x-import></div></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Past dates cannot be chosen. A date with posts asks before adding another.</div>
+<div style="display:flex;justify-content:flex-end;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="80px,38px">Cancel</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button"  hint-size="150px,38px">Save 2 changes</x-import></div>
+</div></div></div>
+<div class="dv-opt" id="5b">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#5b">5b</a>Newsletter approved: copy or export. From <a class="dv-oid" href="#1i">1i</a> screen f4.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="newsletter" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><span style="font-size:var(--fs-sm);color:var(--text-secondary)">Newsletter</span><span style="color:var(--text-tertiary)">/</span><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">November edition</h1><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" size="sm" hint-size="100px,20px">Approved</x-import></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Version 2 approved by Priya, Oct 11</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:32px 40px;display:flex;flex-direction:column;gap:16px;font-size:var(--fs-md);line-height:var(--lh-relaxed);max-width:820px">
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Subject</div><div style="font-weight:600;font-size:var(--fs-lg);line-height:1.3">What we changed in onboarding after losing two clients</div>
+<p style="margin:0">Two clients left in their first 60 days. Neither called our work bad. Both said they never knew what was happening.</p><p style="margin:0">This month we rebuilt the first week around a written 30-day plan and a Friday checklist.</p><p style="margin:0">Reply with the part of your own onboarding you would change first.</p></div>
+<div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icCopy }}" hint-size="130px,38px">Copy text</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="100px,38px">Export</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="ghost"  hint-size="70px,38px">Edit</x-import></div><div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Virel does not send the newsletter. Editing withdraws approval of version 2.</div></div></div></div></div></div>
+<div class="dv-opt" id="5c"><div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#5c">5c</a>Calendar on a phone: the month as a dated list. From <a class="dv-oid" href="#1d">1d</a>.</div>
+<div style="width:390px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;font-family:var(--font-sans);color:var(--text-primary)">
+<header style="height:56px;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Menu" hint-size="44px,44px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="menu" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:var(--fs-md);letter-spacing:var(--ls-heading)">Calendar</span><div style="margin-left:auto"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Replan month" hint-size="44px,44px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="event_repeat" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div></header>
+<div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 16px;background:var(--surface-card)"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Previous month" hint-size="44px,44px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_left" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import><span style="font-family:var(--font-display);font-size:var(--fs-md);font-weight:600">October 2026</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Next month" hint-size="44px,44px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_right" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div>
+<div style="flex:1;overflow:hidden;background:var(--surface-card);border-top:1px solid var(--border-subtle)">
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding:14px 16px 8px">Week of Oct 5</div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Tue</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">6</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Proposal review checklist</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" size="sm" hint-size="84px,20px">Drafted</x-import></div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Thu</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">8</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Pricing signals</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" size="sm" hint-size="84px,20px">Drafting</x-import></div>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding:14px 16px 8px">Week of Oct 12</div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Tue</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">13</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Pricing is a positioning signal</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="84px,20px">Reserved</x-import></div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Thu</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">15</span></div><span style="font-size:var(--fs-sm);line-height:1.3">LinkedIn newsletter changes</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="84px,20px">Reserved</x-import></div>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding:14px 16px 8px">Week of Oct 19</div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Tue</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">20</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Retainer pricing shifts</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="84px,20px">Reserved</x-import></div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Thu</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">22</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Why clients stay</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="84px,20px">Reserved</x-import></div><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);font-size:10px">Thu</span><span style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600">22</span></div><span style="font-size:var(--fs-sm);line-height:1.3">Proposal checklist</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="84px,20px">Reserved</x-import></div></div>
+<div style="flex:0 0 auto;border-top:1px solid var(--border-subtle);background:var(--surface-card);padding:12px 16px 20px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" size="lg" full-width="{{ true }}" icon-left="{{ icAdd }}" hint-size="100%,46px">Add entry</x-import></div></div></div>
+<div class="dv-opt" id="5d">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#5d">5d</a>Settings: Team access. From <a class="dv-oid" href="#1h">1h</a>. Account admin only.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="settings" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Settings</h1><div style="margin-left:auto"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icAdd }}" hint-size="150px,38px">Invite member</x-import></div></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Tabs" items="{{ tabsSettings }}" value="team" hint-size="100%,44px"></x-import>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs)"><div style="display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 20px;"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:var(--fs-sm);font-weight:500">Priya Nair</span><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Account admin</span></div><div style="display:flex;flex-wrap:wrap;gap:6px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="secondary" hint-size="90px,20px">Account admin</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Review</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Publish</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Manage ideas</x-import></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Edit access" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="more_horiz" size="{{ s18 }}" hint-size="18px,18px"></x-import></x-import></div><div style="display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle);"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:var(--fs-sm);font-weight:500">Sam Ortiz</span><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Member</span></div><div style="display:flex;flex-wrap:wrap;gap:6px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Draft posts</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Manage ideas</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Manage experiences</x-import></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Edit access" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="more_horiz" size="{{ s18 }}" hint-size="18px,18px"></x-import></x-import></div><div style="display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle);"><div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:var(--fs-sm);font-weight:500">Dana Lee</span><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Member</span></div><div style="display:flex;flex-wrap:wrap;gap:6px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Manage ideas</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" tone="neutral" hint-size="90px,20px">Research</x-import></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Edit access" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="more_horiz" size="{{ s18 }}" hint-size="18px,18px"></x-import></x-import></div></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary);max-width:640px;line-height:var(--lh-normal)">Capabilities decide what each person can do. A button they cannot use is dimmed with a line saying who can grant it. Areas they can never reach are hidden. Names and roles are sample content.</div></div></div></div></div>
+</section>
+
+<section class="dv-turn" id="t4" style="max-width:none">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Phase 2, part 2: Newsletter, Research, phone review</span></div>
+<p class="lead">Six more frames in the same system, continuing turn <a class="dv-oid" href="#t3">3</a>. Edition names, findings and post text are sample content.</p>
+<div class="dv-opt" id="4a">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4a">4a</a>Newsletter editions. From <a class="dv-oid" href="#1i">1i</a> screen f1.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="newsletter" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Newsletter</h1><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icAdd }}" hint-size="140px,38px">New edition</x-import></div></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs)"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:16px 20px;"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--fs-sm);font-weight:500">October edition</div><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Version 1 · AI draft</div></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" size="sm" hint-size="110px,20px">Draft ready</x-import><x-import tone="neutral" component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="70px,20px">1 QA note</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button"  hint-size="100px,38px">Review</x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--fs-sm);font-weight:500">September edition</div><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Approved version 2 · Priya, Sep 28</div></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" size="sm" hint-size="90px,20px">Approved</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="140px,38px">Copy or export</x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--fs-sm);font-weight:500">August edition</div><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Approved version 1 · Priya, Aug 30</div></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" size="sm" hint-size="90px,20px">Approved</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="140px,38px">Copy or export</x-import></div></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Virel does not send newsletters. Export formats are under Advanced.</div></div></div></div></div>
+<div class="dv-opt" id="4b">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4b">4b</a>New edition: choose sources. From <a class="dv-oid" href="#1i">1i</a> screen f2.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="newsletter" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><span style="font-size:var(--fs-sm);color:var(--text-secondary)">Newsletter</span><span style="color:var(--text-tertiary)">/</span><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">New edition</h1></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:24px;display:flex;flex-direction:column;gap:18px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" label="Edition name" default-value="November edition" hint-size="100%,64px"></x-import>
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:var(--fs-xs);font-weight:500">Sources</span>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding-top:4px">Content Bank entries</div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Checkbox" label="Rebuilt onboarding after losing 2 clients" checked="{{ true }}" description="Experience · Single-use" hint-size="100%,24px"></x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Checkbox" label="Checklist: 10-point proposal review"  description="Resource · Reusable" hint-size="100%,24px"></x-import>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding-top:4px">Research briefings</div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Checkbox" label="Retainer pricing, week of Oct 5" checked="{{ true }}" description="6 sources" hint-size="100%,24px"></x-import>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding-top:4px">Saved documents</div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Checkbox" label="Q3 customer notes"   hint-size="100%,24px"></x-import></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border-subtle);padding-top:18px"><span style="font-size:var(--fs-xs);color:var(--text-secondary)">3 sources chosen. Drafting takes 20 to 60 seconds.</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-right="{{ icArrow }}" hint-size="150px,38px">Draft edition</x-import></div></div>
+<div style="background:var(--accent-primary-soft);border:1px solid color-mix(in oklch,var(--cyan-500) 30%,transparent);border-radius:12px;padding:16px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><b style="font-weight:600">Single-use entries.</b> "Rebuilt onboarding" is used up once the edition is drafted. Reuse stays an explicit choice.</div></div></div></div></div></div>
+<div class="dv-opt" id="4c">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4c">4c</a>Newsletter review. From <a class="dv-oid" href="#1i">1i</a> screen f3.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="newsletter" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><span style="font-size:var(--fs-sm);color:var(--text-secondary)">Newsletter</span><span style="color:var(--text-tertiary)">/</span><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">November edition</h1><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" size="sm" hint-size="110px,20px">Needs review</x-import></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Version 1 · AI draft · Not approved</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:32px 40px;display:flex;flex-direction:column;gap:16px;font-size:var(--fs-md);line-height:var(--lh-relaxed)">
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Subject</div><div style="font-weight:600;font-size:var(--fs-lg);line-height:1.3">What we changed in onboarding after losing two clients in one quarter</div>
+<p style="margin:0">Two clients left in their first 60 days. Neither called our work bad. Both said they never knew what was happening.</p><p style="margin:0">This month we rebuilt the first week around a written 30-day plan and a Friday checklist.</p><p style="margin:0">Also this month: retainer pricing is moving toward fixed scopes, and a 10-point checklist we now use to review every proposal.</p><p style="margin:0">Reply with the part of your own onboarding you would change first.</p></div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:20px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:600;font-size:var(--fs-sm)">QA notes</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="30px,20px">2</x-import></div><div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Advice only. QA does not approve.</div><div style="display:flex;gap:10px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><span style="color:var(--amber-600);flex:0 0 auto">{{ icWarn }}</span>Subject line is long.</div><div style="display:flex;gap:10px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><span style="color:var(--amber-600);flex:0 0 auto">{{ icWarn }}</span>One claim has no source.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button"  hint-size="190px,38px">Approve version 1</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="130px,38px">Request edits</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="ghost"  hint-size="70px,38px">Edit</x-import></div><div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Editing saves a new version and clears approval of this one.</div></div></div></div></div></div>
+<div class="dv-opt" id="4d">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4d">4d</a>Research: saved prompt and briefings. From <a class="dv-oid" href="#1f">1f</a> screen e1.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="research" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Research</h1><div style="margin-left:auto;display:flex;align-items:center;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icPlay }}" hint-size="120px,38px">Run now</x-import></div></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:24px;display:flex;flex-direction:column;gap:16px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Textarea" label="Saved prompt" rows="{{ 3 }}" default-value="What changed this week in how agencies price retainers?" hint-size="100%,110px"></x-import>
+<div style="display:grid;grid-template-columns:260px auto;gap:16px;align-items:end"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Select" label="Schedule" options="{{ schedules }}" default-value="Weekly, Mon 8:00" hint-size="100%,64px"></x-import><div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="120px,38px">Save prompt</x-import></div></div></div>
+<div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Briefings</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs)"><div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:16px 20px;"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--fs-sm);font-weight:500">Retainer pricing, week of Oct 5</div><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Oct 5 · 6 sources</div></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="primary" dot="{{ true }}" size="sm" hint-size="60px,20px">New</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="80px,38px">Open</x-import></div><div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle)"><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:var(--fs-sm);font-weight:500">Retainer pricing, week of Sep 28</div><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Sep 28 · 4 sources</div></div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline"  hint-size="80px,38px">Open</x-import></div></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Source management and run history are under Advanced.</div></div></div></div></div>
+<div class="dv-opt" id="4e">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4e">4e</a>Briefing. From <a class="dv-oid" href="#1f">1f</a> screen e2.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="research" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><span style="font-size:var(--fs-sm);color:var(--text-secondary)">Research</span><span style="color:var(--text-tertiary)">/</span><h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Retainer pricing, week of Oct 5</h1></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0"><div style="background:var(--surface-card);border:1px dashed var(--border-default);border-radius:8px;padding:12px 16px;font-size:var(--fs-xs);color:var(--text-secondary)">Research does not create posts or approvals. Nothing here is used until you choose it.</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Finding 1</div><div style="font-size:var(--fs-md);font-weight:600;line-height:1.3">Fixed-scope retainers are replacing hourly bundles</div><p style="margin:0;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--text-secondary)">Three agency write-ups this week describe moving clients from hours-based retainers to fixed deliverables with a monthly review.</p><div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border-subtle);padding-top:14px"><span style="font-size:var(--fs-2xs);color:var(--text-secondary)">example-news.com · Oct 3 · example-blog.com · Oct 4</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" icon-left="{{ icSave }}" hint-size="180px,38px">Save to Content Bank</x-import></div></div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:24px;display:flex;flex-direction:column;gap:12px"><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Finding 2</div><div style="font-size:var(--fs-md);font-weight:600;line-height:1.3">Pricing pages are showing ranges again</div><p style="margin:0;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--text-secondary)">A survey of small agencies reports more public price ranges and fewer "contact us" pages.</p><div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border-subtle);padding-top:14px"><span style="font-size:var(--fs-2xs);color:var(--text-secondary)">example-report.com · Sep 30</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" icon-left="{{ icSave }}" hint-size="180px,38px">Save to Content Bank</x-import></div></div></div></div></div></div></div>
+<div class="dv-opt" id="4f">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#4f">4f</a>Post review on a phone. From <a class="dv-oid" href="#1e">1e</a> screen d4.</div>
+<div style="display:flex;gap:32px;align-items:flex-start">
+<div style="width:390px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;font-family:var(--font-sans);color:var(--text-primary)">
+<header style="height:56px;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Menu" hint-size="44px,44px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="menu" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import><span style="font-family:var(--font-display);font-weight:600;font-size:var(--fs-md);letter-spacing:var(--ls-heading)">Posts</span><div style="margin-left:auto"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" size="sm" hint-size="110px,20px">Needs review</x-import></div></header>
+<div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);line-height:1.2">Why we rebuilt onboarding</h2><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Version 3 · Edited by Sam, Oct 11</div></div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:18px;display:flex;flex-direction:column;gap:12px;font-size:var(--fs-sm);line-height:var(--lh-relaxed)"><p style="margin:0">We lost two clients in the same quarter. Both left in the first 60 days.</p><p style="margin:0">Neither said our work was bad. Both said they never knew what was happening.</p><p style="margin:0">So we rebuilt onboarding around one rule: the client sees progress in week one.</p></div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:14px 16px;display:flex;align-items:center;gap:10px"><span style="color:var(--amber-600);display:flex">{{ icWarn }}</span><span style="font-size:var(--fs-sm);font-weight:600">QA notes</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="30px,20px">3</x-import><span style="margin-left:auto;display:flex;color:var(--text-secondary)"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="expand_more" size="{{ s20 }}" hint-size="20px,20px"></x-import></span></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Advice only. Edit opens a full screen.</div></div>
+<div style="flex:0 0 auto;border-top:1px solid var(--border-subtle);background:var(--surface-card);padding:12px 16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="grid-column:1/-1"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" size="lg" full-width="{{ true }}" hint-size="100%,46px">Approve version 3</x-import></div>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" size="lg" full-width="{{ true }}" hint-size="100%,46px">Request edits</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="danger" size="lg" full-width="{{ true }}" hint-size="100%,46px">Reject</x-import></div></div>
+<div style="max-width:300px;font-size:var(--fs-xs);line-height:var(--lh-normal);color:var(--text-secondary);display:flex;flex-direction:column;gap:8px"><b style="color:var(--text-primary);font-weight:600">Phone rules</b><span>One column. The sidebar becomes a menu. QA notes collapse. The decision bar stays fixed at the bottom with 46px buttons.</span></div>
+</div></div>
+<p class="dv-next">Next: "show the approved newsletter state" · "phone version of Calendar" · "hand off to Claude Code"</p>
+</section>
+
+<section class="dv-turn" id="t3" style="max-width:none">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Phase 2: full-color mockups</span></div>
+<p class="lead">Six frames in the Avelune visual system: cyan for the one primary action per screen, violet for secondary emphasis, hairline borders, Google Sans, Material Symbols. Layout and behavior follow the wireframes in turn <a class="dv-oid" href="#t1">1</a>. The "Virel" wordmark, "Acme Co" and all entry and post text are sample content.</p>
+
+<div class="dv-opt" id="3a">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3a">3a</a>Content Bank. From <a class="dv-oid" href="#1b">1b</a> screen a1. The row menu is open on the second entry.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="content" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+<h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Content Bank</h1>
+<div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" placeholder="Search entries" icon-left="{{ icSearch }}" size="sm" hint-size="260px,30px" style="width:260px"></x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icAdd }}" hint-size="120px,38px">New entry</x-import>
+</div></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:16px;min-height:0">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Tabs" items="{{ tabsContent }}" value="all" hint-size="100%,44px"></x-import>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs)">
+<sc-for list="{{ entries }}" as="e" hint-placeholder-count="6">
+<div style="position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 20px;border-top:1px solid var(--border-subtle)">
+<div style="width:40px;height:40px;border-radius:8px;background:var(--accent-primary-soft);color:var(--cyan-700);display:flex;align-items:center;justify-content:center"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="{{ e.icon }}" size="{{ s20 }}" hint-size="20px,20px"></x-import></div>
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<div style="font-size:var(--fs-sm);font-weight:500">{{ e.title }}</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">{{ e.type }}</span>
+<sc-if value="{{ e.single }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="70px,20px">{{ e.reuse }}</x-import></sc-if>
+<sc-if value="{{ e.reusable }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" size="sm" hint-size="70px,20px">{{ e.reuse }}</x-import></sc-if>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="{{ e.usedTone }}" dot="{{ true }}" size="sm" hint-size="80px,20px">{{ e.used }}</x-import></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" size="sm" hint-size="100px,30px">Create post</x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="More actions" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="more_horiz" size="{{ s18 }}" hint-size="18px,18px"></x-import></x-import></div>
+<sc-if value="{{ e.menu }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;right:20px;top:60px;z-index:5;width:210px;background:var(--surface-raised);border:1px solid var(--border-default);border-radius:12px;box-shadow:var(--shadow-md);padding:6px;display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:5px;font-size:var(--fs-xs);color:var(--text-primary)"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="{{ m.icon }}" size="{{ s18 }}" hint-size="18px,18px"></x-import>{{ m.label }}</div></sc-for>
+</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Archived entries and bulk actions are under Advanced.</div>
+</div></div></div>
+</div>
+
+<div class="dv-opt" id="3b">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3b">3b</a>Add to Calendar: pick the date. From <a class="dv-oid" href="#1c">1c</a> screen b2.</div>
+<div style="width:760px;padding:40px;background:var(--ink-200);border-radius:12px;display:flex;justify-content:center;font-family:var(--font-sans);color:var(--text-primary)">
+<div style="width:600px;background:var(--surface-raised);border:1px solid var(--border-default);border-radius:18px;box-shadow:var(--shadow-lg);padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0;font-family:var(--font-display);font-size:var(--fs-xl);font-weight:600;letter-spacing:var(--ls-heading)">Add to Calendar</h3>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Close" hint-size="38px,38px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="close" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div>
+<div style="background:var(--surface-sunken);border-radius:8px;padding:12px 16px;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:var(--fs-sm);font-weight:500">Rebuilt onboarding after losing 2 clients</div>
+<div style="display:flex;gap:8px;align-items:center"><span style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Experience</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="70px,20px">Single-use</x-import></div></div>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Tabs" items="{{ tabsMonth }}" value="nov" variant="pill" hint-size="100%,40px"></x-import>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;justify-content:space-between"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Previous month" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_left" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import>
+<span style="font-weight:600;font-size:var(--fs-sm)">November 2026</span>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Next month" size="sm" hint-size="30px,30px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_right" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
+<sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary);padding:4px 6px">{{ w }}</div></sc-for>
+<sc-for list="{{ novCells }}" as="c" hint-placeholder-count="42">
+<div style="height:52px">
+<sc-if value="{{ c.muted }}" hint-placeholder-val="{{ false }}"><div style="height:100%;box-sizing:border-box;border-radius:8px;padding:6px 8px;font-size:var(--fs-xs);color:var(--text-disabled)">{{ c.n }}</div></sc-if>
+<sc-if value="{{ c.live }}" hint-placeholder-val="{{ false }}"><div style="height:100%;box-sizing:border-box;border:1px solid var(--border-subtle);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between;font-size:var(--fs-xs);cursor:pointer"><span>{{ c.n }}</span><sc-if value="{{ c.hasCount }}" hint-placeholder-val="{{ false }}"><span style="font-family:var(--font-mono);font-size:10px;color:var(--violet-700)">{{ c.count }}</span></sc-if></div></sc-if>
+<sc-if value="{{ c.sel }}" hint-placeholder-val="{{ false }}"><div style="height:100%;box-sizing:border-box;background:var(--accent-primary);color:var(--on-accent-primary);border-radius:8px;padding:6px 8px;font-size:var(--fs-xs);font-weight:600;box-shadow:var(--focus-ring)">{{ c.n }}</div></sc-if>
+</div>
+</sc-for>
+</div></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Dates with posts show how many. Past dates cannot be chosen.</div>
+<div style="display:flex;justify-content:flex-end;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" hint-size="80px,38px">Cancel</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" hint-size="140px,38px">Add to Nov 20</x-import></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="3c">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3c">3c</a>The date already has posts. From <a class="dv-oid" href="#1c">1c</a> screen b3.</div>
+<div style="width:600px;padding:40px;background:var(--ink-200);border-radius:12px;display:flex;justify-content:center;font-family:var(--font-sans);color:var(--text-primary)">
+<div style="width:480px;background:var(--surface-raised);border:1px solid var(--border-default);border-radius:18px;box-shadow:var(--shadow-lg);padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0;font-family:var(--font-display);font-size:var(--fs-xl);font-weight:600;letter-spacing:var(--ls-heading)">Nov 12 has 2 posts</h3>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Close" hint-size="38px,38px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="close" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import></div>
+<div style="border:1px solid var(--border-subtle);border-radius:8px">
+<div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-size:var(--fs-sm)">Pricing is a positioning signal</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" size="sm" hint-size="70px,20px">Drafted</x-import></div>
+<div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--border-subtle)"><span style="font-size:var(--fs-sm)">Proposal review checklist</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" size="sm" hint-size="70px,20px">Reserved</x-import></div></div>
+<p style="margin:0;font-size:var(--fs-sm);line-height:var(--lh-normal);color:var(--text-secondary)">Add another post on this day? Two or more posts on one day are allowed.</p>
+<div style="display:flex;justify-content:flex-end;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" hint-size="160px,38px">Choose another date</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" hint-size="150px,38px">Yes, add another</x-import></div>
+</div></div>
+</div>
+
+<div class="dv-opt" id="3d">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3d">3d</a>Calendar month. From <a class="dv-oid" href="#1d">1d</a> screen c1.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="calendar" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+<h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Calendar</h1>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" icon-left="{{ icRepl }}" hint-size="150px,38px">Replan month</x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-left="{{ icAdd }}" hint-size="120px,38px">Add entry</x-import>
+</div></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:16px;min-height:0">
+<div style="display:flex;align-items:center;gap:12px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Previous month" variant="outline" hint-size="38px,38px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_left" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import>
+<h2 style="margin:0;font-family:var(--font-display);font-size:var(--fs-xl);font-weight:600;letter-spacing:var(--ls-heading)">October 2026</h2>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.IconButton" label="Next month" variant="outline" hint-size="38px,38px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Icon" name="chevron_right" size="{{ s20 }}" hint-size="20px,20px"></x-import></x-import>
+<div style="margin-left:auto;display:flex;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="secondary" dot="{{ true }}" hint-size="90px,24px">Reserved</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" hint-size="90px,24px">Drafting</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="success" dot="{{ true }}" hint-size="90px,24px">Drafted</x-import></div></div>
+<div style="border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;background:var(--border-subtle);display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;box-shadow:var(--shadow-xs)">
+<sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="background:var(--surface-card);padding:10px 12px;font-family:var(--font-mono);font-size:var(--fs-3xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">{{ w }}</div></sc-for>
+<sc-for list="{{ octCells }}" as="c" hint-placeholder-count="35">
+<div style="background:var(--surface-card);min-height:112px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:0">
+<sc-if value="{{ c.muted }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-xs);color:var(--text-disabled);padding:2px 4px">{{ c.n }}</span></sc-if>
+<sc-if value="{{ c.live }}" hint-placeholder-val="{{ false }}"><span style="font-size:var(--fs-xs);padding:2px 4px">{{ c.n }}</span>
+<sc-for list="{{ c.chips }}" as="k" hint-placeholder-count="1">
+<sc-if value="{{ k.reserved }}" hint-placeholder-val="{{ false }}"><div style="background:var(--violet-50);border-radius:5px;padding:5px 8px;min-width:0"><div style="font-size:var(--fs-2xs);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.t }}</div><div style="font-family:var(--font-mono);font-size:10px;letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--violet-700)">{{ k.state }}</div></div></sc-if>
+<sc-if value="{{ k.drafting }}" hint-placeholder-val="{{ false }}"><div style="background:var(--status-warning-soft);border-radius:5px;padding:5px 8px;min-width:0"><div style="font-size:var(--fs-2xs);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.t }}</div><div style="font-family:var(--font-mono);font-size:10px;letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--amber-600)">{{ k.state }}</div></div></sc-if>
+<sc-if value="{{ k.drafted }}" hint-placeholder-val="{{ false }}"><div style="background:var(--status-success-soft);border-radius:5px;padding:5px 8px;min-width:0"><div style="font-size:var(--fs-2xs);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.t }}</div><div style="font-family:var(--font-mono);font-size:10px;letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--green-600)">{{ k.state }}</div></div></sc-if>
+</sc-for></sc-if>
+</div>
+</sc-for>
+</div>
+</div></div></div>
+</div>
+
+<div class="dv-opt" id="3e">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3e">3e</a>Post review. From <a class="dv-oid" href="#1e">1e</a> screen d1.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="posts" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+<span style="font-size:var(--fs-sm);color:var(--text-secondary)">Posts</span><span style="color:var(--text-tertiary)">/</span>
+<h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Why we rebuilt onboarding</h1>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="warning" dot="{{ true }}" hint-size="110px,24px">Needs review</x-import></header>
+<div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;min-height:0">
+<div style="font-family:var(--font-mono);font-size:var(--fs-2xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Version 3 · Edited by Sam, Oct 11 · Not approved</div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:32px 40px;display:flex;flex-direction:column;gap:16px;font-size:var(--fs-md);line-height:var(--lh-relaxed)">
+<p style="margin:0">We lost two clients in the same quarter. Both left in the first 60 days.</p>
+<p style="margin:0">Neither said our work was bad. Both said they never knew what was happening.</p>
+<p style="margin:0">So we rebuilt onboarding around one rule: the client sees progress in week one.</p>
+<p style="margin:0">Here is what changed:</p>
+<p style="margin:0">1. The kickoff call ends with a written 30-day plan.<br>2. A shared checklist, updated every Friday.<br>3. One named person who answers questions within a day.</p>
+<p style="margin:0">The work did not change. What the client could see did.</p>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:600;font-size:var(--fs-sm)">QA notes</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="30px,20px">3</x-import></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Advice only. QA does not approve.</div>
+<div style="display:flex;gap:10px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><span style="color:var(--amber-600);flex:0 0 auto">{{ icWarn }}</span>The hook runs long for the feed.</div>
+<div style="display:flex;gap:10px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><span style="color:var(--amber-600);flex:0 0 auto">{{ icWarn }}</span>The client name is not in the source.</div>
+<div style="display:flex;gap:10px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><span style="color:var(--amber-600);flex:0 0 auto">{{ icWarn }}</span>No call to action found.</div>
+</div></div>
+<div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+<div style="display:flex;align-items:center;gap:8px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" hint-size="190px,38px">Approve version 3</x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="outline" hint-size="130px,38px">Request edits</x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="danger" hint-size="90px,38px">Reject</x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="ghost" hint-size="70px,38px">Edit</x-import></div>
+<div style="font-size:var(--fs-2xs);color:var(--text-secondary)">Approval applies to version 3 only. Request edits and Reject each ask for a one-line note.</div></div>
+</div></div></div>
+</div>
+
+<div class="dv-opt" id="3f">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;color:#444"><a class="dv-oid" href="#3f">3f</a>Create post. From <a class="dv-oid" href="#1b">1b</a> screen a2.</div>
+<div style="display:flex;width:1280px;height:820px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:12px;overflow:hidden;font-family:var(--font-sans);color:var(--text-primary)">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.SideNav" items="{{ nav }}" value="content" header="{{ navHeader }}" footer="{{ navFooter }}" hint-size="248px,100%" style="flex:0 0 248px"></x-import>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+<header style="height:60px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+<h1 style="font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:var(--ls-heading);margin:0">Create post</h1></header>
+<div style="flex:1;padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start;min-height:0">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:var(--fs-xs);font-weight:500">Source</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Tabs" items="{{ tabsSource }}" value="entry" variant="pill" hint-size="100%,40px"></x-import></div>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" label="Topic" default-value="Why we rebuilt onboarding" hint-size="100%,64px"></x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Textarea" label="Instructions" rows="{{ 3 }}" placeholder="Anything the draft should include or avoid" hint-size="100%,110px"></x-import>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" label="Intended reader" default-value="Operations leaders" hint-size="100%,64px"></x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Input" label="Takeaway" placeholder="What should the reader remember?" hint-size="100%,64px"></x-import></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Select" label="Pillar" options="{{ pillars }}" default-value="Operations" hint-size="100%,64px"></x-import>
+<x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Select" label="Post type" options="{{ postTypes }}" default-value="Story" hint-size="100%,64px"></x-import></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:var(--fs-xs);font-weight:500">Funnel stage</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Tabs" items="{{ tabsFunnel }}" value="depth" variant="pill" hint-size="100%,40px"></x-import></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--border-subtle);padding-top:18px"><span style="font-size:var(--fs-xs);color:var(--text-secondary)">Fields are prefilled from the source.</span><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" icon-right="{{ icArrow }}" hint-size="140px,38px">Draft post</x-import></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:var(--shadow-xs);padding:20px;display:flex;flex-direction:column;gap:12px">
+<span style="font-family:var(--font-mono);font-size:var(--fs-2xs);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-secondary)">Source entry</span>
+<div style="font-size:var(--fs-sm);font-weight:500">Rebuilt onboarding after losing 2 clients</div>
+<div style="display:flex;gap:8px"><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" size="sm" hint-size="70px,20px">Single-use</x-import><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Badge" tone="primary" dot="{{ true }}" size="sm" hint-size="70px,20px">Unused</x-import></div>
+<p style="margin:0;font-size:var(--fs-xs);line-height:var(--lh-normal);color:var(--text-secondary)">Lost two clients within 60 days of onboarding. Both said they could not see what was happening. Rebuilt the first week around a written 30-day plan and a Friday checklist.</p>
+<div><x-import component-from-global-scope="AveluneCollectiveDesignSystem_b07d2b.Button" variant="ghost" size="sm" hint-size="110px,30px">Change source</x-import></div>
+</div>
+<div style="background:var(--accent-primary-soft);border:1px solid color-mix(in oklch,var(--cyan-500) 30%,transparent);border-radius:12px;padding:16px;font-size:var(--fs-xs);line-height:var(--lh-normal)"><b style="font-weight:600">Single-use.</b> This entry is used up once the post is drafted. Reuse is turned off.</div>
+</div>
+</div></div></div>
+</div>
+
+<p class="dv-next">Next: "make the calendar chips show the post type" · "show the mobile review screen" · "build the Newsletter screens in color"</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Plain-language guide to the wireframes</span></div>
+<div class="pg">
+<p class="lead">A wireframe is a rough floor plan of one screen. It shows what is on the screen and where, not colors or fonts. The 40 wireframes in turn <a class="dv-oid" href="#t1">1</a> below are explained here in words, task by task. You do not need to study them. If this guide makes sense, the design is fine.</p>
+
+<div class="pgc"><h3>How to read the boxes</h3>
+<div class="key">
+<div><span class="bar l" style="display:block"></span></div><div>Gray bars are text. Real wording comes in Phase 2.</div>
+<div><span class="btn p">Main action</span></div><div>The one main thing to do on that screen. There is only one per screen.</div>
+<div><span class="btn">Other action</span></div><div>A secondary choice.</div>
+<div><span class="btn x">Not available</span></div><div>A dashed button means this person is not allowed. A line of text explains who can allow it.</div>
+<div><span class="tg">Single-use</span> <span class="tg f">Unused</span></div><div>Small labels that state facts, such as whether an entry can be reused.</div>
+<div><span class="bn" style="display:inline-flex"><b>!</b><span>Notice</span></span></div><div>A message you must read before going on.</div>
+<div><span class="id">a1</span></div><div>The screen's name. Use it in chat, for example "change a2".</div>
+</div></div>
+
+<div class="pgc"><h3>The app in one minute</h3>
+<p>Today the app has nine menu items. It now has six.</p>
+<div class="cmp">
+<div><b>Before</b>Overview, Content Bank, Research, Calendar, Ideas, Posts, Publish, Newsletter, Settings</div>
+<div><b>After</b>Content Bank, Calendar, Posts, Newsletter, Research, Settings</div>
+</div>
+<ol>
+<li><b>Content Bank</b> holds your source material. Ideas are merged into it.</li>
+<li><b>Calendar</b> shows what is scheduled, by date.</li>
+<li><b>Posts</b> holds drafts, reviews and publishing. It opens on what needs you. Overview and Publish are merged into it.</li>
+<li><b>Newsletter</b> holds your newsletter editions.</li>
+<li><b>Research</b> holds your saved prompt and briefings.</li>
+<li><b>Settings</b> holds your business profile and team access.</li>
+</ol>
+<p>Each company has its own account. There is no workspace switching and no agency level.</p></div>
+
+<div class="pgc"><h3>Task 1: turn a saved entry into a draft post <a class="ref" href="#1b">1b</a></h3>
+<ol>
+<li>Open <b>Content Bank</b>. Each row is one entry and says whether it can be used once or many times. <span class="ref">a1</span></li>
+<li>Press <b>Create post</b> on a row. A form opens with the entry attached and the fields filled in: topic, instructions, reader, takeaway, pillar, post type and funnel stage. Change anything you like. <span class="ref">a2</span></li>
+<li>Press <b>Draft post</b>. A progress screen shows each step. It takes 20 to 60 seconds. You can leave, and the draft will be waiting in Posts. <span class="ref">a3</span></li>
+<li>The draft appears with quality-check notes. Press <b>Review draft</b>. <span class="ref">a4</span></li>
+</ol></div>
+
+<div class="pgc"><h3>Task 2: put an entry on the calendar <a class="ref" href="#1c">1c</a></h3>
+<ol>
+<li>Open an entry and press <b>Add to Calendar</b>. <span class="ref">b1</span></li>
+<li>Choose this month or next month, then click the date you want the post made on. <span class="ref">b2</span></li>
+<li>If that date already has a post, you are asked whether to add another. Yes puts two posts on that day. <span class="ref">b3</span></li>
+<li>Press <b>Add</b>. The entry is reserved for that date. You can write the post now or later. <span class="ref">b4</span></li>
+</ol>
+<p>Replan month on the calendar lets you move several reserved entries to new dates in one go. There is no monthly plan screen. The mix of post types for the month is adjusted automatically in the background.</p></div>
+
+<div class="pgc"><h3>Task 3: see the month <a class="ref" href="#1d">1d</a></h3>
+<p>Open <b>Calendar</b>. Days with a post show a label made of a symbol and a word: Reserved (entry held for that day), Drafting (being written), Drafted (ready to review). A day can hold more than one post. Click a day to see its details and the next action. <span class="ref">c1</span> <span class="ref">c2</span></p></div>
+
+<div class="pgc"><h3>Task 4: review a post, then publish it by hand <a class="ref" href="#1e">1e</a></h3>
+<ol>
+<li>Open a post from Posts. Read it. Quality-check notes sit beside it. They are advice only and never approve anything. <span class="ref">d1</span></li>
+<li>Choose <b>Approve</b>, <b>Request edits</b> or <b>Reject</b>. An approval applies to that exact version. <span class="ref">d1</span></li>
+<li>If you edit the text, saving creates a new version and the old approval no longer counts. The screen says so before you save. <span class="ref">d2</span></li>
+<li>On a phone the same screen is one column, with the three buttons fixed at the bottom. <span class="ref">d4</span></li>
+<li>After approval, press <b>Publish on LinkedIn</b>. Copy the text, post it on LinkedIn yourself, then paste back the post link and the date. Virel never posts for you. <span class="ref">d3</span> <span class="ref">d5</span></li>
+</ol></div>
+
+<div class="pgc"><h3>Task 5: research, then a post from a finding <a class="ref" href="#1f">1f</a></h3>
+<ol>
+<li>Open <b>Research</b>. Edit your saved prompt, then press <b>Run now</b> or pick a weekly schedule. <span class="ref">e1</span></li>
+<li>Open a briefing. Each finding lists its sources and dates. <span class="ref">e2</span></li>
+<li>Press <b>Save to Content Bank</b>. The finding becomes a trend reaction entry. <span class="ref">e3</span></li>
+<li>From that entry, press <b>Create post</b> or <b>Add to Calendar</b>, exactly as in Tasks 1 and 2. Research never creates a post or an approval by itself.</li>
+</ol></div>
+
+<div class="pgc"><h3>Task 6: write and approve a newsletter edition <a class="ref" href="#1i">1i</a></h3>
+<ol>
+<li>Open <b>Newsletter</b>. You see your editions and their status. Press <b>New edition</b>. <span class="ref">f1</span></li>
+<li>Choose the sources: Content Bank entries, research briefings, saved documents. Press <b>Draft edition</b>. <span class="ref">f2</span></li>
+<li>Read the draft. Quality-check notes sit beside it and are advice only. Approve the exact version, request edits, or edit it. <span class="ref">f3</span></li>
+<li>Once approved, copy the text or export it. <span class="ref">f4</span></li>
+</ol></div>
+
+<div class="pgc"><h3>Empty, loading, error and no-permission screens <a class="ref" href="#1g">1g</a></h3>
+<p>Every page shows its title and menu at once, with gray placeholder bars where data is still loading. Empty pages say what to do first. Errors say what failed and that nothing was changed. If you lack a permission, the button is dimmed with one line saying who can grant it. If a whole area is off-limits to you, it is hidden. The small screens in 1g show each case.</p></div>
+
+<div class="pgc"><h3>What I need from you</h3>
+<p>Your answers are applied: findings are saved to Content Bank first, edited versions can be approved by their editor if they have the Review permission, and a rejected post frees a single-use entry again. One question remains.</p>
+<ol><li>Replan month: I assumed it opens the month's reserved entries as a list so you can move several to new dates at once. Is that right? <b>Default: yes.</b></li></ol>
+<p>Anyone can add entries to the calendar.</p>
+<p>When you are happy, reply "approve" and I will start Phase 2 (full-color mockups of the five key screens).</p></div>
+</div>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Virel, Phase 1: wireframes</span></div>
+<p class="lead">Grayscale, real labels. Parts: <a class="dv-oid" href="#1a">1a</a> navigation, <a class="dv-oid" href="#1b">1b</a> Content Bank to draft, <a class="dv-oid" href="#1c">1c</a> add an entry to the calendar, <a class="dv-oid" href="#1d">1d</a> calendar, <a class="dv-oid" href="#1e">1e</a> review to publish, <a class="dv-oid" href="#1f">1f</a> research, <a class="dv-oid" href="#1i">1i</a> newsletter, <a class="dv-oid" href="#1g">1g</a> states, <a class="dv-oid" href="#1h">1h</a> cuts, permissions and open questions. Every frame has a note: primary action, what is on the page, what was removed.</p>
+
+<!-- ============ 1a IA ============ -->
+<div class="dv-opt" id="1a">
+<div class="ptitle"><a class="dv-oid" href="#1a">1a</a>Information architecture: 9 items down to 6</div>
+<div class="flow">
+<div class="step w">
+<div class="sheet">
+<table class="tbl">
+<tr><th style="width:130px">New sidebar item</th><th>Was</th><th>Reason</th></tr>
+<tr><td><b>Content Bank</b></td><td>Content Bank + Ideas</td><td>Ideas and entries are both source material. One list, one place to start a post.</td></tr>
+<tr><td><b>Calendar</b></td><td>Calendar</td><td>Shows what is scheduled. Entries are added to a date from Content Bank.</td></tr>
+<tr><td><b>Posts</b></td><td>Overview + Posts + Publish</td><td>Same lifecycle: draft, QA, approve an exact version, hand off. Publish becomes the last step on a post. Posts opens on a "Needs you" list that replaces Overview.</td></tr>
+<tr><td><b>Newsletter</b></td><td>Newsletter</td><td>Kept as its own item. Editions have their own sources and their own approvals.</td></tr>
+<tr><td><b>Research</b></td><td>Research</td><td>Unchanged. Hidden if the user lacks the Research capability.</td></tr>
+<tr><td><b>Settings</b></td><td>Settings</td><td>Five profile sections plus Team access as a sixth tab.</td></tr>
+</table>
+</div>
+<div class="note"><b>Cut</b><span>Overview page, Ideas page, Publish page, client selector and agency pages. One account per company, so there is no workspace switching.</span><b>Account</b><span>The company name sits at the top of the sidebar as a plain label. Team access is a tab in Settings.</span></div>
+</div>
+<div class="step n">
+<div class="sl"><span class="id">H1</span> Posts (opens on what needs you)</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Posts</h3><span class="btn p">Review next post</span></div>
+<div class="tabs"><span class="on">Needs you</span><span>All posts</span></div>
+<div class="mut">Review · 3</div>
+<div class="row"><div class="g"><b>Rebuilt onboarding after losing 2 clients</b><span class="mut">Draft ready · 2 QA notes</span></div><span class="lk">Review</span></div>
+<div class="row"><div class="g"><b>Proposal review checklist</b><span class="mut">Edited · needs approval</span></div><span class="lk">Review</span></div>
+<div class="mut">Ready to publish · 2</div>
+<div class="row"><div class="g"><b>Pricing is a positioning signal</b><span class="mut">Approved v2</span></div><span class="lk">Publish</span></div>
+<div class="mut">In progress · 1</div>
+<div class="row"><div class="g"><b>October plan</b><span class="mut">Drafting 8 of 12</span></div><span class="lk">View</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Review next post</span><b>On page</b><span>Posts opens on three short lists: review, ready to publish, in progress. "All posts" shows every post.</span><b>Removed</b><span>The Overview page, stats, charts, activity feed, quick-create cards.</span></div>
+</div>
+</div>
+</div>
+
+<!-- ============ 1b FLOW A ============ -->
+<div class="dv-opt" id="1b">
+<div class="ptitle"><a class="dv-oid" href="#1b">1b</a>Flow A: Content Bank list, Create post, draft ready</div>
+<div class="flow">
+
+<div class="step">
+<div class="sl"><span class="id">a1</span> Content Bank list</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i class="on">Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Content Bank</h3><span class="btn p">New entry</span></div>
+<div class="tabs"><span class="on">All</span><span>Experiences</span><span>Trend reactions</span><span>Resources</span></div>
+<div class="in" style="color:#888">Search entries</div>
+<div class="row"><div class="g"><b>Rebuilt onboarding after losing 2 clients</b><span class="mut">Experience · <span class="tg">Single-use</span> <span class="tg f">Unused</span></span></div><span class="btn">Create post</span><span class="mut">⋯</span></div>
+<div class="row"><div class="g"><b>Reaction: LinkedIn newsletter changes</b><span class="mut">Trend reaction · <span class="tg">Reusable</span> <span class="tg f">Used 1×</span></span></div><span class="btn">Create post</span><span class="mut">⋯</span></div>
+<div class="row"><div class="g"><b>Checklist: 10-point proposal review</b><span class="mut">Resource · <span class="tg">Reusable</span> <span class="tg f">Used 3×</span></span></div><span class="btn">Create post</span><span class="mut">⋯</span></div>
+<div class="mut">⋯ menu: Add to Calendar, Edit, Archive, Allow reuse, Usage history, Delete (admin only)</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Create post (per row). New entry is the page-level action.</span><b>On page</b><span>Tabs by type, search, rows showing type and single-use or reusable.</span><b>Removed</b><span>Card grid, bulk toolbar, sort controls, filters beyond type. Archived entries sit under Advanced.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">a2</span> Create post</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i class="on">Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Create post</h3></div>
+<div class="fld"><label>Source</label><div class="tabs"><span>Note</span><span>Saved document</span><span class="on">Content Bank entry</span></div>
+<div class="in">Rebuilt onboarding after losing 2 clients <span class="lk" style="float:right">Change</span></div></div>
+<div class="bn d"><b>Single-use</b><span>This entry is used up once the post is drafted. Reuse is turned off.</span></div>
+<div class="fld"><label>Topic</label><div class="in">Why we rebuilt onboarding</div></div>
+<div class="fld"><label>Instructions</label><div class="in t"></div></div>
+<div class="g2"><div class="fld"><label>Intended reader</label><div class="in">Operations leaders</div></div><div class="fld"><label>Takeaway</label><div class="in"></div></div></div>
+<div class="g2"><div class="fld"><label>Pillar</label><div class="in">Operations ▾</div></div><div class="fld"><label>Post type</label><div class="in">Story ▾</div></div></div>
+<div class="fld"><label>Funnel stage</label><div class="seg"><span>Discovery</span><span class="on">Depth</span><span>Authority</span><span>Commercial</span></div></div>
+<div class="hd"><span class="mut">Fields are prefilled from the source.</span><span class="btn p">Draft post</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Draft post</span><b>On page</b><span>Source with change link, reuse notice, seven editable fields.</span><b>Removed</b><span>Tone, length and hook pickers, template gallery, preview pane.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">a3</span> Drafting (long-running)</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Drafting your post</h3><span class="mut">0:32</span></div>
+<div class="meter"><i style="width:55%"></i></div>
+<div class="card">
+<div>✓ Read source and fields</div><div><b>◔ Writing draft</b></div><div class="mut">○ Running QA checks</div></div>
+<div class="mut">Usually 20 to 60 seconds. You can leave this page. The draft appears in Posts as "Draft ready".</div>
+<div class="btns"><span class="btn p">Back to Content Bank</span><span class="btn">Cancel drafting</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Back to Content Bank (leave and resume)</span><b>On page</b><span>Named steps, elapsed time, expected range, cancel.</span><b>Removed</b><span>Spinner-only wait, modal that blocks navigation.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">a4</span> Draft ready</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Why we rebuilt onboarding</h3><span class="btn p">Review draft</span></div>
+<div class="mut">Version 1 · AI draft · Not approved · Source: Rebuilt onboarding after losing 2 clients</div>
+<div class="in tt" style="display:flex;flex-direction:column;gap:8px;padding:12px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div></div>
+<div class="bn"><b>2 QA notes</b><span>Advice only. A person still has to approve.</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Review draft (continues in 1e)</span><b>On page</b><span>Draft text, version and status, link back to the source, QA count.</span><b>Removed</b><span>Regenerate-variants grid, score badges.</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- ============ 1c FLOW B ============ -->
+<div class="dv-opt" id="1c">
+<div class="ptitle"><a class="dv-oid" href="#1c">1c</a>Flow B: Add to Calendar (pick a date, confirm)</div>
+<div class="flow">
+
+<div class="step">
+<div class="sl"><span class="id">b1</span> Entry panel (opens over the list)</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i class="on">Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Rebuilt onboarding after losing 2 clients</h3><span class="mut">✕</span></div>
+<div class="mut">Experience · <span class="tg">Single-use</span> <span class="tg f">Unused</span></div>
+<div class="in t" style="display:flex;flex-direction:column;gap:7px;padding:10px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div></div>
+<div><span class="sw"></span>Allow reuse <span class="mut">Off: used once, then closed.</span></div>
+<div class="btns"><span class="btn p">Create post</span><span class="btn">Add to Calendar</span><span class="lk">Edit</span><span class="lk">Archive</span></div>
+<div class="mut" style="margin-top:2px">Usage history</div>
+<div class="row"><div class="g"><span>No posts yet</span></div></div>
+<div class="mut">Admin only: <span class="lk">Delete permanently</span> (hidden for others)</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Create post. Add to Calendar is secondary.</span><b>On page</b><span>Entry text, reuse switch, usage history, all entry actions.</span><b>Removed</b><span>Separate detail page, tabs inside the panel.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">b2</span> Pick the date</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i class="on">Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Add to Calendar</h3><span class="mut">✕</span></div>
+<div class="card"><b>Rebuilt onboarding after losing 2 clients</b><span class="mut">Experience · Single-use</span></div>
+<div class="fld"><label>Which month?</label><div class="seg"><span>This month · Oct</span><span class="on">Next month · Nov</span></div></div>
+<div class="fld"><label>Which date?</label>
+<div class="hd"><span class="btn">‹</span><b>November 2026</b><span class="btn">›</span></div>
+<div class="cal"><div class="h">Mon</div><div class="h">Tue</div><div class="h">Wed</div><div class="h">Thu</div><div class="h">Fri</div><div class="h">Sat</div><div class="h">Sun</div><div class="c o"></div><div class="c o"></div><div class="c o"></div><div class="c o"></div><div class="c o"></div><div class="c o"></div><div class="c"><s>1</s></div><div class="c"><s>2</s></div><div class="c"><s>3</s></div><div class="c"><s>4</s><span class="mut">1 post</span></div><div class="c"><s>5</s></div><div class="c"><s>6</s></div><div class="c"><s>7</s></div><div class="c"><s>8</s></div><div class="c"><s>9</s></div><div class="c"><s>10</s></div><div class="c"><s>11</s><span class="mut">1 post</span></div><div class="c"><s>12</s><span class="mut">2 posts</span></div><div class="c"><s>13</s></div><div class="c"><s>14</s></div><div class="c"><s>15</s></div><div class="c"><s>16</s></div><div class="c"><s>17</s></div><div class="c"><s>18</s><span class="mut">1 post</span></div><div class="c"><s>19</s></div><div class="c"><s>20</s><span class="sp k">Selected</span></div><div class="c"><s>21</s></div><div class="c"><s>22</s></div><div class="c"><s>23</s></div><div class="c"><s>24</s></div><div class="c"><s>25</s></div><div class="c"><s>26</s></div><div class="c"><s>27</s></div><div class="c"><s>28</s></div><div class="c"><s>29</s></div><div class="c"><s>30</s></div></div>
+<span class="mut">Dates with posts show how many. Past dates cannot be chosen.</span></div>
+<div class="hd"><span class="mut">Nov 20 chosen.</span><span class="btn p">Add to Nov 20</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Add to Nov 20 (the button names the chosen date)</span><b>On page</b><span>The entry, this month or next, a month grid, the date. Nothing else.</span><b>Removed</b><span>Post count, mix shares, news limit, preview step, plan confirmation. The monthly mix is adjusted in the background.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">b3</span> The date already has a post</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i class="on">Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Add to Calendar</h3><span class="mut">✕</span></div>
+<div class="bn"><b>Nov 12 has 2 posts</b><span>"Pricing is a positioning signal" and "Proposal review checklist". Add another post on this day?</span></div>
+<div class="btns"><span class="btn p">Yes, add another</span><span class="btn">Choose another date</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Yes, add another</span><b>On page</b><span>A single question naming what is already on that date. It appears only when the date is taken.</span><b>Removed</b><span>Blocking the date, a limit on posts per day.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">b4</span> Added</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i class="on">Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>November</h3><span class="btn p">Create post now</span></div>
+<div class="bn"><b>✓ Added</b><span>"Rebuilt onboarding after losing 2 clients" is on Nov 20. It is reserved: the entry is held for that day.</span></div>
+<div class="mut">The calendar month continues in 1d. Open the date to draft the post later.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Create post now (opens the form in a2)</span><b>On page</b><span>One confirmation line, then the month.</span><b>Removed</b><span>Success modal.</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- ============ 1d CALENDAR ============ -->
+<div class="dv-opt" id="1d">
+<div class="ptitle"><a class="dv-oid" href="#1d">1d</a>Flow C: calendar month view and slot states</div>
+<div class="flow">
+
+<div class="step w">
+<div class="sl"><span class="id">c1</span> Month view</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i class="on">Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>‹ October 2026 ›</h3><div class="btns"><span class="btn">Replan month</span><span class="btn p">Add entry</span></div></div>
+<div class="cal">
+<div class="h">Mon</div><div class="h">Tue</div><div class="h">Wed</div><div class="h">Thu</div><div class="h">Fri</div><div class="h">Sat</div><div class="h">Sun</div>
+<div class="c o"></div><div class="c o"></div><div class="c o"></div><div class="c"><s>1</s><span class="sp k">✓ Drafted</span></div><div class="c"><s>2</s></div><div class="c"><s>3</s></div><div class="c"><s>4</s></div>
+<div class="c"><s>5</s></div><div class="c"><s>6</s><span class="sp k">✓ Drafted</span></div><div class="c"><s>7</s></div><div class="c"><s>8</s><span class="sp d">◔ Drafting</span></div><div class="c"><s>9</s></div><div class="c"><s>10</s></div><div class="c t"><s>11</s></div>
+<div class="c"><s>12</s></div><div class="c"><s>13</s><span class="sp r">◆ Reserved</span></div><div class="c"><s>14</s></div><div class="c"><s>15</s><span class="sp r">◆ Reserved</span></div><div class="c"><s>16</s></div><div class="c"><s>17</s></div><div class="c"><s>18</s></div>
+<div class="c"><s>19</s></div><div class="c"><s>20</s><span class="sp r">◆ Reserved</span></div><div class="c"><s>21</s></div><div class="c"><s>22</s><span class="sp r">◆ Reserved</span><span class="sp r">◆ Reserved</span></div><div class="c"><s>23</s></div><div class="c"><s>24</s></div><div class="c"><s>25</s></div>
+<div class="c"><s>26</s></div><div class="c"><s>27</s><span class="sp r">◆ Reserved</span></div><div class="c"><s>28</s></div><div class="c"><s>29</s></div><div class="c"><s>30</s></div><div class="c"><s>31</s></div><div class="c o"></div>
+</div>
+<div class="mut">Today is Oct 11 (bold). Click a slot to open it. Two posts on one day are allowed (Oct 22). Phone: the same slots as a dated list.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Add entry (choose an entry, then 1c). Replan month is secondary.</span><b>Replan</b><span>Opens this month's reserved entries as a list, each with a date picker as in b2. Save moves them all at once. Assumed behavior, please confirm.</span><b>On page</b><span>One month, slots labeled with a symbol and a word. Month arrows.</span><b>Removed</b><span>Week and day views, drag to reschedule, filters, legend colors, plan settings.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">c2</span> Slot panel and states</div>
+<div class="fr"><div class="bar1">Oct 13 · Slot</div><div class="mn">
+<div class="hd"><b style="font-size:14px">◆ Reserved</b><span class="mut">✕</span></div>
+<div class="card"><b>Pricing is a positioning signal</b><span class="mut">Entry: Experience · Single-use</span><span class="mut">Experience post · Funnel stage: Authority</span></div>
+<div class="btns"><span class="btn p">Draft now</span><span class="lk">Change entry</span></div>
+<table class="tbl"><tr><th>State</th><th>Meaning</th><th>Action</th></tr>
+<tr><td>◆ Reserved</td><td>Entry held for this slot</td><td>Draft now</td></tr>
+<tr><td>◔ Drafting</td><td>AI is writing</td><td>View progress</td></tr>
+<tr><td>✓ Drafted</td><td>Post exists, needs review</td><td>Open post</td></tr></table>
+</div></div>
+<div class="note"><b>Primary</b><span>Draft now (changes with the slot state)</span><b>On page</b><span>Entry, post type, funnel stage, state key.</span><b>Removed</b><span>Inline editing of post text in the calendar.</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- ============ 1e REVIEW ============ -->
+<div class="dv-opt" id="1e">
+<div class="ptitle"><a class="dv-oid" href="#1e">1e</a>Flow D: post review, then manual publish handoff</div>
+<div class="flow">
+
+<div class="step w">
+<div class="sl"><span class="id">d1</span> Read, QA, decide</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Why we rebuilt onboarding</h3><span class="tg">Needs review</span></div>
+<div class="mut">Version 3 · Edited by Sam, Oct 11 · Not approved</div>
+<div class="twocol">
+<div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:14px;min-height:220px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div></div>
+<div class="card"><b>QA notes · 3</b><span class="mut">Advice only. QA does not approve.</span>
+<div>! Hook runs long for the feed.</div><div>! Client name is not in the source.</div><div>! No call to action found.</div></div></div>
+<div class="btns"><span class="btn p">Approve version 3</span><span class="btn">Request edits</span><span class="btn">Reject</span><span class="lk">Edit</span></div>
+<div class="mut">Request edits and Reject each ask for a one-line note.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Approve version 3 (names the exact version)</span><b>On page</b><span>Text, QA notes beside it, three decisions, Edit.</span><b>Removed</b><span>QA scores, side-by-side diff (Advanced), comments thread, status stepper.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">d2</span> Edit</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Editing version 3</h3></div>
+<div class="bn d"><b>! Approval</b><span>Saving creates version 4. Approval applies to one version only, so version 4 will need approving again.</span></div>
+<div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:14px;min-height:150px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div></div>
+<div class="btns" style="justify-content:flex-end"><span class="btn">Discard</span><span class="btn p">Save version 4</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Save version 4</span><b>On page</b><span>Plain text editor, approval warning.</span><b>Removed</b><span>Rich formatting toolbar, AI rewrite buttons.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">d3</span> Approved, ready to publish</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Why we rebuilt onboarding</h3><span class="tg f">✓ Approved</span></div>
+<div class="mut">Version 4 approved by Priya, Oct 11</div>
+<div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:14px;min-height:120px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div></div>
+<div class="btns"><span class="btn p">Publish on LinkedIn</span><span class="lk">Edit</span></div>
+<div class="mut">Editing withdraws approval of version 4.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Publish on LinkedIn (opens the handoff, d5)</span><b>On page</b><span>Approved version, who and when, Edit with its consequence.</span><b>Removed</b><span>A separate Publish queue page.</span></div>
+</div>
+
+<div class="step ph">
+<div class="sl"><span class="id">d4</span> Review on a phone</div>
+<div class="phone"><div class="bar1">Posts</div><div class="mn"><b style="font-size:14px">Why we rebuilt onboarding</b><span class="mut">Version 3 · Needs review</span>
+<div style="display:flex;flex-direction:column;gap:8px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div></div>
+<div class="card"><b>QA notes · 3 ▾</b><span class="mut">Advice only</span></div></div>
+<div class="dock"><span class="btn p" style="padding:11px">Approve version 3</span><span class="btn" style="padding:11px">Request edits</span><span class="btn" style="padding:11px">Reject</span></div></div>
+<div class="note"><b>Primary</b><span>Approve version 3</span><b>On page</b><span>Single column, QA collapsed, sticky decision bar with 44px targets.</span><b>Removed</b><span>Sidebar (becomes a menu), inline editing (Edit opens full screen).</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">d5</span> Manual publish handoff</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i class="on">Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Publish version 4</h3></div>
+<div class="bn"><b>Manual</b><span>Virel does not post for you. Three steps.</span></div>
+<div class="card"><b>1. Copy the approved text</b><div class="btns"><span class="btn p">Copy text</span><span class="mut">Version 4 · approved</span></div></div>
+<div class="card"><b>2. Post it on LinkedIn</b><span class="lk">Open LinkedIn</span></div>
+<div class="card"><b>3. Record the post</b><div class="g2"><div class="fld"><label>LinkedIn URL</label><div class="in"></div></div><div class="fld"><label>Date published</label><div class="in">Oct 11, 2026</div></div></div><div class="btns" style="justify-content:flex-end"><span class="btn">Mark as published</span></div></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Copy text, then Mark as published (the filled button moves to the active step)</span><b>On page</b><span>Three numbered cards, URL and date fields.</span><b>Removed</b><span>Scheduler, auto-post toggles, preview of the LinkedIn feed.</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- ============ 1f RESEARCH ============ -->
+<div class="dv-opt" id="1f">
+<div class="ptitle"><a class="dv-oid" href="#1f">1f</a>Flow E: research prompt, briefing, save a finding to Content Bank</div>
+<div class="flow">
+
+<div class="step">
+<div class="sl"><span class="id">e1</span> Research: saved prompt</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i class="on">Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Research</h3><span class="btn p">Run now</span></div>
+<div class="fld"><label>Saved prompt</label><div class="in t">What changed this week in how agencies price retainers?</div></div>
+<div class="g2"><div class="fld"><label>Schedule</label><div class="in">Weekly, Mon 8:00 ▾</div></div><div class="fld"><label>&nbsp;</label><span class="btn" style="text-align:center">Save prompt</span></div></div>
+<div class="mut">Briefings</div>
+<div class="row"><div class="g"><b>Retainer pricing, week of Oct 5</b><span class="mut">Oct 5 · 6 sources</span></div><span class="lk">Open</span></div>
+<div class="row"><div class="g"><b>Retainer pricing, week of Sep 28</b><span class="mut">Sep 28 · 4 sources</span></div><span class="lk">Open</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Run now</span><b>On page</b><span>One editable prompt, schedule, list of briefings with date and source count.</span><b>Removed</b><span>Source management, run logs, classification views (Advanced).</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">e2</span> Briefing</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i class="on">Research</i><i>Settings</i></div>
+<div class="mn"><div class="hd"><h3>Retainer pricing, week of Oct 5</h3></div>
+<div class="bn d"><b>Note</b><span>Research does not create posts or approvals. Nothing here is used until you choose it.</span></div>
+<div class="card"><b>Finding 1</b><div class="bar l"></div><div class="bar m"></div><span class="mut">Sources: example-news.com · Oct 3 · example-blog.com · Oct 4</span><div class="btns"><span class="btn">Save to Content Bank</span></div></div>
+<div class="card"><b>Finding 2</b><div class="bar l"></div><div class="bar s"></div><span class="mut">Sources: example-report.com · Sep 30</span><div class="btns"><span class="btn">Save to Content Bank</span></div></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Save to Content Bank (as a trend reaction)</span><b>On page</b><span>Findings, each with sources and dates, one action each.</span><b>Removed</b><span>Overall summary essay, tagging, save-all, relevance scores.</span></div>
+</div>
+
+<div class="step">
+<div class="sl"><span class="id">e3</span> Saved as a trend reaction</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i class="on">Content Bank</i><i>Calendar</i><i>Posts</i><i>Newsletter</i><i>Research</i><i>Settings</i></div>
+<div class="mn"><div class="bn"><b>✓ Saved</b><span>Finding 1 is now in Content Bank as a trend reaction. Reusable, unused.</span></div>
+<div class="card"><b>Reaction: Finding 1 title</b><span class="mut">Trend reaction · <span class="tg">Reusable</span> <span class="tg f">Unused</span></span></div>
+<div class="btns"><span class="btn p">Create post</span><span class="btn">Add to Calendar</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Create post (opens a2, then a3 and a4)</span><b>On page</b><span>Confirmation, the new entry, the two usual entry actions.</span><b>Removed</b><span>A research-only draft path. Findings reach posts only through Content Bank.</span></div>
+</div>
+
+</div>
+</div>
+
+<!-- ============ 1i NEWSLETTER ============ -->
+<div class="dv-opt" id="1i">
+<div class="ptitle"><a class="dv-oid" href="#1i">1i</a>Flow F: newsletter edition, sources, draft, approve, export</div>
+<div class="flow">
+<div class="step"><div class="sl"><span class="id">f1</span> Newsletter editions</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i class="on">Newsletter</i><i>Research</i><i>Settings</i></div><div class="mn"><div class="hd"><h3>Newsletter</h3><span class="btn p">New edition</span></div>
+<div class="row"><div class="g"><b>October edition</b><span class="mut">Draft ready · 1 QA note</span></div><span class="lk">Review</span></div>
+<div class="row"><div class="g"><b>September edition</b><span class="mut">Approved version 2</span></div><span class="lk">Copy or export</span></div>
+<div class="row"><div class="g"><b>August edition</b><span class="mut">Approved version 1</span></div><span class="lk">Copy or export</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>New edition</span><b>On page</b><span>One list of editions with status and the next action.</span><b>Removed</b><span>Subscriber stats, send scheduling, templates gallery.</span></div></div>
+
+<div class="step"><div class="sl"><span class="id">f2</span> New edition: choose sources</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i class="on">Newsletter</i><i>Research</i><i>Settings</i></div><div class="mn"><div class="hd"><h3>New edition</h3></div>
+<div class="fld"><label>Edition name</label><div class="in">November edition</div></div>
+<div class="fld"><label>Sources</label>
+<div class="card"><div class="mut">Content Bank entries</div><div><span class="chk y"></span>Rebuilt onboarding after losing 2 clients</div><div><span class="chk"></span>Checklist: 10-point proposal review</div>
+<div class="mut">Research briefings</div><div><span class="chk y"></span>Retainer pricing, week of Oct 5</div>
+<div class="mut">Saved documents</div><div><span class="chk"></span>Q3 customer notes</div></div></div>
+<div class="hd"><span class="mut">3 sources chosen. Drafting takes 20 to 60 seconds.</span><span class="btn p">Draft edition</span></div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Draft edition</span><b>On page</b><span>Name, source checklist grouped by type.</span><b>Removed</b><span>Section builder, layout options. Reuse of an entry stays an explicit choice, as elsewhere.</span></div></div>
+
+<div class="step"><div class="sl"><span class="id">f3</span> Read, QA, decide</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i class="on">Newsletter</i><i>Research</i><i>Settings</i></div><div class="mn"><div class="hd"><h3>November edition</h3><span class="tg">Needs review</span></div>
+<div class="mut">Version 1 · AI draft · Not approved</div>
+<div class="twocol"><div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:14px;min-height:200px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div><div class="bar l"></div><div class="bar m"></div></div>
+<div class="card"><b>QA notes · 2</b><span class="mut">Advice only. QA does not approve.</span><div>! Subject line is long.</div><div>! One claim has no source.</div></div></div>
+<div class="btns"><span class="btn p">Approve version 1</span><span class="btn">Request edits</span><span class="lk">Edit</span></div>
+<div class="mut">Editing saves a new version and clears approval of this one.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Approve version 1 (names the exact version)</span><b>On page</b><span>Text, QA notes, decisions. Same pattern as post review (d1).</span><b>Removed</b><span>Side-by-side diff (Advanced), comments thread.</span></div></div>
+
+<div class="step"><div class="sl"><span class="id">f4</span> Approved: copy or export</div>
+<div class="fr"><div class="app"><div class="sb"><b>Acme Co</b><i>Content Bank</i><i>Calendar</i><i>Posts</i><i class="on">Newsletter</i><i>Research</i><i>Settings</i></div><div class="mn"><div class="hd"><h3>November edition</h3><span class="tg f">✓ Approved</span></div>
+<div class="mut">Version 2 approved by Priya, Oct 11</div>
+<div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:14px;min-height:120px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div></div>
+<div class="btns"><span class="btn p">Copy text</span><span class="btn">Export</span><span class="lk">Edit</span></div>
+<div class="mut">Virel does not send the newsletter. Editing withdraws approval of version 2.</div>
+</div></div></div>
+<div class="note"><b>Primary</b><span>Copy text</span><b>On page</b><span>Approved version, who and when, Copy, Export.</span><b>Removed</b><span>Send and schedule buttons. Export formats sit under Advanced.</span></div></div>
+</div>
+</div>
+
+<!-- ============ 1g STATES ============ -->
+<div class="dv-opt" id="1g">
+<div class="ptitle"><a class="dv-oid" href="#1g">1g</a>States for key screens</div>
+<div class="flow">
+
+<div class="step n"><div class="sl"><span class="id">s1</span> Loading: Content Bank</div>
+<div class="fr"><div class="bar1">Content Bank</div><div class="mn sk"><div class="hd"><h3>Content Bank</h3><span class="btn x">New entry</span></div>
+<div class="tabs"><span class="on">All</span><span>Experiences</span><span>Trend reactions</span><span>Resources</span></div>
+<div class="row"><div class="g"><div class="bar m"></div><div class="bar s"></div></div></div><div class="row"><div class="g"><div class="bar l"></div><div class="bar s"></div></div></div><div class="row"><div class="g"><div class="bar m"></div><div class="bar s"></div></div></div></div></div>
+<div class="note"><b>Rule</b><span>Page title, tabs and nav render at once. Only data rows are skeleton bars. Same for every page.</span></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s2</span> Loading: Post</div>
+<div class="fr"><div class="bar1">Posts</div><div class="mn sk"><div class="bar m" style="height:14px"></div><div class="bar s"></div><div class="twocol"><div class="in tt" style="display:flex;flex-direction:column;gap:9px;padding:12px"><div class="bar l"></div><div class="bar m"></div><div class="bar l"></div><div class="bar s"></div></div><div class="card"><div class="bar m"></div><div class="bar l"></div></div></div><div class="btns"><span class="btn x">Approve</span><span class="btn x">Edit</span></div></div></div>
+<div class="note"><b>Rule</b><span>Decision buttons show disabled while loading, so the layout does not jump.</span></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s3</span> Empty: Content Bank</div>
+<div class="fr"><div class="bar1">Content Bank</div><div class="mn" style="align-items:flex-start;padding:28px 16px"><b style="font-size:15px">No entries yet</b><span class="mut" style="font-size:12px">Entries are the source material for posts. Add an experience, a trend reaction or a resource.</span><span class="btn p">New entry</span></div></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s4</span> Empty: Calendar</div>
+<div class="fr"><div class="bar1">Calendar</div><div class="mn" style="align-items:flex-start;padding:28px 16px"><b style="font-size:15px">Nothing on the calendar yet</b><span class="mut" style="font-size:12px">Pick a Content Bank entry, then choose the date to post it.</span><span class="btn p">Add entry</span></div></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s5</span> Empty: Research</div>
+<div class="fr"><div class="bar1">Research</div><div class="mn" style="align-items:flex-start;padding:28px 16px"><b style="font-size:15px">No briefings yet</b><span class="mut" style="font-size:12px">Write a prompt, then run it now or on a schedule.</span><span class="btn p">Write a prompt</span></div></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s6</span> Error: list failed to load</div>
+<div class="fr"><div class="bar1">Content Bank</div><div class="mn"><div class="bn"><b>! Error</b><span>Could not load entries. Nothing was changed.</span></div><div class="btns"><span class="btn p">Try again</span></div></div></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s7</span> Error: drafting failed</div>
+<div class="fr"><div class="bar1">Posts</div><div class="mn"><div class="bn"><b>! Stopped</b><span>Drafting stopped while writing. Your source and fields are saved. The entry was not used.</span></div><div class="btns"><span class="btn p">Try again</span><span class="btn">Edit fields</span></div></div></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s8</span> No permission: Create post</div>
+<div class="fr"><div class="bar1">Create post</div><div class="mn"><div class="fld"><label>Topic</label><div class="in">Why we rebuilt onboarding</div></div><div class="btns"><span class="btn x">Draft post</span></div><span class="mut">You cannot draft posts. Ask an account admin to add the Draft posts capability.</span></div></div>
+<div class="note"><b>Rule</b><span>Disabled with a one-line reason when it is the next step on a visible page.</span></div></div>
+
+<div class="step n"><div class="sl"><span class="id">s9</span> No permission: Review</div>
+<div class="fr"><div class="bar1">Posts</div><div class="mn"><b>Why we rebuilt onboarding</b><div class="btns"><span class="btn x">Approve version 3</span><span class="btn x">Reject</span><span class="lk">Edit</span></div><span class="mut">You cannot approve posts. Ask an account admin to add the Review capability.</span></div></div>
+<div class="note"><b>Rule</b><span>Hidden when the whole area is off-limits: admin-only Delete, nav items without capability.</span></div></div>
+
+
+
+</div>
+</div>
+
+<!-- ============ 1h CUTS ============ -->
+<div class="dv-opt" id="1h">
+<div class="ptitle"><a class="dv-oid" href="#1h">1h</a>Cut, hide behind Advanced, permissions, open questions</div>
+<div class="flow">
+<div class="step w"><div class="sheet">
+<b>Cut</b>
+<ul class="ul" style="margin:6px 0 14px"><li>Overview dashboard widgets: replaced by the "Needs you" list at the top of Posts.</li><li>Ideas page: entries live in Content Bank, planned ideas are Calendar slots.</li><li>Publish page: now a filter in Posts and the last step of a post.</li><li>Client selector and agency pages: one account per company.</li></ul>
+<b>Hide behind "Advanced" (a text link at the foot of the page, one level deep)</b>
+<ul class="ul" style="margin:6px 0 0"><li>Content Bank: archived entries, bulk edit, bulk archive and delete, full usage log.</li><li>Posts: version history and compare, QA rule details.</li><li>Calendar: per-slot reassignment, plan revision history.</li><li>Research: source and feed management, run history, classification.</li><li>Newsletter: source selection defaults and export formats.</li><li>Settings: saved documents library, operational logs.</li></ul>
+</div></div>
+<div class="step w"><div class="sheet">
+<b>Permissions: hidden or disabled</b>
+<table class="tbl" style="margin-top:6px"><tr><th>Capability</th><th>Gates</th><th>Without it</th></tr>
+<tr><td>Manage ideas</td><td>Add, edit, archive entries. Add to Calendar.</td><td>Disabled, with reason</td></tr>
+<tr><td>Manage experiences</td><td>Experience entries</td><td>Disabled, with reason</td></tr>
+<tr><td>Draft posts</td><td>Create post, Draft now</td><td>Disabled, with reason</td></tr>
+<tr><td>Review</td><td>Approve, Reject, Request edits</td><td>Disabled, with reason</td></tr>
+<tr><td>Publish</td><td>Copy and record publication</td><td>Disabled, with reason</td></tr>
+<tr><td>Research</td><td>Research page and runs</td><td>Nav item hidden</td></tr>
+<tr><td>Account admin</td><td>Settings, Team access, permanent Delete</td><td>Hidden</td></tr>
+</table>
+</div>
+<div class="note" style="margin-top:12px"><b>Rule</b><span>Hide what the person can never reach. Disable, with one line saying who can grant it, what they could otherwise do next.</span></div>
+</div>
+<div class="step w"><div class="sheet">
+<b>Open question</b>
+<ol class="ul" style="margin:6px 0 0;list-style:decimal"><li>What exactly should Replan month do? Assumed: move this month's reserved entries to new dates in one list.</li></ol>
+<b style="display:block;margin-top:14px">Decided</b>
+<ul class="ul" style="margin:6px 0 0"><li>Research findings are saved to Content Bank as a trend reaction first.</li><li>The person who edited a version can approve it if they have Review.</li><li>A rejected post frees its single-use entry again.</li><li>Two posts on one day are allowed. Monthly mix is adjusted in the background.</li></ul>
+</div></div>
+</div>
+</div>
+
+<p class="dv-next">Next: "approve Phase 1, start Phase 2" · "change the Posts landing page" · "add more Newsletter screens"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    this._t = setInterval(() => { if (window.AveluneCollectiveDesignSystem_b07d2b) { clearInterval(this._t); this.forceUpdate(); } }, 120);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+  renderVals() {
+    const NS = window.AveluneCollectiveDesignSystem_b07d2b, h = React.createElement;
+    const I = (n, s = 16) => NS ? h(NS.Icon, { name: n, size: s }) : null;
+    const nav = [
+      { value: 'content', label: 'Content Bank', icon: I('inventory_2') },
+      { value: 'calendar', label: 'Calendar', icon: I('calendar_month') },
+      { value: 'posts', label: 'Posts', icon: I('article'), count: 3 },
+      { value: 'newsletter', label: 'Newsletter', icon: I('mail') },
+      { value: 'research', label: 'Research', icon: I('travel_explore') },
+      { value: 'settings', label: 'Settings', icon: I('settings') }
+    ];
+    const navHeader = h('div', { style: { display: 'flex', flexDirection: 'column', gap: 2 } },
+      h('span', { style: { fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, letterSpacing: 'var(--ls-heading)', color: 'var(--text-primary)' } }, 'Virel'));
+    const navFooter = h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' } },
+      h('span', { style: { width: 24, height: 24, borderRadius: 999, background: 'var(--violet-500)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 } }, 'AC'), 'Acme Co');
+    const entries = [
+      { icon: 'person_pin', title: 'Rebuilt onboarding after losing 2 clients', type: 'Experience', reuse: 'Single-use', reuseSec: false, used: 'Unused', usedTone: 'primary' },
+      { icon: 'trending_up', title: 'Reaction: LinkedIn newsletter changes', type: 'Trend reaction', reuse: 'Reusable', reuseSec: true, used: 'Used 1×', usedTone: 'neutral', menu: true },
+      { icon: 'description', title: 'Checklist: 10-point proposal review', type: 'Resource', reuse: 'Reusable', reuseSec: true, used: 'Used 3×', usedTone: 'neutral' },
+      { icon: 'person_pin', title: 'Pricing is a positioning signal', type: 'Experience', reuse: 'Single-use', reuseSec: false, used: 'Reserved for Oct 13', usedTone: 'success' },
+      { icon: 'person_pin', title: 'Why our best clients stay past year two', type: 'Experience', reuse: 'Single-use', reuseSec: false, used: 'Used', usedTone: 'neutral' },
+      { icon: 'trending_up', title: 'Reaction: retainer pricing shifts', type: 'Trend reaction', reuse: 'Reusable', reuseSec: true, used: 'Unused', usedTone: 'primary' }
+    ].map(e => Object.assign({ single: !e.reuseSec, reusable: e.reuseSec }, e));
+    const menuItems = [
+      { icon: 'calendar_add_on', label: 'Add to Calendar' }, { icon: 'edit', label: 'Edit' },
+      { icon: 'archive', label: 'Archive' }, { icon: 'history', label: 'Usage history' }
+    ];
+    const chipMap = {
+      1: [['Rebuilt onboarding', 'drafted']], 6: [['Proposal review checklist', 'drafted']], 8: [['Pricing signals', 'drafting']],
+      13: [['Pricing is a positioning signal', 'reserved']], 15: [['LinkedIn newsletter changes', 'reserved']], 20: [['Retainer pricing shifts', 'reserved']],
+      22: [['Why clients stay', 'reserved'], ['Proposal checklist', 'reserved']], 27: [['Hiring after growth', 'reserved']]
+    };
+    const label = { reserved: 'Reserved', drafting: 'Drafting', drafted: 'Drafted' };
+    const octCells = [];
+    [28, 29, 30].forEach(n => octCells.push({ muted: true, live: false, n }));
+    for (let n = 1; n <= 31; n++) octCells.push({ muted: false, live: true, n, today: n === 11,
+      chips: (chipMap[n] || []).map(([t, k]) => ({ t, state: label[k], reserved: k === 'reserved', drafting: k === 'drafting', drafted: k === 'drafted' })) });
+    octCells.push({ muted: true, live: false, n: 1 });
+    const cnt = { 4: 1, 11: 1, 12: 2, 18: 1 };
+    const novCells = [];
+    [26, 27, 28, 29, 30, 31].forEach(n => novCells.push({ muted: true, sel: false, live: false, n }));
+    for (let n = 1; n <= 30; n++) novCells.push({ muted: false, sel: n === 20, live: n !== 20, n, hasCount: !!cnt[n], count: cnt[n] === 2 ? '2 posts' : '1 post' });
+    for (let n = 1; n <= 6; n++) novCells.push({ muted: true, sel: false, live: false, n });
+    return {
+      nav, navHeader, navFooter, entries, menuItems, octCells, novCells,
+      weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      s14: 14, s16: 16, s18: 18, s20: 20, s24: 24,
+      icAdd: I('add', 18), icArrow: I('arrow_forward', 18), icSearch: I('search', 15), icCal: I('calendar_month', 18),
+      icWarn: I('error', 18), icEvent: I('event', 20), icRepl: I('event_repeat', 18), icPlay: I('play_arrow', 18), icCopy: I('content_copy', 18), tabsSettings: [{ value: 'biz', label: 'Business' }, { value: 'voice', label: 'Voice' }, { value: 'pillars', label: 'Pillars' }, { value: 'aud', label: 'Audience' }, { value: 'offers', label: 'Offers' }, { value: 'team', label: 'Team access' }], icSave: I('bookmark_add', 18), schedules: ['Weekly, Mon 8:00', 'Daily, 8:00', 'Off'],
+      tabsContent: [{ value: 'all', label: 'All', count: 24 }, { value: 'exp', label: 'Experiences', count: 9 }, { value: 'trend', label: 'Trend reactions', count: 8 }, { value: 'res', label: 'Resources', count: 7 }],
+      tabsMonth: [{ value: 'oct', label: 'This month · October' }, { value: 'nov', label: 'Next month · November' }],
+      tabsSource: [{ value: 'note', label: 'Note' }, { value: 'doc', label: 'Saved document' }, { value: 'entry', label: 'Content Bank entry' }],
+      tabsFunnel: [{ value: 'disc', label: 'Discovery' }, { value: 'depth', label: 'Depth' }, { value: 'auth', label: 'Authority' }, { value: 'comm', label: 'Commercial' }],
+      pillars: ['Operations', 'Sales', 'Leadership'], postTypes: ['Story', 'How-to', 'Opinion']
+    };
+  }
+}
+</script>
+</body>
+</html>

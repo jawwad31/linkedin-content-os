@@ -1,32 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { FileText } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-import { getNavItems, type NavItem } from "./nav-items";
+import { getNavItems, isNavItemActive } from "./nav-items";
 
-export function AppNav({ clientId }: { clientId: string }) {
+/** The sidebar links: 34px rows, a soft cyan wash on the current page. */
+export function AppNav({
+  clientId,
+  showResearch,
+}: {
+  clientId: string;
+  showResearch: boolean;
+}) {
   const pathname = usePathname();
-  const params = useParams<{ post_id?: string }>();
-
-  const items: NavItem[] = getNavItems(clientId);
-
-  if (params?.post_id) {
-    items.push({
-      label: "Post Review",
-      href: pathname,
-      icon: FileText,
-      accent: "orange",
-    });
-  }
+  const items = getNavItems(clientId, { showResearch });
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav aria-label="Main" className="flex flex-col gap-0.5 px-3">
       {items.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = isNavItemActive(pathname, item.href);
         const Icon = item.icon;
 
         return (
@@ -35,11 +30,10 @@ export function AppNav({ clientId }: { clientId: string }) {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-small font-medium text-soft-white/60 transition-colors hover:bg-white/10 hover:text-soft-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-near-black",
-              isActive &&
-                (item.accent === "purple"
-                  ? "bg-secondary-dark font-semibold text-white shadow-sm"
-                  : "bg-primary-dark font-semibold text-white shadow-sm"),
+              "flex h-[34px] items-center gap-2.5 rounded-control px-2.5 text-small transition-colors duration-[140ms] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
+              isActive
+                ? "bg-accent-primary-soft font-medium text-near-black"
+                : "text-muted-foreground hover:bg-surface-hover hover:text-near-black",
             )}
           >
             <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />

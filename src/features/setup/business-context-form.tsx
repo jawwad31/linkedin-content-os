@@ -105,7 +105,7 @@ function SectionIntro({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-orange" aria-hidden="true" />
+      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-link" aria-hidden="true" />
       <div>
         <h3 className="text-body font-semibold text-near-black">{title}</h3>
         <p className="mt-0.5 text-small text-muted-foreground">{description}</p>

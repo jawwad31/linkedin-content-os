@@ -268,7 +268,7 @@ export function ContentIdeasPanel({
               <>
                 {plan ? (
                   <div className="rounded-control border border-brand-purple/20 bg-brand-purple/5 p-3">
-                    <p className="text-caption font-medium uppercase tracking-wide text-brand-purple">
+                    <p className="text-caption font-medium uppercase tracking-wide text-link">
                       Core Argument
                     </p>
                     <p className="mt-1 text-small font-medium text-near-black">
@@ -296,7 +296,7 @@ export function ContentIdeasPanel({
                   <IdeaField
                     label="Commercial Relevance"
                     value={idea.commercialRelevance}
-                    labelClassName="text-brand-purple"
+                    labelClassName="text-link"
                   />
                 </div>
 

@@ -17,6 +17,10 @@ interface SegmentedNavigationProps<T extends string = string> {
   className?: string;
 }
 
+/**
+ * Underline tabs (the design system's Tabs): a hairline under the row, the active tab
+ * in primary text with a 2px cyan underline, counts in small monospace.
+ */
 export function SegmentedNavigation<T extends string = string>({
   items,
   activeId,
@@ -25,10 +29,8 @@ export function SegmentedNavigation<T extends string = string>({
 }: SegmentedNavigationProps<T>) {
   return (
     <div
-      className={cn(
-        "flex flex-wrap gap-1.5 rounded-2xl bg-soft-white p-1.5",
-        className
-      )}
+      role="tablist"
+      className={cn("flex flex-wrap items-center gap-x-6 border-b border-border-subtle", className)}
     >
       {items.map((item) => {
         const isActive = item.id === activeId;
@@ -38,31 +40,20 @@ export function SegmentedNavigation<T extends string = string>({
           <button
             key={item.id}
             type="button"
+            role="tab"
+            aria-selected={isActive}
             onClick={() => onChange(item.id)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-small font-medium text-muted-foreground transition-colors hover:text-near-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2",
-              isActive && "bg-white text-near-black shadow-sm font-semibold"
+              "-mb-px inline-flex h-[38px] shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-px text-small transition-colors duration-[140ms] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
+              isActive
+                ? "border-cyan-500 font-medium text-near-black"
+                : "text-muted-foreground hover:text-near-black",
             )}
           >
-            {Icon && (
-              <Icon
-                aria-hidden="true"
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-colors",
-                  isActive ? "text-near-black" : "text-muted-foreground"
-                )}
-              />
-            )}
+            {Icon && <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />}
             <span>{item.label}</span>
             {item.count !== undefined && item.count > 0 && (
-              <span
-                className={cn(
-                  "ml-1.5 rounded-full px-1.5 py-0.5 text-caption font-mono font-medium transition-colors",
-                  isActive
-                    ? "bg-soft-white text-near-black"
-                    : "bg-soft-white/60 text-muted-foreground"
-                )}
-              >
+              <span className="font-mono text-[11px] font-normal text-muted-foreground">
                 {item.count}
               </span>
             )}

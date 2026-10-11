@@ -7,5 +7,5 @@ export default async function ClientRootPage({
 }) {
   const { client_id: clientId } = await params;
 
-  redirect(`/client/${clientId}/dashboard`);
+  redirect(`/client/${clientId}/posts`);
 }

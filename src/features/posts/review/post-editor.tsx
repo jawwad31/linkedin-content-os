@@ -90,7 +90,7 @@ export function PostEditor({
         <div className="flex flex-wrap items-center gap-3">
           <p role="alert" className="text-small text-danger-strong">{error}</p>
           {stale ? (
-            <Link href={reviewHref} className="text-small text-brand-purple underline">Reload the post</Link>
+            <Link href={reviewHref} className="text-small text-link underline">Reload the post</Link>
           ) : null}
         </div>
       ) : null}

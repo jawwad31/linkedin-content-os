@@ -48,10 +48,12 @@ beforeAll(async () => {
     next_month_start: string;
     after_next: string;
   }>(
-    `select current_date::text as today,
-            (current_date - 1)::text as yesterday,
-            (date_trunc('month', current_date) + interval '1 month')::date::text as next_month_start,
-            (date_trunc('month', current_date) + interval '2 months' + interval '4 days')::date::text as after_next`,
+    // UTC explicitly: the functions use the account timezone (UTC when none is saved),
+    // and the machine running the tests may already be on the next local day.
+    `select (now() at time zone 'UTC')::date::text as today,
+            ((now() at time zone 'UTC')::date - 1)::text as yesterday,
+            (date_trunc('month', now() at time zone 'UTC') + interval '1 month')::date::text as next_month_start,
+            (date_trunc('month', now() at time zone 'UTC') + interval '2 months' + interval '4 days')::date::text as after_next`,
   );
   today = dates.rows[0].today;
   tomorrowOrToday = today;

@@ -68,7 +68,7 @@ export function MobileAgencyNav({ agencyName }: { agencyName: string }) {
                   A
                 </span>
                 <span className="truncate text-small font-heading font-semibold">
-                  AIXelerate Content OS
+                  Virel
                 </span>
               </div>
               <Dialog.Close

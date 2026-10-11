@@ -255,7 +255,7 @@ export function StandalonePostForm({
             <label className="flex flex-col gap-1 text-small font-medium">Main takeaway (optional)<Input value={takeaway} onChange={(event) => setTakeaway(event.target.value)} maxLength={700} placeholder="What should the reader understand or do?" /></label>
             {mode !== "content_bank" || initialContentBankSource?.sourceType !== "content_resource" ? <p className="text-caption text-muted-foreground">For a lead magnet offer, select the approved resource in Content Bank.</p> : null}
           </fieldset>
-          {ideaId ? <p role="status" className="text-small">Your brief is saved. Retry uses this same brief. You can also find it in <Link href={`/client/${clientId}/ideas`} className="font-medium text-brand-orange underline">Ideas</Link>.</p> : null}
+          {ideaId ? <p role="status" className="text-small">Your brief is saved. Retry uses this same brief. You can also find it in <Link href={`/client/${clientId}/ideas`} className="font-medium text-link underline">Ideas</Link>.</p> : null}
           {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="brand" disabled={pending || readingFile || !sourceCanGenerate}>{pending ? "Creating draft..." : ideaId ? "Retry draft" : "Create draft"}</Button>

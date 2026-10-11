@@ -63,10 +63,10 @@ function UsageHistory({ clientId, entry }: { clientId: string; entry: ContentBan
       </div>
       <Detail label="Angle" value={use.angle} />
       <Detail label="Takeaway" value={use.takeaway} />
-      {use.newsletterId ? <a href={`/client/${clientId}/newsletter?edition=${use.newsletterId}`} className="text-small text-brand-purple underline">Open newsletter edition</a>
-        : use.postId ? <a href={`/client/${clientId}/posts/${use.postId}/review`} className="text-small text-brand-purple underline">Open post</a>
-        : use.contentIdeaId ? <a href={`/client/${clientId}/ideas`} className="text-small text-brand-purple underline">Open Ideas</a>
-          : use.channel === "newsletter" || use.channel === "calendar_slot" ? <a href={`/client/${clientId}/${use.channel === "newsletter" ? "newsletter" : "calendar"}`} className="text-small text-brand-purple underline">Open {use.channel === "newsletter" ? "Newsletter" : "Calendar"}</a>
+      {use.newsletterId ? <a href={`/client/${clientId}/newsletter?edition=${use.newsletterId}`} className="text-small text-link underline">Open newsletter edition</a>
+        : use.postId ? <a href={`/client/${clientId}/posts/${use.postId}/review`} className="text-small text-link underline">Open post</a>
+        : use.contentIdeaId ? <a href={`/client/${clientId}/ideas`} className="text-small text-link underline">Open Ideas</a>
+          : use.channel === "newsletter" || use.channel === "calendar_slot" ? <a href={`/client/${clientId}/${use.channel === "newsletter" ? "newsletter" : "calendar"}`} className="text-small text-link underline">Open {use.channel === "newsletter" ? "Newsletter" : "Calendar"}</a>
             : <p className="text-caption text-muted-foreground">No linked output is available.</p>}
       <span className="text-caption text-muted-foreground">Updated {formatUtcDate(use.updatedAt)}</span>
     </div>)}
@@ -203,7 +203,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                     <Detail label="Resource description" value={entry.description} />
                     <Detail label="Target use case" value={entry.targetUseCase} />
                     <Detail label="Delivery URL" value={entry.deliveryUrl} />
-                    {entry.deliveryUrl && /^https?:\/\//i.test(entry.deliveryUrl) ? <a href={entry.deliveryUrl} target="_blank" rel="noreferrer" className="text-small text-brand-purple underline">Open delivery link</a> : null}
+                    {entry.deliveryUrl && /^https?:\/\//i.test(entry.deliveryUrl) ? <a href={entry.deliveryUrl} target="_blank" rel="noreferrer" className="text-small text-link underline">Open delivery link</a> : null}
                     <Detail label="Manual delivery instructions" value={entry.deliveryInstructions} />
                   </> : <>
                     <Detail label="What happened / proof" value={entry.whatHappened} />
@@ -211,7 +211,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                     <Detail label="What changed" value={entry.whatChanged} />
                     <Detail label="Why it matters" value={entry.whyItMatters} />
                     <Detail label="Reaction type" value={entry.reactionType} />
-                    {entry.sourceTrendCardId ? <a href={`/client/${clientId}/research`} className="text-small text-brand-purple underline">Open Research</a> : null}
+                    {entry.sourceTrendCardId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
                   </>}
                   <p className="text-caption text-muted-foreground">Created {formatUtcDate(entry.createdAt)} · Updated {formatUtcDate(entry.updatedAt)} · {entry.usageCount} recorded successful uses</p>
                   <UsageHistory clientId={clientId} entry={entry} />
@@ -232,8 +232,8 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                 <Button type="button" size="sm" variant="ghost" disabled={!editable || isPending || editor !== null} onClick={() => mutate(entry, "reuse")}><RefreshCw className="h-4 w-4" />{entry.allowReuse ? "Reusable" : "Single-use"}</Button>
                 {editable && entry.readiness !== "archived" ? <Button type="button" size="sm" variant="ghost" disabled={isPending || editor !== null} onClick={() => mutate(entry, "archive")}><Archive className="h-4 w-4" /> Archive</Button> : null}
                 {isAdmin && entry.sourceType === "founder_experience" ? <Button type="button" size="sm" variant="ghost" className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong" disabled={isPending || editor !== null} onClick={() => setDeleteTarget(entry)}><Trash2 className="h-4 w-4" /> Delete</Button> : null}
-                {available && canUseNewsletter ? <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small text-brand-purple underline">Use in newsletter</a> : null}
-                {available && canManageIdeas ? <a href={`/client/${clientId}/ideas`} className="text-small text-brand-purple underline">Open Ideas</a> : null}
+                {available && canUseNewsletter ? <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small text-link underline">Use in newsletter</a> : null}
+                {available && canManageIdeas ? <a href={`/client/${clientId}/ideas`} className="text-small text-link underline">Open Ideas</a> : null}
               </div>
               {canCreatePost && !postEligibility.eligible ? <p className="text-caption text-muted-foreground">Create post unavailable: {postEligibility.message}</p> : null}
               {canManageIdeas && !calendarEligibility.eligible && (!canCreatePost || calendarEligibility.message !== postEligibility.message) ? <p className="text-caption text-muted-foreground">Add to Calendar unavailable: {calendarEligibility.message}</p> : null}

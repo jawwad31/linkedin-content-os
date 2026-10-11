@@ -189,7 +189,7 @@ export function AutomationPanel({
                       className="rounded-card border border-outline-variant p-3 text-small"
                     >
                       <a
-                        className="break-all text-brand-purple underline"
+                        className="break-all text-link underline"
                         href={source.url}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -286,7 +286,7 @@ export function AutomationPanel({
                             {new Date(version.fetched_at).toLocaleString()}
                           </summary>
                           <a
-                            className="break-all text-small text-brand-purple underline"
+                            className="break-all text-small text-link underline"
                             href={version.url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -320,7 +320,7 @@ export function AutomationPanel({
               {view.notifications.map((n) => (
                 <li key={n.id} className="text-small">
                   <Link
-                    className="text-brand-purple underline"
+                    className="text-link underline"
                     href={`/client/${clientId}/research?tab=briefings&briefing=${n.briefing_id}#briefing-${n.briefing_id}`}
                   >
                     {notificationLabels[n.kind]}

@@ -26,7 +26,7 @@ export function BeliefShiftDisplay({ value }: { value: string }) {
           &ldquo;{shift.from}&rdquo;
         </p>
       </div>
-      <div className="flex justify-center text-brand-purple">
+      <div className="flex justify-center text-link">
         <ArrowDown aria-hidden="true" className="h-4 w-4" />
       </div>
       <div className="rounded-control border border-brand-purple/25 bg-white p-3">

@@ -1,72 +1,65 @@
-import { Search } from "lucide-react";
-
-import { Input } from "@/components/ui/input";
 import { LogoutButton } from "@/features/auth/logout-button";
 import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { AppNav } from "./app-nav";
 import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
+function initials(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "");
+  return letters.join("") || "V";
+}
+
+/**
+ * The 248px app rail: the Virel wordmark, six links, and the company name at the foot.
+ * Light surface with a hairline edge, as in the design system's SideNav.
+ */
 export function AppSidebar({
   clientId,
   clientName,
-  agencyName,
   role,
   accessibleClientCount,
+  showResearch,
 }: {
   clientId: string;
   clientName: string;
-  agencyName: string | null;
   role: EffectiveClientRole;
   accessibleClientCount: number;
+  showResearch: boolean;
 }) {
   return (
-    <aside className="hidden flex-col gap-6 bg-near-black p-6 text-soft-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-72 lg:shrink-0">
-      <div className="flex items-center gap-2.5 px-1">
-        <span
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-gradient-brand font-heading text-sm font-bold text-white shadow-sm"
-        >
-          A
-        </span>
-        <span className="text-small font-heading font-semibold">
-          AIXelerate Content OS
+    <aside className="hidden w-[248px] shrink-0 flex-col border-r border-border-subtle bg-white lg:sticky lg:top-0 lg:flex lg:h-screen">
+      <div className="px-5 pb-4 pt-5">
+        <span className="font-heading text-[24px] font-semibold leading-none tracking-[-0.018em] text-near-black">
+          Virel
         </span>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-control border border-white/10 bg-white/5 p-3.5">
-        <p className="truncate text-body font-semibold text-soft-white">
-          {clientName}
-        </p>
-        {agencyName ? (
-          <p className="truncate text-caption text-soft-white/50">
-            Agency: {agencyName}
-          </p>
-        ) : null}
+      <div className="flex-1 overflow-y-auto pt-1">
+        <AppNav clientId={clientId} showResearch={showResearch} />
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border-subtle p-4">
+        <div className="flex items-center gap-2 text-caption text-muted-foreground">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-700 text-[10px] font-semibold text-white"
+          >
+            {initials(clientName)}
+          </span>
+          <span className="truncate" title={clientName}>
+            {clientName}
+          </span>
+        </div>
         <WorkspaceSwitchLink
           role={role}
           accessibleClientCount={accessibleClientCount}
+          variant="light"
         />
-      </div>
-
-      <div className="relative">
-        <Search
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-soft-white/40"
-        />
-        <Input
-          type="search"
-          disabled
-          aria-label="Search coming later"
-          placeholder="Search coming later"
-          className="border-white/10 bg-transparent pl-9 text-caption text-soft-white placeholder:text-soft-white/40 disabled:bg-transparent disabled:opacity-100"
-        />
-      </div>
-
-      <AppNav clientId={clientId} />
-
-      <div className="lg:mt-auto">
-        <LogoutButton className="w-full justify-start text-soft-white/60 hover:bg-white/5 hover:text-soft-white" />
+        <LogoutButton className="w-full justify-start text-muted-foreground" />
       </div>
     </aside>
   );

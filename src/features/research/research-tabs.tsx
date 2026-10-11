@@ -51,7 +51,7 @@ export function ResearchTabs({
             className={cn(
               "flex items-center gap-1.5 rounded-t-control border-b-2 px-3 py-2 text-small font-medium transition-colors",
               isActive
-                ? "border-brand-purple text-brand-purple"
+                ? "border-brand-purple text-link"
                 : "border-transparent text-muted-foreground hover:text-near-black",
             )}
           >
@@ -61,7 +61,7 @@ export function ResearchTabs({
                 className={cn(
                   "rounded-full px-1.5 py-0.5 font-mono text-caption",
                   isActive
-                    ? "bg-brand-purple/10 text-brand-purple"
+                    ? "bg-brand-purple/10 text-link"
                     : "bg-soft-white text-muted-foreground",
                 )}
               >

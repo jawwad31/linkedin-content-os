@@ -45,7 +45,7 @@ function EvidenceLink({
         href={source.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="break-words text-brand-purple underline underline-offset-2"
+        className="break-words text-link underline underline-offset-2"
       >
         {source.title}
       </a>
@@ -340,7 +340,7 @@ export function ResearchWorkbench({
             Select up to three approved findings. Each becomes its own post;
             repeat selections reuse its idea.
           </p>
-          {selected.length ? <Link className="text-small font-medium text-brand-purple underline" href={`/client/${clientId}/newsletter?new=true&sources=${selected.join(",")}`}>Add selected findings to newsletter</Link> : null}
+          {selected.length ? <Link className="text-small font-medium text-link underline" href={`/client/${clientId}/newsletter?new=true&sources=${selected.join(",")}`}>Add selected findings to newsletter</Link> : null}
         </div>
       ) : null}
       {created.length ? (
@@ -348,7 +348,7 @@ export function ResearchWorkbench({
           {created.map((item) => (
             <li key={item.findingId}>
               <Link
-                className="text-brand-purple underline"
+                className="text-link underline"
                 href={
                   item.postId
                     ? `/client/${clientId}/posts/${item.postId}/review`
@@ -519,7 +519,7 @@ export function ResearchWorkbench({
                 {finding.content_idea_id ? (
                   <Link
                     href={`/client/${clientId}/ideas`}
-                    className="text-small text-brand-purple underline"
+                    className="text-small text-link underline"
                   >
                     Selected idea is available in Ideas
                   </Link>

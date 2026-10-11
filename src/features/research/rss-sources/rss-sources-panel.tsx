@@ -63,7 +63,7 @@ export function RssSourcesPanel({
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-1.5 self-start rounded-control px-1 py-1 text-small font-medium text-brand-orange hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
+            className="flex items-center gap-1.5 self-start rounded-control px-1 py-1 text-small font-medium text-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2"
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             Add RSS source

@@ -2,6 +2,18 @@
 
 Updated 2026-10-06. Visual foundation preserved from the current repository. New screen requirements below are planned; implement only the assigned phase.
 
+## 2026-10-12 visual system change (supersedes the Roboto Flex / orange-purple direction below)
+
+Jawad chose the Avelune Collective design system as the visual target for the redesign. Its tokens live in `ui-reference/_ds/avelune-collective-design-system-*/tokens/*.css` and are mirrored in `src/app/globals.css`. Where this section and the older text below disagree, **this section wins**. Layout and behavior come from `ui-reference/Virel Phase 1 Wireframes.dc.html`.
+
+- **Color:** Signal Cyan `#07DBF2` is the one primary action per screen and never carries white text (dark ink text). Halo Violet is second-order emphasis (solid violet uses `violet-700` so white text passes). Neutrals are the ink ramp (`#262626` text, `#F4F4F4` page, white cards, hairline `#EBEBEB`, control borders `#D9D9D9`). Status uses green, amber and red. No gradients, no glow, no translucent cards.
+- **Deliberate deviations for contrast:** link text uses `cyan-800` (the system's `cyan-700` is 4.1:1 on white); muted text uses `ink-500` (the system's tertiary `ink-400` is 3.0:1); avatars and solid violet use `violet-700`.
+- **Type:** Google Sans (400-700) at 14px product body, 13px small, 12px caption; JetBrains Mono for counts and labels. Delivered as a 30 KB Latin subset (`src/app/fonts/google-sans-latin.woff2`) of the supplied variable font; the full 4.8 MB file is not shipped.
+- **Shape and space:** 5px controls (38px tall; 30px small), 12px cards with a hairline border and `shadow-xs`, 18px dialogs, 4px spacing grid, 248px app rail, 1280px content cap.
+- **Icons:** lucide (kept for weight and speed) instead of the Material Symbols icon font used in the mockups.
+- **Navigation:** six items (Content Bank, Calendar, Posts, Newsletter, Research, Settings) on a light rail; Overview, Ideas and Publish are gone from the rail. Overview and Publish redirect to Posts; the Ideas page is still reachable by link until research findings flow through the Content Bank.
+- **Not yet built:** the 60px top bar with breadcrumb, the Posts count badge in the rail, the "Advanced" links, and the Newsletter, Research and Settings screens restyled beyond the shared components.
+
 ## Authority
 
 AGENTS.md and security-access.md govern product/security. The approved product specification controls the new workflows. Existing PNGs and Stitch exports determine visual language, not feature scope. Do not revert to the older uploaded Poppins/cold-white palette. Preserve the live Roboto Flex/warm tonal system.
