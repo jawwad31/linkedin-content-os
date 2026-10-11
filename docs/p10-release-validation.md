@@ -96,4 +96,8 @@ Implemented locally and validated by automated checks only (tsc, lint, 41 files 
 
 Implemented locally and validated by automated checks only (tsc, lint, 41 files / 367 tests, build); uncommitted and undeployed. Deferred manual checks: `/resources` redirects to the Content Bank and the sidebar has no Resources item; resources (all types, including Framework) can still be created, edited, deactivated and archived from the Content Bank by an admin and not by a non-admin; the Ideas page still lists approved resources for planning; Create post and Add to Calendar still work for resources; no old API route for resources remains reachable.
 
+### Dated calendar entries (2026-10-11)
+
+Step 1 of the UI redesign: migration and tests only (17 SQL tests); not applied to production and not yet used by the application. Deferred manual checks once the screens exist: add an entry on a date this month and next; a past date and a third month are refused; a day with posts asks first and allows any number; a held single-use entry and an entry already in that month are refused; Replan month moves several entries at once and a stale window is told the plan changed; queued, drafting and drafted posts never move; non-planners see the action dimmed with a reason; existing undated slots appear under "Needs a date". Details: `docs/dated-calendar-entries.md`.
+
 Proceed with the deferred extensive testing round when Jawad requests it. Keep unchecked gates pending. Record the exact commit/push and actual web/worker deployment results in CURRENT.md/completion report; a deployment alone does not complete P10. Application rollback restores the prior normalizer and test/document state; it does not reverse any existing database migration.
