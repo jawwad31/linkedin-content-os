@@ -3,7 +3,6 @@ import {
   CalendarDays,
   LayoutDashboard,
   Lightbulb,
-  Quote,
   Radar,
   Send,
   Settings,
@@ -51,12 +50,6 @@ export function getNavItems(clientId: string): NavItem[] {
       href: `/client/${clientId}/calendar`,
       icon: CalendarDays,
       accent: "orange",
-    },
-    {
-      label: "Founder Experiences",
-      href: `/client/${clientId}/founder-experiences`,
-      icon: Quote,
-      accent: "purple",
     },
     {
       label: "Ideas",

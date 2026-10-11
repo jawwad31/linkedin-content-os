@@ -88,4 +88,8 @@ Automated validation was authorized for the stale-plan release and run locally w
 
 Implemented locally and validated by automated checks only (tsc, lint, 41 files / 365 tests, build); the constraint migration is not applied and nothing is committed or deployed. Deferred manual checks: create a Framework from Content Bank and from the legacy Content Resources page, edit it to and from other types, use it for Create post and Add to Calendar, confirm non-admins still cannot manage resources, and confirm resources of every older type still load and save. Details: `docs/content-resource-framework-type.md`.
 
+### Founder Experiences screen removal (2026-10-11)
+
+Implemented locally and validated by automated checks only (tsc, lint, 41 files / 369 tests, build); uncommitted and undeployed. Deferred manual checks: the sidebar no longer shows Founder Experiences and the old URL redirects to the Content Bank; every experience and trend reaction is still listed, editable, archivable and usable for Create post and Add to Calendar; an admin can permanently delete an unused experience from the Content Bank; deletion is refused (with a clear message) when an idea or an active calendar slot depends on the entry; non-admins see no Delete button and a direct call is forbidden; the audit log records `founder_experience_hard_deleted`; resources still delete from the legacy Resources page.
+
 Proceed with the deferred extensive testing round when Jawad requests it. Keep unchecked gates pending. Record the exact commit/push and actual web/worker deployment results in CURRENT.md/completion report; a deployment alone does not complete P10. Application rollback restores the prior normalizer and test/document state; it does not reverse any existing database migration.

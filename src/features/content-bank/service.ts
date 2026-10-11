@@ -7,9 +7,11 @@ import { contentResourceInputSchema } from "@/features/resources/schemas";
 import { trendReactionInputSchema } from "@/features/research/trend-cards/schemas";
 import {
   canAccessClient, canContributeResearch, canManageClientSetup, canManageFounderExperiences,
+  canUserDeleteBusinessRecords,
 } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
+import { isMissingTableError } from "@/lib/supabase/schema-errors";
 import { getServerUser } from "@/lib/supabase/session";
 
 import {
@@ -42,7 +44,7 @@ function acceptsFields(input: object, isResource: boolean, isReaction = false) {
 }
 
 function refreshSources(clientId: string) {
-  for (const page of ["content-bank", "founder-experiences", "resources", "ideas", "research", "calendar", "newsletter"]) {
+  for (const page of ["content-bank", "resources", "ideas", "research", "calendar", "newsletter"]) {
     revalidatePath(`/client/${clientId}/${page}`);
   }
 }
@@ -211,4 +213,95 @@ export async function loadContentBankUsage(clientId: string, entryId: string, so
   const loaded = await loadEntry(clientId, entryId, sourceType, false);
   if (!loaded.ok) return { ok: false as const, error: loaded.message };
   return getContentBankUsageHistory(clientId, entryId, sourceType);
+}
+
+/**
+ * Permanently deletes one Founder Experience or Trend Reaction. Admin-only, and
+ * refused while a Content Idea, an active calendar slot or any other saved record
+ * still depends on the entry; archiving is the ordinary way to retire an entry.
+ * (This is the former Founder Experiences page delete, moved here unchanged.)
+ */
+export async function deleteContentBankExperience(
+  clientId: string, entryId: string,
+): Promise<ServiceResult<void>> {
+  const { user } = await getServerUser();
+  if (!user) return AUTH_REQUIRED;
+  const ids = z.object({ clientId: z.string().uuid(), entryId: z.string().uuid() }).safeParse({ clientId, entryId });
+  if (!ids.success) return INVALID_INPUT;
+
+  if (!(await canUserDeleteBusinessRecords(user.id, ids.data.clientId))) {
+    return { ok: false, code: "FORBIDDEN", message: "You do not have permission to delete entries for this Client Workspace." };
+  }
+
+  const supabase = await createClient();
+  const { data: entry, error: fetchError } = await supabase
+    .from("founder_experiences")
+    .select("id, entry_type")
+    .eq("id", ids.data.entryId)
+    .eq("client_id", ids.data.clientId)
+    .is("deleted_at", null)
+    .maybeSingle<{ id: string; entry_type: string | null }>();
+  if (fetchError || !entry) return NOT_FOUND;
+
+  const { count: citedCount, error: citeError } = await supabase
+    .from("content_ideas")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", ids.data.clientId)
+    .is("deleted_at", null)
+    .contains("source_ids_json", JSON.stringify([ids.data.entryId]));
+  if (citeError) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not perform dependency check." };
+  }
+  if ((citedCount ?? 0) > 0) {
+    return { ok: false, code: "DEPENDENCY_CONFLICT", message: "This entry cannot be deleted because a Content Idea depends on it." };
+  }
+
+  // A plain GET, not HEAD: a failed HEAD request carries no error body, so the client
+  // library would report the failure as success and hide a real dependency check error.
+  const { data: plannedSlots, error: planError } = await supabase
+    .from("calendar_slots")
+    .select("id")
+    .eq("client_id", ids.data.clientId)
+    .eq("source_id", ids.data.entryId)
+    .neq("status", "cancelled")
+    .limit(1);
+  // Before the calendar migration is applied no slot can exist, so a missing table is
+  // not a dependency. Any other error still blocks the delete.
+  if (planError && !isMissingTableError(planError)) {
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not perform dependency check." };
+  }
+  if ((plannedSlots?.length ?? 0) > 0) {
+    return {
+      ok: false, code: "DEPENDENCY_CONFLICT",
+      message: "This entry cannot be deleted because it is planned in a content calendar. Cancel that slot first.",
+    };
+  }
+
+  const { data: deleted, error: deleteError } = await supabase
+    .from("founder_experiences")
+    .delete()
+    .eq("id", ids.data.entryId)
+    .eq("client_id", ids.data.clientId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (deleteError || !deleted) {
+    if (deleteError?.code === "23503") {
+      return { ok: false, code: "DEPENDENCY_CONFLICT", message: "This entry is referenced by saved content or a newsletter edition and cannot be deleted." };
+    }
+    return { ok: false, code: "UNKNOWN_ERROR", message: "Could not delete this entry. Please try again." };
+  }
+
+  await writeAuditLog({
+    clientId: ids.data.clientId,
+    userId: user.id,
+    action: "founder_experience_hard_deleted",
+    entityType: "founder_experience",
+    entityId: ids.data.entryId,
+    metadata: { experience_id: ids.data.entryId, entry_type: entry.entry_type },
+  });
+
+  refreshSources(ids.data.clientId);
+  revalidatePath(`/client/${ids.data.clientId}/dashboard`);
+  return { ok: true, data: undefined };
 }

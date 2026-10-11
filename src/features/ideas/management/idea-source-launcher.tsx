@@ -152,7 +152,7 @@ function FounderExperiencesGroup({
   return (
     <SourceGroup
       title="Founder Experiences"
-      emptyMessage="Add Founder Experiences to generate ideas from lived operator insight."
+      emptyMessage="Capture experiences in the Content Bank to generate ideas from lived operator insight."
     >
       {sources.map((source) => (
         <SourceCard

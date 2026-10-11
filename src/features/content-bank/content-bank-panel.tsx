@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, BookOpen, CalendarPlus, FilePenLine, Pencil, Plus, RefreshCw, Search } from "lucide-react";
+import { Archive, BookOpen, CalendarPlus, FilePenLine, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,7 +22,7 @@ import {
   CONTENT_BANK_CATEGORIES, CONTENT_BANK_CATEGORY_LABELS, CONTENT_BANK_READINESS, USAGE_STATUSES,
   type ContentBankEntry, type SourceUsageRecord,
 } from "./schemas";
-import { toggleAllowReuseAction, archiveContentBankEntryAction, loadContentBankUsageAction } from "./actions";
+import { toggleAllowReuseAction, archiveContentBankEntryAction, deleteContentBankExperienceAction, loadContentBankUsageAction } from "./actions";
 import { ContentBankEntryForm } from "./content-bank-entry-form";
 import { getContentBankPostEligibility } from "./post-eligibility";
 
@@ -80,6 +81,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   const [selectedUsage, setSelectedUsage] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editor, setEditor] = useState<ContentBankEntry | "new" | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ContentBankEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -124,7 +126,6 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
         <Plus className="h-4 w-4" /> Capture entry
       </Button> : null}
       <span className="text-small text-muted-foreground">{entries.length} entries · reuse is always deliberate</span>
-      <a href={`/client/${clientId}/founder-experiences`} className="text-small text-brand-purple underline">Founder Experiences</a>
       <a href={`/client/${clientId}/resources`} className="text-small text-brand-purple underline">Content Resources</a>
     </div>
     {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
@@ -221,6 +222,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                 {editable ? <Button type="button" size="sm" variant="outline" disabled={isPending || editor !== null} onClick={() => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil className="h-4 w-4" /> Edit</Button> : null}
                 <Button type="button" size="sm" variant="ghost" disabled={!editable || isPending || editor !== null} onClick={() => mutate(entry, "reuse")}><RefreshCw className="h-4 w-4" />{entry.allowReuse ? "Reusable" : "Single-use"}</Button>
                 {editable && entry.readiness !== "archived" ? <Button type="button" size="sm" variant="ghost" disabled={isPending || editor !== null} onClick={() => mutate(entry, "archive")}><Archive className="h-4 w-4" /> Archive</Button> : null}
+                {isAdmin && entry.sourceType === "founder_experience" ? <Button type="button" size="sm" variant="ghost" className="text-danger-strong hover:bg-danger/10 hover:text-danger-strong" disabled={isPending || editor !== null} onClick={() => setDeleteTarget(entry)}><Trash2 className="h-4 w-4" /> Delete</Button> : null}
                 {available && canUseNewsletter ? <a href={`/client/${clientId}/newsletter?new=true&sources=${entry.id}`} className="text-small text-brand-purple underline">Use in newsletter</a> : null}
                 {available && canManageIdeas ? <a href={`/client/${clientId}/ideas`} className="text-small text-brand-purple underline">Open Ideas</a> : null}
               </div>
@@ -230,5 +232,18 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
           </Card>;
         })}
       </div>}
+    <DestructiveConfirmDialog
+      open={deleteTarget !== null}
+      onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+      recordType={deleteTarget?.entryType === "trend_reaction" ? "Trend Reaction" : "Experience"}
+      recordTitle={deleteTarget?.title ?? ""}
+      description="This permanently deletes the entry. It is refused while an idea, calendar slot or saved content depends on it. Archive the entry instead to keep its history."
+      onConfirm={async () => {
+        if (!deleteTarget) return { ok: false, error: "No entry selected." };
+        const result = await deleteContentBankExperienceAction(clientId, deleteTarget.id);
+        return result.ok ? { ok: true } : { ok: false, error: result.error ?? "Failed to delete entry." };
+      }}
+      onSuccess={() => { setDeleteTarget(null); setSuccess("Entry deleted."); router.refresh(); }}
+    />
   </div>;
 }

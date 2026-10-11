@@ -5,6 +5,7 @@ import {
   updateContentBankEntry,
   toggleAllowReuse,
   archiveContentBankEntry,
+  deleteContentBankExperience,
   loadContentBankUsage,
 } from "./service";
 import type { CreateContentBankEntryInput, UpdateContentBankEntryInput } from "./schemas";
@@ -61,6 +62,13 @@ export async function archiveContentBankEntryAction(
     return { error: result.message, success: null };
   }
   return { error: null, success: "Entry archived." };
+}
+
+export async function deleteContentBankExperienceAction(clientId: string, entryId: string) {
+  const result = await deleteContentBankExperience(clientId, entryId);
+  return result.ok
+    ? { ok: true as const, error: null }
+    : { ok: false as const, error: result.message };
 }
 
 export async function loadContentBankUsageAction(
