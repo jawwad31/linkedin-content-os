@@ -1,6 +1,6 @@
 # Posts: Needs you, exact-version review, reject frees the entry, publish handoff
 
-Status (2026-10-11): **implemented and validated locally; uncommitted. The migration is not applied to production.** Manual acceptance is deferred by Jawad to the end of the project.
+Status (2026-10-12): **implemented, validated locally, migration applied to production by Jawad; application release pushed.** Manual acceptance is deferred by Jawad to the end of the project. Jawad applied migration `20261011183532` manually in the Supabase SQL Editor on 2026-10-12 and it returned success; a call to `reject_post` with fake ids and no signed-in user returned `{"ok":false,"code":"FORBIDDEN"}`, confirming the function exists and refuses an unauthenticated caller. The history row was inserted. An earlier attempt (the same morning) did not create anything: the permission check and column check returned no rows and the function did not exist, so the history row was briefly inaccurate until this run. Not reported, and therefore not claimed: the per-role privilege table and the three-column check after this run.
 
 Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then `ui-reference/Claude Code handoff.md` and the wireframes (frames 1a H1, 1e d1 to d5, 1h).
 
