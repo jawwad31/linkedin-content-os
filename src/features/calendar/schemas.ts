@@ -7,6 +7,7 @@ import {
   maxNewsCount,
   type CalendarSettings,
 } from "./allocation";
+import { isValidDate } from "./dates";
 import { isValidMonthKey } from "./months";
 
 export const monthKeySchema = z
@@ -114,29 +115,32 @@ export function newsRoom(settings: Pick<CalendarSettings, "postCount" | "newsCap
   return maxNewsCount(settings.postCount, settings.newsCapPercent);
 }
 
-export const planSelectionSchema = z.object({
-  experienceIds: z.array(z.string().uuid()).max(MAX_POST_COUNT),
-  assetIds: z.array(z.string().uuid()).max(MAX_POST_COUNT),
-  requiredSource: z.object({
-    sourceId: z.string().uuid(),
-    sourceType: z.enum(["founder_experience", "content_resource"]),
-  }).strict().optional(),
-});
+const sourceTypeSchema = z.enum(["founder_experience", "content_resource"]);
+const dateSchema = z.string().refine(isValidDate, "Choose a valid date.");
 
-export type PlanSelection = z.infer<typeof planSelectionSchema>;
-
-export const calendarSourceHintSchema = z.object({
+/** One Content Bank entry reserved on one date (this month or next). */
+export const addCalendarEntrySchema = z.object({
   sourceId: z.string().uuid(),
-  sourceType: z.enum(["founder_experience", "content_resource"]),
+  sourceType: sourceTypeSchema,
+  date: dateSchema,
+  /** True only after the user answered "add another post on this day?" with yes. */
+  allowSameDay: z.boolean(),
 }).strict();
 
-export type CalendarIncomingSource = z.infer<typeof calendarSourceHintSchema> & {
-  title: string;
-  bucket: "experience" | "asset";
-  state: "eligible" | "already_in_month" | "unavailable";
-  message: string;
-  slotId: string | null;
-};
+export type AddCalendarEntryInput = z.infer<typeof addCalendarEntrySchema>;
+
+/** Replan month: several reserved entries moved to new dates in one save. */
+export const moveCalendarSlotsSchema = z.object({
+  calendarId: z.string().uuid(),
+  moves: z.array(z.object({ slotId: z.string().uuid(), date: dateSchema }).strict())
+    .min(1)
+    .max(100),
+  allowSameDay: z.boolean(),
+  /** The plan revision the user was looking at; the database refuses a stale one. */
+  expectedPlanRevision: z.number().int().min(0).max(2_147_483_647),
+}).strict();
+
+export type MoveCalendarSlotsInput = z.infer<typeof moveCalendarSlotsSchema>;
 
 export const cancelSlotsSchema = z.object({
   slotIds: z.array(z.string().uuid()).max(MAX_POST_COUNT).optional(),

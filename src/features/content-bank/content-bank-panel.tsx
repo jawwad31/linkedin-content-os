@@ -24,6 +24,7 @@ import {
 } from "./schemas";
 import { toggleAllowReuseAction, archiveContentBankEntryAction, deleteContentBankExperienceAction, loadContentBankUsageAction } from "./actions";
 import { ContentBankEntryForm } from "./content-bank-entry-form";
+import { AddToCalendarDialog, type CalendarEntryChoice } from "@/features/calendar/add-to-calendar-dialog";
 import { getContentBankPostEligibility } from "./post-eligibility";
 
 const selectClass = "h-10 rounded-control border border-border-grey bg-white px-3 text-small";
@@ -82,6 +83,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   const [searchQuery, setSearchQuery] = useState("");
   const [editor, setEditor] = useState<ContentBankEntry | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ContentBankEntry | null>(null);
+  const [calendarEntry, setCalendarEntry] = useState<CalendarEntryChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -168,7 +170,13 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
           const postEligibility = getContentBankPostEligibility(entry);
           const calendarEligibility = getContentBankPostEligibility(entry, "calendar");
           const createPostHref = `/client/${clientId}/posts?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
-          const addToCalendarHref = `/client/${clientId}/calendar?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
+          const calendarChoice: CalendarEntryChoice = {
+            sourceId: entry.id,
+            sourceType: entry.sourceType,
+            title: entry.title,
+            typeLabel: entry.sourceType === "content_resource" ? "Resource" : entry.entryType === "trend_reaction" ? "Trend reaction" : "Experience",
+            reuseLabel: entry.allowReuse ? "Reusable" : "Single-use",
+          };
           return <Card key={`${entry.sourceType}:${entry.id}`}>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -214,10 +222,12 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                   href={createPostHref}
                   className={buttonVariants({ variant: "accent-purple", size: "sm" })}
                 ><FilePenLine className="h-4 w-4" /> Create post</Link> : null}
-                {canManageIdeas && calendarEligibility.eligible ? <Link
-                  href={addToCalendarHref}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                ><CalendarPlus className="h-4 w-4" /> Add to Calendar</Link> : null}
+                {canManageIdeas && calendarEligibility.eligible ? <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCalendarEntry(calendarChoice)}
+                ><CalendarPlus className="h-4 w-4" /> Add to Calendar</Button> : null}
                 {editable ? <Button type="button" size="sm" variant="outline" disabled={isPending || editor !== null} onClick={() => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil className="h-4 w-4" /> Edit</Button> : null}
                 <Button type="button" size="sm" variant="ghost" disabled={!editable || isPending || editor !== null} onClick={() => mutate(entry, "reuse")}><RefreshCw className="h-4 w-4" />{entry.allowReuse ? "Reusable" : "Single-use"}</Button>
                 {editable && entry.readiness !== "archived" ? <Button type="button" size="sm" variant="ghost" disabled={isPending || editor !== null} onClick={() => mutate(entry, "archive")}><Archive className="h-4 w-4" /> Archive</Button> : null}
@@ -231,6 +241,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
           </Card>;
         })}
       </div>}
+    <AddToCalendarDialog clientId={clientId} entry={calendarEntry} onClose={() => setCalendarEntry(null)} />
     <DestructiveConfirmDialog
       open={deleteTarget !== null}
       onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}

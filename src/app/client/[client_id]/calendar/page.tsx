@@ -5,8 +5,10 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CalendarPanel } from "@/features/calendar/calendar-panel";
+import type { CalendarEntryChoice } from "@/features/calendar/add-to-calendar-dialog";
 import { CalendarDraftingPanel } from "@/features/calendar/calendar-drafting-panel";
+import { CalendarView } from "@/features/calendar/calendar-view";
+import { todayInTimezone } from "@/features/calendar/dates";
 import { calendarDraftingEnabled, getLatestDraftJob, isCalendarDraftingAvailable } from "@/features/calendar/drafting-service";
 import {
   currentMonthKey,
@@ -21,6 +23,7 @@ import {
   getCandidateInventory,
   getReplannableUsageIds,
   isCalendarAvailable,
+  type CandidateEntry,
 } from "@/features/calendar/queries";
 import {
   canRoleManageClientSetup,
@@ -29,12 +32,18 @@ import {
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import { getServerUser } from "@/lib/supabase/session";
 import { cn } from "@/lib/utils";
-import { getContentBankEntry } from "@/features/content-bank/queries";
-import { getContentBankPostEligibility } from "@/features/content-bank/post-eligibility";
-import {
-  calendarSourceHintSchema,
-  type CalendarIncomingSource,
-} from "@/features/calendar/schemas";
+
+function toChoice(entry: CandidateEntry): CalendarEntryChoice {
+  return {
+    sourceId: entry.id,
+    sourceType: entry.sourceType,
+    title: entry.title,
+    typeLabel: entry.sourceType === "content_resource"
+      ? "Resource"
+      : entry.entryType === "trend_reaction" ? "Trend reaction" : "Experience",
+    reuseLabel: entry.allowReuse ? "Reusable" : "Single-use",
+  };
+}
 
 export default async function CalendarPage({
   params,
@@ -60,115 +69,48 @@ export default async function CalendarPage({
         <EmptyState
           icon={CalendarDays}
           title="Calendar is not available yet"
-          description="A pending database update has to be applied before monthly planning can be used. Nothing is wrong with your account."
+          description="A pending database update has to be applied before the calendar can be used. Nothing is wrong with your account."
         />
       </div>
     );
   }
 
   const defaults = await getCalendarDefaults(clientId);
-  const monthKey = isValidMonthKey(month)
-    ? month
-    : currentMonthKey(defaults?.settings.timezone);
-  const hasSourceHint = query.sourceId !== undefined || query.sourceType !== undefined;
-  const parsedSourceHint = calendarSourceHintSchema.safeParse({
-    sourceId: typeof query.sourceId === "string" ? query.sourceId : "",
-    sourceType: typeof query.sourceType === "string" ? query.sourceType : "",
-  });
-  const sourceHint = hasSourceHint && parsedSourceHint.success
-    ? parsedSourceHint.data
-    : null;
-  let incomingSourceError = hasSourceHint && !parsedSourceHint.success
-    ? "This Content Bank selection is invalid. Return to Content Bank and choose the entry again."
-    : null;
+  const timezone = defaults?.settings.timezone;
+  const today = todayInTimezone(timezone);
+  const monthKey = isValidMonthKey(month) ? month : currentMonthKey(timezone);
 
   const calendar = await getCalendarForMonth(clientId, monthKey);
   const slots = calendar ? await getCalendarSlots(clientId, calendar.id) : [];
+
   const canPlan = hasClientPermission(access.role, access.permissions, "ideas_manage");
   const canEditDefaults = canRoleManageClientSetup(access.role);
   const canDraft = canPlan && hasClientPermission(access.role, access.permissions, "posts_draft");
-  const candidates = calendar || sourceHint
+
+  // Entries that can still be added: ready, not held elsewhere, and not already in this month.
+  const inventory = canPlan
     ? await getCandidateInventory(
         clientId,
         slots,
         calendar ? await getReplannableUsageIds(clientId, calendar.id) : new Set<string>(),
       )
     : { experience: [], asset: [] };
-  let incomingSource: CalendarIncomingSource | null = null;
-  if (sourceHint) {
-    const selected = await getContentBankEntry(clientId, sourceHint.sourceId, sourceHint.sourceType);
-    if (!selected) {
-      incomingSourceError = "This Content Bank entry is no longer available in this workspace.";
-    } else {
-      const entry = selected.entry;
-      const bucket = sourceHint.sourceType === "founder_experience" ? "experience" : "asset";
-      const existingSlot = slots.find((slot) =>
-        slot.sourceId === sourceHint.sourceId && slot.sourceType === sourceHint.sourceType);
-      const eligibleCandidate = candidates[bucket].some((candidate) => candidate.id === sourceHint.sourceId);
-      const baseEligibility = getContentBankPostEligibility(entry, "calendar");
+  const entries = [...inventory.experience, ...inventory.asset]
+    .filter((entry) => !entry.inPlan)
+    .map(toChoice);
 
-      if (!canPlan) {
-        incomingSource = {
-          ...sourceHint,
-          title: entry.title,
-          bucket,
-          state: "unavailable",
-          message: "You need the Idea Creator permission to add this entry to a calendar.",
-          slotId: null,
-        };
-      } else if (existingSlot) {
-        incomingSource = {
-          ...sourceHint,
-          title: entry.title,
-          bucket,
-          state: "already_in_month",
-          message: `Already assigned to slot ${existingSlot.slotIndex} for this month. No additional reservation will be created.`,
-          slotId: existingSlot.id,
-        };
-      } else if (eligibleCandidate) {
-        incomingSource = {
-          ...sourceHint,
-          title: entry.title,
-          bucket,
-          state: "eligible",
-          message: calendar
-            ? "Selected for this month. Preview the plan before reserving it."
-            : "Save this month's settings first. This selection will remain while you set up the month.",
-          slotId: null,
-        };
-      } else {
-        incomingSource = {
-          ...sourceHint,
-          title: entry.title,
-          bucket,
-          state: "unavailable",
-          message: baseEligibility.eligible
-            ? "This entry is not available for this month because another active assignment already holds it."
-            : baseEligibility.message,
-          slotId: null,
-        };
-      }
-    }
-  }
   const draftJob = calendar && canDraft ? await getLatestDraftJob(clientId, calendar.id, user.id) : null;
   const draftingAvailable = calendar && canDraft && calendarDraftingEnabled()
     ? await isCalendarDraftingAvailable(clientId) : false;
 
-  const monthHref = (key: string) => {
-    const nextQuery = new URLSearchParams({ month: key });
-    if (sourceHint) {
-      nextQuery.set("sourceType", sourceHint.sourceType);
-      nextQuery.set("sourceId", sourceHint.sourceId);
-    }
-    return `/client/${clientId}/calendar?${nextQuery.toString()}`;
-  };
+  const monthHref = (key: string) => `/client/${clientId}/calendar?month=${key}`;
   const navClass = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Calendar"
-        description="Plan a month of posts. Choose how many posts and where they come from, pick the Content Bank entries to use, and review the plan before anything is drafted."
+        description="Entries reserved for a date. Add an entry from the Content Bank, or here, and pick the day to post it."
         action={
           <nav aria-label="Choose month" className="flex items-center gap-2">
             <Link
@@ -195,20 +137,18 @@ export default async function CalendarPage({
         }
       />
 
-      <CalendarPanel
-        key={`${monthKey}:${sourceHint ? `${sourceHint.sourceType}:${sourceHint.sourceId}` : "no-source"}`}
+      <CalendarView
+        key={`${monthKey}:${calendar?.planRevision ?? 0}`}
         clientId={clientId}
         monthKey={monthKey}
         monthLabel={formatMonthLabel(monthKey)}
+        today={today}
         canPlan={canPlan}
-        canEditDefaults={canEditDefaults}
-        defaults={defaults}
-        calendar={calendar}
+        calendar={calendar ? { id: calendar.id, planRevision: calendar.planRevision } : null}
         slots={slots}
-        candidates={candidates}
-        incomingSource={incomingSource}
-        incomingSourceError={incomingSourceError}
+        entries={entries}
       />
+
       {calendar && canDraft ? <CalendarDraftingPanel key={calendar.id}
         clientId={clientId} calendarId={calendar.id} slots={slots} initialJob={draftJob}
         enabled={draftingAvailable} canCancelOthers={canEditDefaults} /> : null}

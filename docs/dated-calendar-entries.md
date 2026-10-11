@@ -1,6 +1,6 @@
 # Dated calendar entries (backend for the Add to Calendar redesign)
 
-Status (2026-10-11): **migration written and tested locally; not applied to production; the application does not use it yet.** Manual acceptance is deferred by Jawad to the end of the project.
+Status (2026-10-11): **migration applied to production by Jawad and verified; the application screens that use it (step 2) are implemented locally, uncommitted and undeployed.** Manual acceptance is deferred by Jawad to the end of the project.
 
 Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then `ui-reference/Claude Code handoff.md` and `ui-reference/Virel Phase 1 Wireframes.dc.html` (frames 1c, 1d, 5a).
 
@@ -74,4 +74,4 @@ Backup: no verified backup or recorded waiver exists for this project. The migra
 
 ## Next
 
-Step 2 builds the Add to Calendar screens on these functions (entry panel, month and date picker, same-day question, confirmation), then the month view and the Replan month dialog. The application change must not deploy before this migration is applied.
+Step 2 is built locally (see docs/handoffs/CURRENT.md). It is safe to deploy now that this migration is applied. Step 3 rebuilds Posts (Needs you, review, publish as the last step) and frees a rejected post's single-use entry.

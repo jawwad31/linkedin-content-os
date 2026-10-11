@@ -1,76 +1,27 @@
 "use server";
 
 import {
+  addCalendarEntry,
   cancelCalendarSlots,
-  checkCalendarSourceAssignment,
-  commitCalendarPlan,
-  previewCalendarPlan,
-  resetMonthToDefaults,
-  saveAccountDefaults,
-  saveMonthSettings,
+  getAddableDateCounts,
+  moveCalendarSlots,
   type CalendarServiceResult,
-  type PlanPreview,
 } from "./service";
 import { startCalendarDraftBatch, pumpCalendarDraftBatch, cancelCalendarDraftBatch } from "./drafting-service";
 
 /** Server actions return plain serialisable results; the service owns all checks. */
 export type CalendarActionResult<T = null> = CalendarServiceResult<T>;
 
-export async function saveMonthSettingsAction(
-  clientId: string,
-  monthKey: string,
-  settings: unknown,
-  expectedRevision: number | null,
-) {
-  const result = await saveMonthSettings(clientId, monthKey, settings, expectedRevision);
-  return result.ok
-    ? ({ ok: true, data: { settingsRevision: result.data.settingsRevision } } as const)
-    : result;
+export async function addCalendarEntryAction(clientId: string, input: unknown) {
+  return addCalendarEntry(clientId, input);
 }
 
-export async function saveAccountDefaultsAction(
-  clientId: string,
-  settings: unknown,
-  expectedVersion: number | null,
-) {
-  return saveAccountDefaults(clientId, settings, expectedVersion);
+export async function moveCalendarSlotsAction(clientId: string, input: unknown) {
+  return moveCalendarSlots(clientId, input);
 }
 
-export async function resetMonthToDefaultsAction(
-  clientId: string,
-  monthKey: string,
-  expectedRevision: number,
-) {
-  const result = await resetMonthToDefaults(clientId, monthKey, expectedRevision);
-  return result.ok
-    ? ({ ok: true, data: { settingsRevision: result.data.settingsRevision } } as const)
-    : result;
-}
-
-export async function previewCalendarPlanAction(
-  clientId: string,
-  monthKey: string,
-  selection: unknown,
-): Promise<CalendarServiceResult<PlanPreview>> {
-  return previewCalendarPlan(clientId, monthKey, selection);
-}
-
-export async function commitCalendarPlanAction(
-  clientId: string,
-  monthKey: string,
-  selection: unknown,
-  confirmReplace: boolean,
-  expectedPlanRevision: number,
-) {
-  return commitCalendarPlan(clientId, monthKey, selection, confirmReplace, expectedPlanRevision);
-}
-
-export async function checkCalendarSourceAssignmentAction(
-  clientId: string,
-  monthKey: string,
-  source: unknown,
-) {
-  return checkCalendarSourceAssignment(clientId, monthKey, source);
+export async function getAddableDateCountsAction(clientId: string) {
+  return getAddableDateCounts(clientId);
 }
 
 export async function cancelCalendarSlotsAction(

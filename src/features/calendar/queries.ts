@@ -83,6 +83,8 @@ export type CalendarSlotRecord = {
   sourceTitle: string | null;
   postId: string | null;
   postStatus: string | null;
+  /** The day this entry is reserved for (YYYY-MM-DD); null for slots from the old monthly plan. */
+  scheduledDate: string | null;
   draftBrief?: DraftBrief | null;
   draftAttempts?: number;
   draftErrorCode?: string | null;
@@ -95,6 +97,8 @@ export type CandidateEntry = {
   summary: string | null;
   category: string;
   allowReuse: boolean;
+  /** "work_log" or "trend_reaction" for experiences; null for resources. */
+  entryType: string | null;
   /** Times this entry has been used or published before. */
   usageCount: number;
   /** Held by a slot of this month's current plan that can still be replanned. */
@@ -191,6 +195,7 @@ type SlotRow = {
   source_id: string | null;
   source_type: SourceKind | null;
   post_id: string | null;
+  scheduled_date?: string | null;
   draft_brief?: unknown;
   draft_attempts?: number;
   draft_error_code?: string | null;
@@ -205,7 +210,7 @@ export async function getCalendarSlots(
   let { data, error } = await supabase
     .from("calendar_slots")
     .select(
-      "id, slot_index, bucket, requested_bucket, shortage_reason, status, source_id, source_type, post_id, draft_brief, draft_attempts, draft_error_code",
+      "id, slot_index, bucket, requested_bucket, shortage_reason, status, source_id, source_type, post_id, scheduled_date, draft_brief, draft_attempts, draft_error_code",
     )
     .eq("client_id", clientId)
     .eq("calendar_id", calendarId)
@@ -277,6 +282,7 @@ export async function getCalendarSlots(
     sourceTitle: slot.source_id ? (titles.get(slot.source_id) ?? null) : null,
     postId: slot.post_id,
     postStatus: slot.post_id ? (postStatuses.get(slot.post_id) ?? null) : null,
+    scheduledDate: slot.scheduled_date ?? null,
     draftBrief: draftBriefSchema.safeParse(slot.draft_brief).success ? draftBriefSchema.parse(slot.draft_brief) : null,
     draftAttempts: slot.draft_attempts ?? 0,
     draftErrorCode: slot.draft_error_code ?? null,
@@ -309,6 +315,7 @@ type ExperienceRow = {
   id: string;
   title: string;
   category: string | null;
+  entry_type: string | null;
   takeaway: string | null;
   allow_reuse: boolean | null;
   updated_at: string;
@@ -343,7 +350,7 @@ export async function getCandidateInventory(
   const [experiences, resources, usage] = await Promise.all([
     supabase
       .from("founder_experiences")
-      .select("id, title, category, takeaway, allow_reuse, updated_at")
+      .select("id, title, category, entry_type, takeaway, allow_reuse, updated_at")
       .eq("client_id", clientId)
       .eq("readiness", "ready")
       .is("deleted_at", null)
@@ -379,7 +386,7 @@ export async function getCandidateInventory(
   );
 
   const toEntry = (
-    base: { id: string; title: string; allowReuse: boolean; updatedAt: string },
+    base: { id: string; title: string; allowReuse: boolean; updatedAt: string; entryType?: string | null },
     sourceType: SourceKind,
     category: string,
     summary: string | null,
@@ -401,6 +408,7 @@ export async function getCandidateInventory(
         summary,
         category,
         allowReuse: base.allowReuse,
+        entryType: base.entryType ?? null,
         usageCount: rows.filter((row) => row.status === "used" || row.status === "published")
           .length,
         inPlan: inPlanSources.has(base.id),
@@ -430,6 +438,7 @@ export async function getCandidateInventory(
             title: row.title,
             allowReuse: Boolean(row.allow_reuse),
             updatedAt: row.updated_at,
+            entryType: row.entry_type,
           },
           "founder_experience",
           row.category ?? "observation",
@@ -473,4 +482,32 @@ export async function getReplannableUsageIds(
     .returns<{ source_usage_id: string }[]>();
 
   return new Set((error ? [] : data ?? []).map((row) => row.source_usage_id));
+}
+
+/**
+ * How many active slots each day already has, between two dates (inclusive). Used to
+ * show "2 posts" on the date picker; the database makes the real same-day decision.
+ */
+export async function getScheduledCounts(
+  clientId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("calendar_slots")
+    .select("scheduled_date")
+    .eq("client_id", clientId)
+    .neq("status", "cancelled")
+    .gte("scheduled_date", fromDate)
+    .lte("scheduled_date", toDate)
+    .returns<{ scheduled_date: string | null }[]>();
+
+  if (error || !data) return {};
+  const counts: Record<string, number> = {};
+  for (const row of data) {
+    if (!row.scheduled_date) continue;
+    counts[row.scheduled_date] = (counts[row.scheduled_date] ?? 0) + 1;
+  }
+  return counts;
 }

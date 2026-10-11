@@ -3,43 +3,27 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import {
-  canAccessClient,
-  canManageClientSetup,
-  canManageIdeas,
-} from "@/lib/access/client-access";
+import { canAccessClient, canManageIdeas } from "@/lib/access/client-access";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
+import { addableMonths, daysInMonth, dateInMonth, todayInTimezone } from "./dates";
 import {
-  planAllocation,
-  sumCounts,
-  type AllocationPlan,
-  type BucketCounts,
-} from "./allocation";
-import { monthKeyToDate } from "./months";
-import {
-  CALENDAR_COLUMNS,
-  calendarFromRow,
   getCalendarDefaults,
   getCalendarForMonth,
-  getCalendarSlots,
-  getCandidateInventory,
-  getReplannableUsageIds,
-  settingsToColumns,
-  splitSlots,
-  type CalendarRecord,
+  getScheduledCounts,
 } from "./queries";
 import {
-  calendarSourceHintSchema,
+  addCalendarEntrySchema,
   cancelSlotsSchema,
   monthKeySchema,
-  parseCalendarSettings,
-  planSelectionSchema,
-  type PlanSelection,
-  type SettingsIssue,
+  moveCalendarSlotsSchema,
 } from "./schemas";
+
+/** A post already on a day, named so the user knows what "add another" means. */
+export type SameDayPost = { slotId: string; title: string; status: string };
+export type SameDayDate = { date: string; incoming: number; posts: SameDayPost[] };
 
 export type CalendarServiceResult<T> =
   | { ok: true; data: T }
@@ -47,35 +31,29 @@ export type CalendarServiceResult<T> =
       ok: false;
       code: string;
       message: string;
-      issues?: SettingsIssue[];
-      unavailable?: { sourceId: string; reason: string }[];
+      /** Set with DATE_HAS_POSTS when adding one entry. */
+      sameDayPosts?: SameDayPost[];
+      /** Set with DATE_HAS_POSTS when moving several entries. */
+      sameDayDates?: SameDayDate[];
     };
 
 const fail = (code: string, message: string) => ({ ok: false as const, code, message });
 
 const AUTH_REQUIRED = fail("AUTH_REQUIRED", "You must be signed in to continue.");
-const NO_ACCESS = fail("FORBIDDEN", "You do not have access to this client.");
+const NO_ACCESS = fail("FORBIDDEN", "You do not have access to this account.");
 const PLANNER_REQUIRED = fail(
   "FORBIDDEN",
-  "You do not have permission to plan the calendar.",
-);
-const ADMIN_REQUIRED = fail(
-  "FORBIDDEN",
-  "Only Account and Agency Admins can change the account defaults.",
+  "You need the Manage ideas capability to change the calendar. Ask an account admin to add it.",
 );
 const INVALID_INPUT = fail("VALIDATION_ERROR", "Invalid input provided.");
-const NOT_FOUND = fail("NOT_FOUND", "This month has not been saved yet. Save its settings first.");
-const STALE = fail(
-  "CONFLICT",
-  "These settings changed since you opened them. Reload the page and try again.",
-);
-const GENERIC_FAILURE = fail("UNKNOWN_ERROR", "Something went wrong. Please try again.");
+const NOT_FOUND = fail("NOT_FOUND", "This month could not be found.");
+const GENERIC_FAILURE = fail("UNKNOWN_ERROR", "Something went wrong. Nothing was changed. Please try again.");
 
 type Authorized = { userId: string; clientId: string };
 
 async function authorize(
   clientId: string,
-  level: "planner" | "admin",
+  level: "reader" | "planner",
 ): Promise<{ ok: true; auth: Authorized } | { ok: false; error: ReturnType<typeof fail> }> {
   const { user } = await getServerUser();
   if (!user) return { ok: false, error: AUTH_REQUIRED };
@@ -86,13 +64,8 @@ async function authorize(
   if (!(await canAccessClient(user.id, parsedClient.data))) {
     return { ok: false, error: NO_ACCESS };
   }
-
-  const allowed =
-    level === "admin"
-      ? await canManageClientSetup(user.id, parsedClient.data)
-      : await canManageIdeas(user.id, parsedClient.data);
-  if (!allowed) {
-    return { ok: false, error: level === "admin" ? ADMIN_REQUIRED : PLANNER_REQUIRED };
+  if (level === "planner" && !(await canManageIdeas(user.id, parsedClient.data))) {
+    return { ok: false, error: PLANNER_REQUIRED };
   }
 
   return { ok: true, auth: { userId: user.id, clientId: parsedClient.data } };
@@ -103,658 +76,246 @@ function revalidate(clientId: string) {
   revalidatePath(`/client/${clientId}/content-bank`);
 }
 
-function settingsFailure(issues: SettingsIssue[]) {
-  return {
-    ...fail("VALIDATION_ERROR", issues[0]?.message ?? "Invalid settings."),
-    issues,
-  };
+type RpcSameDayPost = { slot_id: string; title: string | null; status: string };
+
+function toSameDayPosts(posts: RpcSameDayPost[] | undefined): SameDayPost[] {
+  return (posts ?? []).map((post) => ({
+    slotId: post.slot_id,
+    title: post.title ?? "Untitled entry",
+    status: post.status,
+  }));
 }
 
-/**
- * Save for this month: writes only the selected month's snapshot. The first save
- * creates the snapshot (remembering which defaults version it started from); later
- * saves bump its revision. Account defaults are never touched, and a saved plan is
- * not rewritten; replanning is a separate, previewed action.
- */
-export async function saveMonthSettings(
-  clientId: string,
-  monthKey: string,
-  rawSettings: unknown,
-  expectedRevision: number | null,
-): Promise<CalendarServiceResult<CalendarRecord>> {
-  const gate = await authorize(clientId, "planner");
-  if (!gate.ok) return gate.error;
-
-  const month = monthKeySchema.safeParse(monthKey);
-  const parsed = parseCalendarSettings(rawSettings);
-  if (!month.success) return INVALID_INPUT;
-  if (!parsed.ok) return settingsFailure(parsed.issues);
-
-  const { userId, clientId: verifiedClientId } = gate.auth;
-  const supabase = await createClient();
-  const columns = settingsToColumns(parsed.settings);
-  const existing = await getCalendarForMonth(verifiedClientId, month.data);
-
-  let saved: CalendarRecord | null = null;
-
-  if (!existing) {
-    const defaults = await getCalendarDefaults(verifiedClientId);
-    const { data, error } = await supabase
-      .from("content_calendars")
-      .insert({
-        client_id: verifiedClientId,
-        month: monthKeyToDate(month.data),
-        ...columns,
-        defaults_version: defaults?.version ?? null,
-        created_by: userId,
-        updated_by: userId,
-      })
-      .select(CALENDAR_COLUMNS)
-      .single();
-
-    if (error?.code === "23505") return STALE;
-    if (error || !data) return GENERIC_FAILURE;
-    saved = calendarFromRow(data);
-  } else {
-    if (expectedRevision !== existing.settingsRevision) return STALE;
-
-    const { data, error } = await supabase
-      .from("content_calendars")
-      .update({
-        ...columns,
-        settings_revision: existing.settingsRevision + 1,
-        updated_by: userId,
-      })
-      .eq("id", existing.id)
-      .eq("client_id", verifiedClientId)
-      .eq("settings_revision", existing.settingsRevision)
-      .select(CALENDAR_COLUMNS)
-      .maybeSingle();
-
-    if (error) return GENERIC_FAILURE;
-    if (!data) return STALE;
-    saved = calendarFromRow(data);
-  }
-
-  await writeAuditLog({
-    clientId: verifiedClientId,
-    userId,
-    action: "calendar_month_settings_saved",
-    entityType: "content_calendar",
-    entityId: saved.id,
-    metadata: {
-      month: month.data,
-      settings_revision: saved.settingsRevision,
-      post_count: saved.settings.postCount,
-    },
-  });
-
-  revalidate(verifiedClientId);
-  return { ok: true, data: saved };
-}
-
-/**
- * Save as default: admin only. Changes the account's defaults for calendars created
- * afterwards. Existing month snapshots and their plans are not modified.
- */
-export async function saveAccountDefaults(
-  clientId: string,
-  rawSettings: unknown,
-  expectedVersion: number | null,
-): Promise<CalendarServiceResult<{ version: number }>> {
-  const gate = await authorize(clientId, "admin");
-  if (!gate.ok) return gate.error;
-
-  const parsed = parseCalendarSettings(rawSettings);
-  if (!parsed.ok) return settingsFailure(parsed.issues);
-
-  const { userId, clientId: verifiedClientId } = gate.auth;
-  const supabase = await createClient();
-  const columns = settingsToColumns(parsed.settings);
-  const existing = await getCalendarDefaults(verifiedClientId);
-
-  let version: number;
-
-  if (!existing) {
-    const { data, error } = await supabase
-      .from("calendar_defaults")
-      .insert({ client_id: verifiedClientId, version: 1, ...columns, updated_by: userId })
-      .select("version")
-      .single<{ version: number }>();
-
-    if (error?.code === "23505") return STALE;
-    if (error || !data) return GENERIC_FAILURE;
-    version = data.version;
-  } else {
-    if (expectedVersion !== existing.version) return STALE;
-
-    const { data, error } = await supabase
-      .from("calendar_defaults")
-      .update({ ...columns, version: existing.version + 1, updated_by: userId })
-      .eq("client_id", verifiedClientId)
-      .eq("version", existing.version)
-      .select("version")
-      .maybeSingle<{ version: number }>();
-
-    if (error) return GENERIC_FAILURE;
-    if (!data) return STALE;
-    version = data.version;
-  }
-
-  await writeAuditLog({
-    clientId: verifiedClientId,
-    userId,
-    action: "calendar_defaults_saved",
-    entityType: "calendar_defaults",
-    entityId: verifiedClientId,
-    metadata: { version, post_count: parsed.settings.postCount },
-  });
-
-  revalidate(verifiedClientId);
-  return { ok: true, data: { version } };
-}
-
-/** Explicit reset: copies the current account defaults into one month's snapshot. */
-export async function resetMonthToDefaults(
-  clientId: string,
-  monthKey: string,
-  expectedRevision: number,
-): Promise<CalendarServiceResult<CalendarRecord>> {
-  const gate = await authorize(clientId, "planner");
-  if (!gate.ok) return gate.error;
-
-  const month = monthKeySchema.safeParse(monthKey);
-  if (!month.success) return INVALID_INPUT;
-
-  const { userId, clientId: verifiedClientId } = gate.auth;
-  const [defaults, existing] = await Promise.all([
-    getCalendarDefaults(verifiedClientId),
-    getCalendarForMonth(verifiedClientId, month.data),
-  ]);
-
-  if (!defaults) {
-    return fail("NO_DEFAULTS", "No account defaults have been saved yet.");
-  }
-  if (!existing) return NOT_FOUND;
-  if (expectedRevision !== existing.settingsRevision) return STALE;
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("content_calendars")
-    .update({
-      ...settingsToColumns(defaults.settings),
-      defaults_version: defaults.version,
-      settings_revision: existing.settingsRevision + 1,
-      updated_by: userId,
-    })
-    .eq("id", existing.id)
-    .eq("client_id", verifiedClientId)
-    .eq("settings_revision", existing.settingsRevision)
-    .select(CALENDAR_COLUMNS)
-    .maybeSingle();
-
-  if (error) return GENERIC_FAILURE;
-  if (!data) return STALE;
-
-  const saved = calendarFromRow(data);
-  await writeAuditLog({
-    clientId: verifiedClientId,
-    userId,
-    action: "calendar_month_reset_to_defaults",
-    entityType: "content_calendar",
-    entityId: saved.id,
-    metadata: { month: month.data, defaults_version: defaults.version },
-  });
-
-  revalidate(verifiedClientId);
-  return { ok: true, data: saved };
-}
-
-/** A source held by an unfinished slot that a confirmed replan would release. */
-export type ReleasedReservation = {
-  sourceId: string;
-  sourceType: "founder_experience" | "content_resource";
-  title: string;
-  slotIndex: number;
-  /** Still selected, but the month has no open allocation left for it. */
-  reason: "beyond_capacity" | "not_selected";
+const DATE_MESSAGES: Record<string, string> = {
+  DATE_IN_PAST: "Past dates cannot be chosen. Pick today or a later date.",
+  DATE_OUT_OF_RANGE: "Choose a date in this month or next month.",
+  FORBIDDEN: PLANNER_REQUIRED.message,
+  VALIDATION_ERROR: INVALID_INPUT.message,
+  NOT_FOUND: NOT_FOUND.message,
 };
 
-export type PlanPreview = {
-  plan: AllocationPlan;
-  hasExistingPlan: boolean;
-  /** Slots a confirmed replan would cancel and release. */
-  replannableSlots: number;
-  /** Slots kept because they already carry a post, or are queued or drafting. */
-  preservedSlots: number;
-  /** Source reservations among the replannable slots that the new plan drops. */
-  releasedReservations: ReleasedReservation[];
-  /**
-   * The month's plan revision when this preview was built. A commit must send it
-   * back; the database refuses the commit if the plan has since changed.
-   */
-  planRevision: number;
+const SOURCE_REASON_MESSAGES: Record<string, string> = {
+  NOT_AVAILABLE: "This entry is no longer ready to use. Check it in the Content Bank.",
+  ALREADY_IN_CALENDAR: "This entry is already on the calendar for that month.",
+  SINGLE_USE_CONFLICT:
+    "This single-use entry is already reserved or used. Turn on reuse in the Content Bank to use it again.",
 };
 
-type LoadedPlanContext = {
-  calendar: CalendarRecord;
-  plan: AllocationPlan;
-  hasExistingPlan: boolean;
-  replannableSlots: number;
-  preservedSlots: number;
-  releasedReservations: ReleasedReservation[];
-  requiredSource: PlanSelection["requiredSource"] | null;
-};
-
-/**
- * Builds the proposed plan from the month's saved snapshot and the user's selected
- * entries. Selections are checked against the live inventory; an entry that is no
- * longer eligible is reported rather than silently dropped. Nothing is written.
- */
-async function buildPlan(
-  clientId: string,
-  monthKey: string,
-  rawSelection: unknown,
-): Promise<
-  | { ok: true; context: LoadedPlanContext }
-  | { ok: false; error: ReturnType<typeof fail> & { unavailable?: { sourceId: string; reason: string }[] } }
-> {
-  const month = monthKeySchema.safeParse(monthKey);
-  const selection = planSelectionSchema.safeParse(rawSelection);
-  if (!month.success || !selection.success) return { ok: false, error: INVALID_INPUT };
-
-  const calendar = await getCalendarForMonth(clientId, month.data);
-  if (!calendar) return { ok: false, error: NOT_FOUND };
-
-  const slots = await getCalendarSlots(clientId, calendar.id);
-  const { preserved, replannable, locked } = splitSlots(slots);
-  const heldUsage = await getReplannableUsageIds(clientId, calendar.id);
-  const inventory = await getCandidateInventory(clientId, slots, heldUsage);
-  const requiredSource = selection.data.requiredSource ?? null;
-  const requiredLockedSlot = requiredSource
-    ? locked.find((slot) =>
-        slot.sourceId === requiredSource.sourceId &&
-        slot.sourceType === requiredSource.sourceType)
-    : null;
-
-  const eligible = new Set([
-    ...inventory.experience.map((entry) => entry.id),
-    ...inventory.asset.map((entry) => entry.id),
-  ]);
-  const requested = [...selection.data.experienceIds, ...selection.data.assetIds];
-  const missing = requested.filter((id) =>
-    !eligible.has(id) && id !== requiredLockedSlot?.sourceId);
-  if (missing.length > 0) {
-    return {
-      ok: false,
-      error: {
-        ...fail(
-          "SOURCE_UNAVAILABLE",
-          "Some selected entries are no longer available. Review the list and select again.",
-        ),
-        unavailable: missing.map((sourceId) => ({ sourceId, reason: "NOT_AVAILABLE" })),
-      },
-    };
-  }
-
-  // An id must be in the bucket it was submitted under, so an experience id cannot be
-  // planned as an asset (or the reverse).
-  const experienceIds = new Set(inventory.experience.map((entry) => entry.id));
-  const assetIds = new Set(inventory.asset.map((entry) => entry.id));
-  const crossBucket =
-    selection.data.experienceIds.some((id) =>
-      !experienceIds.has(id) &&
-      !(requiredLockedSlot?.sourceType === "founder_experience" && requiredLockedSlot.sourceId === id)) ||
-    selection.data.assetIds.some((id) =>
-      !assetIds.has(id) &&
-      !(requiredLockedSlot?.sourceType === "content_resource" && requiredLockedSlot.sourceId === id));
-  if (crossBucket) return { ok: false, error: INVALID_INPUT };
-
-  if (requiredSource && !requiredLockedSlot) {
-    const selectedInCorrectBucket = requiredSource.sourceType === "founder_experience"
-      ? selection.data.experienceIds.includes(requiredSource.sourceId)
-      : selection.data.assetIds.includes(requiredSource.sourceId);
-    if (!selectedInCorrectBucket || !eligible.has(requiredSource.sourceId)) {
-      return {
-        ok: false,
-        error: fail(
-          "SOURCE_UNAVAILABLE",
-          "The Content Bank entry is no longer eligible for this month. Return to Content Bank or choose another source.",
-        ),
-      };
-    }
-  }
-
-  const selectedExperienceIds = selection.data.experienceIds.filter((id) =>
-    !(requiredLockedSlot?.sourceType === "founder_experience" && requiredLockedSlot.sourceId === id));
-  const selectedAssetIds = selection.data.assetIds.filter((id) =>
-    !(requiredLockedSlot?.sourceType === "content_resource" && requiredLockedSlot.sourceId === id));
-
-  const plan = planAllocation({
-    settings: calendar.settings,
-    selection: {
-      experience: selectedExperienceIds,
-      asset: selectedAssetIds,
-    },
-    available: { experience: inventory.experience.length, asset: inventory.asset.length },
-    preserved,
-  });
-
-  if (requiredSource && !requiredLockedSlot) {
-    const included = plan.slots.some((slot) =>
-      slot.sourceId === requiredSource.sourceId &&
-      slot.sourceType === requiredSource.sourceType);
-    if (!included) {
-      const label = requiredSource.sourceType === "founder_experience"
-        ? "experience"
-        : "asset";
-      return {
-        ok: false,
-        error: fail(
-          "SOURCE_CAPACITY",
-          `This month has no open ${label} allocation for the selected Content Bank entry. Adjust and save the monthly count or source percentages, then preview again.`,
-        ),
-      };
-    }
-  }
-
-  // Reservations held by unfinished slots survive a replan only when the new plan
-  // keeps the same entry. Name every other one so the user sees what is released.
-  const ignored = new Set([
-    ...plan.ignoredSelections.experience,
-    ...plan.ignoredSelections.asset,
-  ]);
-  const releasedReservations: ReleasedReservation[] = replannable.flatMap((slot) => {
-    const { sourceId, sourceType } = slot;
-    if (!sourceId || !sourceType) return [];
-    const kept = plan.slots.some((planned) =>
-      planned.sourceId === sourceId && planned.sourceType === sourceType);
-    if (kept) return [];
-    return [{
-      sourceId,
-      sourceType,
-      title: slot.sourceTitle ?? "Untitled entry",
-      slotIndex: slot.slotIndex,
-      reason: ignored.has(sourceId) ? "beyond_capacity" as const : "not_selected" as const,
-    }];
-  });
-
-  return {
-    ok: true,
-    context: {
-      calendar,
-      plan,
-      hasExistingPlan: slots.length > 0,
-      replannableSlots: replannable.length,
-      preservedSlots: sumCounts(preserved),
-      releasedReservations,
-      requiredSource,
-    },
-  };
-}
-
-export async function previewCalendarPlan(
-  clientId: string,
-  monthKey: string,
-  rawSelection: unknown,
-): Promise<CalendarServiceResult<PlanPreview>> {
-  const gate = await authorize(clientId, "planner");
-  if (!gate.ok) return gate.error;
-
-  const built = await buildPlan(gate.auth.clientId, monthKey, rawSelection);
-  if (!built.ok) return built.error;
-
-  const {
-    calendar,
-    plan,
-    hasExistingPlan,
-    replannableSlots,
-    preservedSlots,
-    releasedReservations,
-  } = built.context;
-  return {
-    ok: true,
-    data: {
-      plan,
-      hasExistingPlan,
-      replannableSlots,
-      preservedSlots,
-      releasedReservations,
-      planRevision: calendar.planRevision,
-    },
-  };
-}
-
-type CommitRpcResult = {
+type AddRpcResult = {
   ok?: boolean;
   code?: string;
+  reason?: string;
+  slot_id?: string;
+  calendar_id?: string;
   plan_revision?: number;
-  slot_count?: number;
-  released?: number;
-  unavailable?: { source_id: string; reason: string }[];
+  scheduled_date?: string;
+  posts_on_day?: number;
+  posts?: RpcSameDayPost[];
 };
 
-export type CommittedCalendarSource = {
-  sourceId: string;
-  sourceType: "founder_experience" | "content_resource";
+export type AddedCalendarEntry = {
   slotId: string;
-  state: "reserved" | "already_in_month";
-};
-
-export type CommitCalendarPlanResult = {
+  calendarId: string;
+  date: string;
+  postsOnDay: number;
   planRevision: number;
-  slotCount: number;
-  released: number;
-  selectedSource: CommittedCalendarSource | null;
-};
-
-async function confirmCalendarSourceAssignment(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  clientId: string,
-  calendarId: string,
-  source: NonNullable<PlanSelection["requiredSource"]>,
-): Promise<CommittedCalendarSource | null> {
-  const slot = await supabase.from("calendar_slots")
-    .select("id,source_usage_id,post_id")
-    .eq("client_id", clientId)
-    .eq("calendar_id", calendarId)
-    .eq("source_id", source.sourceId)
-    .eq("source_type", source.sourceType)
-    .neq("status", "cancelled")
-    .limit(1)
-    .maybeSingle<{ id: string; source_usage_id: string | null; post_id: string | null }>();
-  if (slot.error || !slot.data) return null;
-
-  if (slot.data.post_id) {
-    return { ...source, slotId: slot.data.id, state: "already_in_month" };
-  }
-  if (!slot.data.source_usage_id) return null;
-
-  const usage = await supabase.from("source_usage")
-    .select("id")
-    .eq("id", slot.data.source_usage_id)
-    .eq("client_id", clientId)
-    .eq("source_id", source.sourceId)
-    .eq("source_type", source.sourceType)
-    .eq("channel", "calendar_slot")
-    .eq("status", "reserved")
-    .maybeSingle<{ id: string }>();
-  if (usage.error || usage.data?.id !== slot.data.source_usage_id) return null;
-
-  return { ...source, slotId: slot.data.id, state: "reserved" };
-}
-
-/**
- * Read-only: reports whether one Content Bank entry holds a confirmed slot and
- * reservation in a month. The browser calls it after a commit response is lost, so
- * it can tell an assignment that succeeded from a request that did not, without
- * sending another reservation.
- */
-export async function checkCalendarSourceAssignment(
-  clientId: string,
-  monthKey: string,
-  rawSource: unknown,
-): Promise<CalendarServiceResult<{ assignment: CommittedCalendarSource | null }>> {
-  const gate = await authorize(clientId, "planner");
-  if (!gate.ok) return gate.error;
-
-  const month = monthKeySchema.safeParse(monthKey);
-  const source = calendarSourceHintSchema.safeParse(rawSource);
-  if (!month.success || !source.success) return INVALID_INPUT;
-
-  const calendar = await getCalendarForMonth(gate.auth.clientId, month.data);
-  if (!calendar) return { ok: true, data: { assignment: null } };
-
-  const supabase = await createClient();
-  const assignment = await confirmCalendarSourceAssignment(
-    supabase,
-    gate.auth.clientId,
-    calendar.id,
-    source.data,
-  );
-  return { ok: true, data: { assignment } };
-}
-
-const PLAN_CHANGED_MESSAGE =
-  "This month's plan changed after you previewed it. Nothing was changed. Reload, review the latest plan and preview again.";
-
-const planRevisionSchema = z.number().int().min(0).max(2_147_483_647);
-
-const COMMIT_MESSAGES: Record<string, string> = {
-  PLAN_REVISION_CONFLICT: PLAN_CHANGED_MESSAGE,
-  PLAN_REVISION_REQUIRED:
-    "The plan revision is missing. Reload, review the latest plan and preview again.",
-  PLAN_EXISTS: "This month already has a plan. Preview and confirm a replan to change it.",
-  TOO_MANY_SLOTS: "The plan has more slots than this month's post count allows.",
-  DUPLICATE_SOURCE: "An entry can be planned only once in a month.",
-  NOT_FOUND: "This month could not be found.",
 };
 
 /**
- * Commits the plan: recomputes it on the server from the saved snapshot and the
- * selected entry ids (nothing the browser computed is trusted), then writes slots
- * and reservations in one SQL transaction. If any selected entry was claimed in the
- * meantime, nothing is written and the unavailable entries are reported.
- *
- * `expectedPlanRevision` is the revision returned by the preview the user
- * confirmed. The database compares it under the calendar-row lock, so a plan that
- * another session committed in between is never replaced unseen. It is never
- * defaulted from a fresh read here, which would defeat the check.
+ * Reserves one Content Bank entry on one date (this month or next). The database
+ * checks the capability, the date range, that the entry is ready and unclaimed, and
+ * whether the day already has posts, then writes the slot and its reservation in one
+ * transaction. A day with posts returns `DATE_HAS_POSTS` until the caller confirms.
  */
-export async function commitCalendarPlan(
+export async function addCalendarEntry(
   clientId: string,
-  monthKey: string,
-  rawSelection: unknown,
-  confirmReplace: boolean,
-  expectedPlanRevision: unknown,
-): Promise<CalendarServiceResult<CommitCalendarPlanResult>> {
+  rawInput: unknown,
+): Promise<CalendarServiceResult<AddedCalendarEntry>> {
   const gate = await authorize(clientId, "planner");
   if (!gate.ok) return gate.error;
 
-  const expectedRevision = planRevisionSchema.safeParse(expectedPlanRevision);
-  if (!expectedRevision.success) {
-    return fail("PLAN_REVISION_REQUIRED", COMMIT_MESSAGES.PLAN_REVISION_REQUIRED);
-  }
+  const input = addCalendarEntrySchema.safeParse(rawInput);
+  if (!input.success) return INVALID_INPUT;
 
   const { userId, clientId: verifiedClientId } = gate.auth;
-  const built = await buildPlan(verifiedClientId, monthKey, rawSelection);
-  if (!built.ok) return built.error;
-
-  const { calendar, plan, hasExistingPlan, requiredSource } = built.context;
-
-  if (hasExistingPlan && !confirmReplace) {
-    return fail(
-      "REPLAN_CONFIRMATION_REQUIRED",
-      "This month already has a plan. Confirm the replan to apply these changes.",
-    );
-  }
-
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("commit_calendar_plan", {
+  const { data, error } = await supabase.rpc("add_calendar_entry", {
     p_client_id: verifiedClientId,
-    p_calendar_id: calendar.id,
-    p_slots: plan.slots.map((slot) => ({
-      bucket: slot.bucket,
-      requested_bucket: slot.requestedBucket,
-      shortage_reason: slot.shortageReason,
-      source_id: slot.sourceId,
-      source_type: slot.sourceType,
-    })),
-    p_replace: hasExistingPlan,
-    p_expected_plan_revision: expectedRevision.data,
+    p_source_id: input.data.sourceId,
+    p_source_type: input.data.sourceType,
+    p_date: input.data.date,
+    p_allow_same_day: input.data.allowSameDay,
   });
 
-  const result = data as CommitRpcResult | null;
+  const result = data as AddRpcResult | null;
   if (error || !result) return GENERIC_FAILURE;
 
   if (!result.ok) {
     const code = result.code ?? "UNKNOWN_ERROR";
-    if (code === "SOURCE_UNAVAILABLE") {
+    if (code === "DATE_HAS_POSTS") {
       return {
-        ...fail(
-          code,
-          "Another plan claimed one or more of these entries first. Nothing was reserved. Review the list and select again.",
-        ),
-        unavailable: (result.unavailable ?? []).map((entry) => ({
-          sourceId: entry.source_id,
-          reason: entry.reason,
-        })),
+        ...fail(code, "That day already has posts. Add another post on the same day?"),
+        sameDayPosts: toSameDayPosts(result.posts),
       };
     }
-    return fail(code, COMMIT_MESSAGES[code] ?? GENERIC_FAILURE.message);
+    if (code === "SOURCE_UNAVAILABLE") {
+      return fail(
+        code,
+        SOURCE_REASON_MESSAGES[result.reason ?? ""] ?? "This entry is not available for the calendar.",
+      );
+    }
+    return fail(code, DATE_MESSAGES[code] ?? GENERIC_FAILURE.message);
   }
 
-  const selectedSource = requiredSource
-    ? await confirmCalendarSourceAssignment(
-        supabase,
-        verifiedClientId,
-        calendar.id,
-        requiredSource,
-      )
-    : null;
-  const selectedSourceUnconfirmed = Boolean(requiredSource && !selectedSource);
+  if (!result.slot_id || !result.calendar_id) return GENERIC_FAILURE;
 
   await writeAuditLog({
     clientId: verifiedClientId,
     userId,
-    action: "calendar_plan_committed",
-    entityType: "content_calendar",
-    entityId: calendar.id,
+    action: "calendar_entry_added",
+    entityType: "calendar_slot",
+    entityId: result.slot_id,
     metadata: {
-      month: calendar.month,
-      plan_revision: result.plan_revision ?? null,
-      replaced: hasExistingPlan,
-      slot_count: result.slot_count ?? plan.slots.length,
-      released: result.released ?? 0,
-      requested: plan.requested as BucketCounts,
-      actual: plan.actual as BucketCounts,
-      selected_source_id: requiredSource?.sourceId ?? null,
-      selected_source_type: requiredSource?.sourceType ?? null,
-      selected_source_confirmed: requiredSource ? Boolean(selectedSource) : null,
+      calendar_id: result.calendar_id,
+      source_id: input.data.sourceId,
+      source_type: input.data.sourceType,
+      date: input.data.date,
+      posts_on_day: result.posts_on_day ?? 1,
     },
   });
 
   revalidate(verifiedClientId);
-  if (selectedSourceUnconfirmed) {
-    return fail(
-      "COMMIT_UNCONFIRMED",
-      "The calendar plan was saved, but the selected Content Bank reservation could not be confirmed. Refresh the month before trying again.",
-    );
-  }
   return {
     ok: true,
     data: {
-      planRevision: result.plan_revision ?? calendar.planRevision + 1,
-      slotCount: result.slot_count ?? plan.slots.length,
-      released: result.released ?? 0,
-      selectedSource,
+      slotId: result.slot_id,
+      calendarId: result.calendar_id,
+      date: result.scheduled_date ?? input.data.date,
+      postsOnDay: result.posts_on_day ?? 1,
+      planRevision: result.plan_revision ?? 0,
     },
   };
 }
 
+type MoveRpcResult = {
+  ok?: boolean;
+  code?: string;
+  moved?: number;
+  plan_revision?: number;
+  slot_ids?: string[];
+  dates?: { date: string; incoming: number; posts: RpcSameDayPost[] }[];
+};
+
+export type MovedCalendarSlots = { moved: number; planRevision: number };
+
 /**
- * Cancels planned slots (all of them when no ids are given) and releases their
- * reservations. Slots that already carry a post are never cancelled here.
+ * Replan month: moves several reserved entries to new dates in one save. The
+ * database refuses the whole save if the plan changed since the caller loaded it, if
+ * any entry is no longer a plain reservation, or if a date is invalid.
+ */
+export async function moveCalendarSlots(
+  clientId: string,
+  rawInput: unknown,
+): Promise<CalendarServiceResult<MovedCalendarSlots>> {
+  const gate = await authorize(clientId, "planner");
+  if (!gate.ok) return gate.error;
+
+  const input = moveCalendarSlotsSchema.safeParse(rawInput);
+  if (!input.success) return INVALID_INPUT;
+
+  const { userId, clientId: verifiedClientId } = gate.auth;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("move_calendar_slots", {
+    p_client_id: verifiedClientId,
+    p_calendar_id: input.data.calendarId,
+    p_moves: input.data.moves.map((move) => ({ slot_id: move.slotId, date: move.date })),
+    p_allow_same_day: input.data.allowSameDay,
+    p_expected_plan_revision: input.data.expectedPlanRevision,
+  });
+
+  const result = data as MoveRpcResult | null;
+  if (error || !result) return GENERIC_FAILURE;
+
+  if (!result.ok) {
+    const code = result.code ?? "UNKNOWN_ERROR";
+    if (code === "DATE_HAS_POSTS") {
+      return {
+        ...fail(code, "Some of those days already have posts. Move them there anyway?"),
+        sameDayDates: (result.dates ?? []).map((entry) => ({
+          date: entry.date,
+          incoming: entry.incoming,
+          posts: toSameDayPosts(entry.posts),
+        })),
+      };
+    }
+    if (code === "PLAN_REVISION_CONFLICT" || code === "PLAN_REVISION_REQUIRED") {
+      return fail(
+        "PLAN_REVISION_CONFLICT",
+        "This month changed after you opened it. Nothing was moved. Reload, check the dates and try again.",
+      );
+    }
+    if (code === "SLOT_NOT_MOVABLE") {
+      return fail(code, "Only reserved entries can be moved. Drafting and drafted posts stay where they are.");
+    }
+    if (code === "SLOT_NOT_FOUND") {
+      return fail(code, "One of those entries is no longer on this calendar. Reload and try again.");
+    }
+    return fail(code, DATE_MESSAGES[code] ?? GENERIC_FAILURE.message);
+  }
+
+  await writeAuditLog({
+    clientId: verifiedClientId,
+    userId,
+    action: "calendar_slots_moved",
+    entityType: "content_calendar",
+    entityId: input.data.calendarId,
+    metadata: {
+      moved: result.moved ?? 0,
+      requested: input.data.moves.length,
+      plan_revision: result.plan_revision ?? null,
+    },
+  });
+
+  revalidate(verifiedClientId);
+  return {
+    ok: true,
+    data: { moved: result.moved ?? 0, planRevision: result.plan_revision ?? input.data.expectedPlanRevision },
+  };
+}
+
+export type AddableDateCounts = {
+  today: string;
+  months: { monthKey: string; days: number; counts: Record<string, number> }[];
+};
+
+/** This month and next, with how many posts each date already has (for the date picker). */
+export async function getAddableDateCounts(
+  clientId: string,
+): Promise<CalendarServiceResult<AddableDateCounts>> {
+  const gate = await authorize(clientId, "reader");
+  if (!gate.ok) return gate.error;
+
+  const defaults = await getCalendarDefaults(gate.auth.clientId);
+  const today = todayInTimezone(defaults?.settings.timezone);
+  const [current, next] = addableMonths(today);
+  const counts = await getScheduledCounts(
+    gate.auth.clientId,
+    dateInMonth(current, 1),
+    dateInMonth(next, daysInMonth(next)),
+  );
+
+  const forMonth = (monthKey: string) => ({
+    monthKey,
+    days: daysInMonth(monthKey),
+    counts: Object.fromEntries(Object.entries(counts).filter(([date]) => date.startsWith(monthKey))),
+  });
+  return { ok: true, data: { today, months: [forMonth(current), forMonth(next)] } };
+}
+
+/**
+ * Removes planned or reserved entries from a month (all of them when no ids are
+ * given) and releases their reservations. Slots that already carry a post are never
+ * cancelled here.
  */
 export async function cancelCalendarSlots(
   clientId: string,
