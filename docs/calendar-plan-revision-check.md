@@ -1,6 +1,6 @@
 # Calendar plan-revision check
 
-Status (2026-10-11): **migration applied to production manually; application release committed and pushed; deployment verification and manual acceptance pending.** Until the matching application is live, plan commits on the previously deployed application fail (the old four-argument function is revoked).
+Status (2026-10-11): **migration applied and registered in history; application released at `f025790` (Railway web and worker success); manual acceptance deferred by Jawad to the end of the project.** The stale-plan race is closed in production for the Calendar commit path, subject to the limits below, but no manual conflict test has been run.
 
 Read AGENTS.md, security-access.md, design.md, feature-checklist.md and CONTRIBUTING.md in order, then the P05 section of IMPLEMENTATION-PLAN.md and `docs/handoffs/CURRENT.md`.
 
