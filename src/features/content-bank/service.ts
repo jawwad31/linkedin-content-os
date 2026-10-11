@@ -44,7 +44,7 @@ function acceptsFields(input: object, isResource: boolean, isReaction = false) {
 }
 
 function refreshSources(clientId: string) {
-  for (const page of ["content-bank", "resources", "ideas", "research", "calendar", "newsletter"]) {
+  for (const page of ["content-bank", "ideas", "research", "calendar", "newsletter"]) {
     revalidatePath(`/client/${clientId}/${page}`);
   }
 }

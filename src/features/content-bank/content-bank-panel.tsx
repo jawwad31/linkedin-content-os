@@ -126,7 +126,6 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
         <Plus className="h-4 w-4" /> Capture entry
       </Button> : null}
       <span className="text-small text-muted-foreground">{entries.length} entries · reuse is always deliberate</span>
-      <a href={`/client/${clientId}/resources`} className="text-small text-brand-purple underline">Content Resources</a>
     </div>
     {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
     {success ? <p role="status" className="text-small text-success-strong">{success}</p> : null}

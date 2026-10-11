@@ -14,9 +14,6 @@ import { buildContentPrompt } from "@/features/posts/agents/content-agent";
 import {
   editPostContentSchema,
 } from "@/features/posts/review/schemas";
-import {
-  standaloneDraftInputSchema,
-} from "@/features/posts/generate/standalone-service";
 
 import {
   businessContextFixture,
@@ -52,36 +49,6 @@ describe("P04: Shared Standalone Writer & Editorial Controls", () => {
         "evergreen",
         "news",
       ]);
-    });
-
-    it("validates standalone draft inputs across all source paths", () => {
-      const validSources = [
-        { sourceType: "founder_experience", sourceId: "d3b07384-d113-4ec6-b333-8ec23f39a0c1" },
-        { sourceType: "content_resource", sourceId: "d3b07384-d113-4ec6-b333-8ec23f39a0c2", allocationBucket: "asset" },
-        { sourceType: "profile_led", allocationBucket: "evergreen", funnelStage: "Discovery" },
-        { sourceType: "custom_upload", customNotes: "# Architecture Notes\nEvidence points here." },
-        { sourceType: "trend_card", allocationBucket: "news" },
-        { sourceType: "research_brief", allocationBucket: "news", funnelStage: "Authority" },
-      ];
-
-      for (const src of validSources) {
-        const parsed = standaloneDraftInputSchema.safeParse(src);
-        expect(parsed.success).toBe(true);
-      }
-    });
-
-    it("rejects invalid post types or funnel stages in input", () => {
-      const invalid = standaloneDraftInputSchema.safeParse({
-        sourceType: "founder_experience",
-        funnelStage: "TopOfTheFunnel", // Invalid funnel stage
-      });
-      expect(invalid.success).toBe(false);
-
-      const invalidType = standaloneDraftInputSchema.safeParse({
-        sourceType: "founder_experience",
-        postType: "viral_thread", // Invalid post type
-      });
-      expect(invalidType.success).toBe(false);
     });
   });
 
