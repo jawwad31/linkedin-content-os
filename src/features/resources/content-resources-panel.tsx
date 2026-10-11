@@ -290,7 +290,7 @@ export function ContentResourcesPanel({
 
       {resources.length === 0 ? (
         <p className="rounded-card border border-dashed border-border-grey p-6 text-center text-small text-muted-foreground">
-          No Content Resources yet. Add a real guide, template, checklist, report, worksheet, or tool before planning a resource post.
+          No Content Resources yet. Add a real guide, template, checklist, framework, report, worksheet, or tool before planning a resource post.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

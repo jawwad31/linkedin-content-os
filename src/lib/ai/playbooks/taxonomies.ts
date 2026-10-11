@@ -100,6 +100,7 @@ export const RESOURCE_TYPES = [
   "guide",
   "template",
   "checklist",
+  "framework",
   "report",
   "worksheet",
   "tool",

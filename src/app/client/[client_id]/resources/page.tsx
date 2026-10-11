@@ -23,7 +23,7 @@ export default async function ResourcesPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Content Resources"
-        description="Manage real guides, templates, checklists, reports, worksheets, and tools that can support an occasional resource post."
+        description="Manage real guides, templates, checklists, frameworks, reports, worksheets, and tools that can support an occasional resource post."
       />
       <Card>
         <CardHeader>

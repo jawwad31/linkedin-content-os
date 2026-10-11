@@ -9,6 +9,14 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Content Resource Framework type (2026-10-11)
+
+- Jawad chose the Framework resource type as the next feature (the one Content Bank gap the handoff recorded). Baseline HEAD `3c64b90` (docs closeout; Railway web and worker success). Unrelated `supabase/.temp/` excluded. Manual testing is deferred by Jawad to the end of the project.
+- **Change:** `framework` added to `RESOURCE_TYPES` (drives the Content Bank form, the legacy Content Resources form and the legacy resource schema; now equals the Content Bank schema's `LEAD_MAGNET_TYPES`). Migration `20261011095112_content_resource_framework_type.sql` widens `content_resources_type_check` in one ALTER (drop and add together), touching no rows. Two sentences list "frameworks". No playbook edit: the type reaches prompts only as a display string and no playbook enumerates types; `resources/context/business-context.md` is a loaded prompt file and was not edited. No new table, function, grant, permission, dependency, provider, variable or flag.
+- **Validation (automated only, no paid calls):** `tsc` clean, lint clean, full suite 41 files / 365 tests passed (new `tests/content-resource-types.test.ts`), build passes, `git diff --check` clean. Not run: any browser or manual acceptance.
+- **Status:** implemented and validated locally; **uncommitted, migration not applied, not deployed.** Release steps, preflight/verify/rollback SQL and the history insert are in `docs/content-resource-framework-type.md`. Order: apply schema first, then deploy the application; there is no outage window because the deployed app never sends `framework`. Backup: none verified or waived for this migration (it changes no rows).
+- Supersedes the earlier "Framework resource support needs an additive schema/playbook change" notes below once released.
+
 ## Calendar stale-plan check and release attempt (2026-10-10)
 
 - Jawad authorized implementing the atomic revision check, running validation and releasing to production if safe. Baseline HEAD `89a6451`, main; untracked `supabase/.temp/` excluded. All earlier uncommitted Create post, Add to Calendar and review-correction work is preserved.
