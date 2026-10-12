@@ -18,7 +18,7 @@ import type { ManagedAccountMember, ManagedAgencyMember } from "./queries";
 import { EMPTY_USER_MANAGEMENT_STATE } from "./state";
 
 const selectClasses =
-  "h-11 w-full rounded-control border border-border-grey bg-white px-3 text-body text-near-black outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50";
+  "h-[38px] w-full rounded-control border border-border-grey bg-white px-3 text-small text-near-black outline-none";
 
 export function AccountTeamManagement({
   clientId,

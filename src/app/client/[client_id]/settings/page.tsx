@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AccountTeamManagement } from "@/features/access-management/team-management";
 import { AccountUserProvisionForm } from "@/features/access-management/user-provision-form";
 import { getAccountTeam } from "@/features/access-management/queries";
+import { SettingsTabs, type SettingsTab } from "@/features/setup/settings-tabs";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
 import { OperationalLogsPanel } from "@/features/setup/operational-logs-panel";
 import { getOperationalLogs } from "@/features/setup/operational-logs-queries";
@@ -26,10 +27,13 @@ import { getServerUser } from "@/lib/supabase/session";
 
 export default async function SetupPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ client_id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { client_id: clientId } = await params;
+  const { tab } = await searchParams;
   const { user } = await getServerUser();
 
   if (!user) {
@@ -46,47 +50,69 @@ export default async function SetupPage({
       />
 
       {role ? (
-        <div className="mt-6 flex flex-col gap-6">
-          <BusinessContextSection clientId={clientId} role={role} />
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText aria-hidden="true" className="h-5 w-5 text-link" />
-                <CardTitle>Supporting Documents & Evidence</CardTitle>
-              </div>
-              <CardDescription>
-                Upload markdown briefs, customer interviews, and evidence files. Scoped retrieval
-                extracts relevant proof during drafting without polluting prompt logs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DocumentsSection clientId={clientId} role={role} />
-            </CardContent>
-          </Card>
-
-          {canRoleManageClientUsers(role) ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Users aria-hidden="true" className="h-5 w-5 text-link" />
-                  <CardTitle>Team Access</CardTitle>
-                </div>
-                <CardDescription>
-                  Create users with immediate access, choose Account User permissions,
-                  and manage passwords. No email is sent.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-6">
-                <AccountUserProvisionForm clientId={clientId} />
-                <TeamAccessList clientId={clientId} />
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {canRoleViewOperationalLogs(role) ? (
-            <OperationalLogsSection clientId={clientId} />
-          ) : null}
+        <div className="mt-6">
+          <SettingsTabs
+            initialTab={typeof tab === "string" ? tab : undefined}
+            tabs={[
+              {
+                id: "business",
+                label: "Business context",
+                content: <BusinessContextSection clientId={clientId} role={role} />,
+              },
+              {
+                id: "documents",
+                label: "Documents",
+                content: (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <FileText aria-hidden="true" className="h-5 w-5 text-link" />
+                        <CardTitle>Supporting Documents & Evidence</CardTitle>
+                      </div>
+                      <CardDescription>
+                        Upload markdown briefs, customer interviews, and evidence files. Scoped retrieval
+                        extracts relevant proof during drafting without polluting prompt logs.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <DocumentsSection clientId={clientId} role={role} />
+                    </CardContent>
+                  </Card>
+                ),
+              },
+              ...(canRoleManageClientUsers(role)
+                ? [{
+                    id: "team" as const,
+                    label: "Team access",
+                    content: (
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center gap-2">
+                            <Users aria-hidden="true" className="h-5 w-5 text-link" />
+                            <CardTitle>Team Access</CardTitle>
+                          </div>
+                          <CardDescription>
+                            Create users with immediate access, choose Account User permissions,
+                            and manage passwords. No email is sent.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-6">
+                          <AccountUserProvisionForm clientId={clientId} />
+                          <TeamAccessList clientId={clientId} />
+                        </CardContent>
+                      </Card>
+                    ),
+                  }]
+                : []),
+              ...(canRoleViewOperationalLogs(role)
+                ? [{
+                    id: "logs" as const,
+                    label: "Activity & AI logs",
+                    content: <OperationalLogsSection clientId={clientId} />,
+                  }]
+                : []),
+            ] satisfies SettingsTab[]}
+          />
         </div>
       ) : null}
     </div>
