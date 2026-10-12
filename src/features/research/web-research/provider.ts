@@ -285,6 +285,13 @@ export function mapWebResponse(
   for (const item of header.data.findings) {
     const checked = findingSchema.safeParse(item);
     if (!checked.success) {
+      // Server log only: which fields failed and why, never their values.
+      console.error(
+        `[web-research] a finding was omitted, fields that failed: ${checked.error.issues
+          .slice(0, 8)
+          .map((issue) => `${issue.path.join(".") || "(root)"} ${issue.code}`)
+          .join("; ")}`,
+      );
       result.coverageGaps.push(
         "A finding was omitted because its fields or dates could not be validated.",
       );

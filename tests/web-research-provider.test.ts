@@ -495,6 +495,16 @@ describe("P07 bounded search and evidence mapping", () => {
       logged.mockRestore();
     });
   });
+  it("logs which fields made a finding fail, never their values", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const bad = { ...researchFinding, previousFindingId: "SECRET-NOT-A-UUID", extraKey: "SECRET-X" };
+    const result = mapWebResponse(webResponse([bad]), [], now);
+    expect(result.findings).toHaveLength(0);
+    const line = String(logged.mock.calls[0][0]);
+    expect(line).toContain("previousFindingId");
+    expect(line).not.toContain("SECRET");
+    logged.mockRestore();
+  });
   it("retains Router candidates after failed search/synthesis and incomplete generation", () => {
     const raw = webResponse();
     raw.output[0].type = "openrouter:web_search";
