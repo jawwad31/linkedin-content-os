@@ -9,6 +9,11 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Account menu at the foot of the rail (2026-10-12)
+
+- Jawad's request: Change password and Log out must not be always visible. The foot of the rail (and the phone drawer) now shows only the company name with its initials; clicking it opens a small menu with **Change password** and **Log out** (`src/components/app-shell/account-menu.tsx`, base-ui Menu, opens upward). Profile settings are deliberately not built yet; add an entry to the `entries` list in that file when they exist. Uncommitted. No migration.
+- **Tests:** `tests/account-menu.test.ts` (4, mutation-checked). **Not verified:** the open menu in a browser, including inside the phone drawer (the menu layer is `z-[70]` above the drawer).
+
 ## Whole article text for saved RSS articles (2026-10-12)
 
 - Scope: Jawad asked why drafting from a saved article only used the title, summary and link. Decision: read the page when Save to Content Bank is pressed. Uncommitted. **Needs one additive migration first:** `20261012250000_collected_article_full_text.sql` (two nullable columns on `market_signal_items`; guide "Part 2" in `docs/rss-articles-to-content-bank.md`).

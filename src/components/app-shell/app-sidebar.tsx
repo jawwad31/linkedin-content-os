@@ -1,22 +1,8 @@
-import Link from "next/link";
-
-import { buttonVariants } from "@/components/ui/button";
-import { LogoutButton } from "@/features/auth/logout-button";
-import { cn } from "@/lib/utils";
-
+import { AccountMenu } from "./account-menu";
 import { AppNav } from "./app-nav";
 
-function initials(name: string): string {
-  const letters = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "");
-  return letters.join("") || "V";
-}
-
 /**
- * The 248px app rail: the Virel wordmark, six links, and the company name at the foot.
+ * The 248px app rail: the Virel wordmark, six links, and the account menu (the company name) at the foot.
  * Light surface with a hairline edge, as in the design system's SideNav.
  */
 export function AppSidebar({
@@ -42,20 +28,8 @@ export function AppSidebar({
         <AppNav clientId={clientId} showResearch={showResearch} postsNeedingYou={postsNeedingYou} />
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-border-subtle p-4">
-        <div className="flex items-center gap-2 text-caption text-muted-foreground">
-          <span
-            aria-hidden="true"
-            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-700 text-[10px] font-semibold text-white"
-          >
-            {initials(clientName)}
-          </span>
-          <span className="truncate" title={clientName}>
-            {clientName}
-          </span>
-        </div>
-        <Link href="/account/password" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-muted-foreground")}>Change password</Link>
-        <LogoutButton className="w-full justify-start text-muted-foreground" />
+      <div className="border-t border-border-subtle p-3">
+        <AccountMenu clientName={clientName} />
       </div>
     </aside>
   );

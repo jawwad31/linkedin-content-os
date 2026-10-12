@@ -161,3 +161,7 @@ Automated checks only. DEFERRED manual checks: apply the migration and run its v
 ### Whole article text for saved RSS articles (2026-10-12)
 
 Automated checks only. DEFERRED manual checks: apply the migration and run its verify queries; save an article from a plain news or blog site and confirm the box says the whole article was read; save one from a paywalled or script-heavy site and confirm the entry is still created with the honest note; create a post from the first and check the draft uses details from the body of the article, not only the headline; confirm nothing shows the stored text on any screen.
+
+### Account menu (2026-10-12)
+
+Automated checks only. DEFERRED manual checks: the foot of the rail shows only the company name; clicking it opens Change password and Log out; Change password opens the screen; Log out signs out; Escape and clicking elsewhere close the menu; in the phone drawer the menu opens above the drawer and both entries work.
