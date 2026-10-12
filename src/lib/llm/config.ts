@@ -8,7 +8,11 @@ export const LLM_ROLES = {
   planning: { prefix: "LLM_PLANNING", legacyModel: "OPENROUTER_PLANNING_MODEL" },
   content: { prefix: "LLM_CONTENT", legacyModel: "OPENROUTER_CONTENT_MODEL" },
   review: { prefix: "LLM_REVIEW", legacyModel: "OPENROUTER_REVIEW_MODEL" },
-} as const;
+  // Newsletter stages follow the planning, content and review roles unless their own pair is set.
+  newsletterPlan: { prefix: "LLM_NEWSLETTER_PLAN", legacyModel: "OPENROUTER_PLANNING_MODEL", fallback: "planning" },
+  newsletterWrite: { prefix: "LLM_NEWSLETTER_WRITE", legacyModel: "OPENROUTER_CONTENT_MODEL", fallback: "content" },
+  newsletterQa: { prefix: "LLM_NEWSLETTER_QA", legacyModel: "OPENROUTER_REVIEW_MODEL", fallback: "review" },
+} as const satisfies Record<string, { prefix: string; legacyModel: string; fallback?: string }>;
 
 export type LlmRole = keyof typeof LLM_ROLES;
 export type LlmConfig = {
@@ -18,9 +22,12 @@ export type LlmConfig = {
 };
 
 function resolveSettings(role: LlmRole): Omit<LlmConfig, "apiKey"> | null {
-  const settings = LLM_ROLES[role];
+  const settings: { prefix: string; legacyModel: string; fallback?: LlmRole } = LLM_ROLES[role];
   const providerValue = process.env[`${settings.prefix}_PROVIDER`];
   const modelValue = process.env[`${settings.prefix}_MODEL`];
+  // A role with a fallback and no settings of its own simply follows the role it falls back to.
+  if (providerValue === undefined && modelValue === undefined && settings.fallback)
+    return resolveSettings(settings.fallback);
   if (providerValue !== undefined || modelValue !== undefined) {
     const provider = providerValue?.trim().toLowerCase();
     const model = modelValue?.trim();

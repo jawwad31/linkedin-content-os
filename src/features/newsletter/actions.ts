@@ -19,17 +19,20 @@ import {
   sourceSelectionSchema,
   validateSourceArrangement,
   exportEdition,
+  exportEditionHtml,
   hasPrivateEvidenceLink,
   type EditionInput,
   type NewsletterSource,
 } from "./contracts";
-import { draftNewsletter, reviewNewsletter } from "./agent";
+import { draftNewsletter, planNewsletter, reviewNewsletter } from "./agent";
 
 export async function exportNewsletter(
   clientId: string,
   editionId: string,
   revision: number,
-): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+): Promise<
+  { ok: true; text: string; html: string } | { ok: false; message: string }
+> {
   const { user } = await getServerUser();
   if (
     !user ||
@@ -62,7 +65,7 @@ export async function exportNewsletter(
       message:
         "Remove private evidence links before export, then rerun QA and approval.",
     };
-  return { ok: true, text };
+  return { ok: true, text, html: exportEditionHtml(parsed.data) };
 }
 
 type Result =
@@ -190,17 +193,22 @@ export async function transitionNewsletter(
     return failure();
   }
 }
+/**
+ * Runs one stage of the newsletter workflow on the saved version:
+ * plan (propose the outline), draft (write the article, then check it) or qa (check it again).
+ * Each stage is one paid attempt that is claimed first and released if anything fails.
+ */
 export async function generateNewsletter(
   clientId: string,
   editionId: string,
   expected: number,
   requestKey: string,
-  mode: "draft" | "qa",
+  mode: "plan" | "draft" | "qa",
 ): Promise<Result> {
   const { user } = await getServerUser();
   if (
     !user ||
-    !["draft", "qa"].includes(mode) ||
+    !["plan", "draft", "qa"].includes(mode) ||
     ![clientId, editionId, requestKey].every(
       (v) => z.string().uuid().safeParse(v).success,
     ) ||
@@ -260,15 +268,22 @@ export async function generateNewsletter(
       profile,
       excerpts,
     };
-    const drafted: EditionInput | null =
-      mode === "draft" ? await draftNewsletter(agentInput) : payload;
-    if (!drafted)
-      return {
-        ok: false,
-        message:
-          "Drafting failed or the AI is not configured. The entry was not consumed. Refresh before retrying.",
-      };
-    const qa = await reviewNewsletter({ ...agentInput, payload: drafted });
+    let result: EditionInput = payload;
+    let qa: unknown = null;
+    if (mode === "plan") {
+      const planned = await planNewsletter(agentInput);
+      if (!planned.ok) return { ok: false, message: planned.message };
+      result = planned.payload;
+    } else if (mode === "draft") {
+      const drafted = await draftNewsletter(agentInput);
+      if (!drafted.ok) return { ok: false, message: drafted.message };
+      result = drafted.payload;
+      qa = await reviewNewsletter({ ...agentInput, payload: result });
+    } else {
+      if (!payload.article?.trim())
+        return { ok: false, message: "There is no draft to check yet." };
+      qa = await reviewNewsletter(agentInput);
+    }
     const evidence = {
       ...buildContextManifest({
         profileRevision: profile.profileRevision ?? 1,
@@ -276,9 +291,10 @@ export async function generateNewsletter(
           id: source.source_id,
           type: source.source_type,
         })),
-        playbookVersion: "newsletter-v1",
+        playbookVersion: "newsletter-v2",
         retrievedSections: excerpts,
       }),
+      stage: mode,
       sourceHashes: agentInput.sources.map((source) => ({
         id: source.source_id,
         hash: source.content_hash,
@@ -288,7 +304,7 @@ export async function generateNewsletter(
       p_client: clientId,
       p_attempt: claim.attempt,
       p_token: claim.token,
-      p_payload: drafted,
+      p_payload: result,
       p_qa: qa,
       p_evidence: evidence,
     });

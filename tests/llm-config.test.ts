@@ -71,6 +71,26 @@ describe("server-only LLM role configuration", () => {
     expect(getOpenRouterConfig("LLM_CONTENT_MODEL")).toBeNull();
   });
 
+  it("newsletter stages follow planning, content and review until they get their own pair", () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "router-key");
+    vi.stubEnv("LLM_PLANNING_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_PLANNING_MODEL", "plan-model");
+    vi.stubEnv("LLM_CONTENT_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_CONTENT_MODEL", "content-model");
+    vi.stubEnv("LLM_REVIEW_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_REVIEW_MODEL", "review-model");
+    expect(getOpenRouterConfig("LLM_NEWSLETTER_PLAN_MODEL")?.model).toBe("plan-model");
+    expect(getOpenRouterConfig("LLM_NEWSLETTER_WRITE_MODEL")?.model).toBe("content-model");
+    expect(getOpenRouterConfig("LLM_NEWSLETTER_QA_MODEL")?.model).toBe("review-model");
+    vi.stubEnv("LLM_NEWSLETTER_QA_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_NEWSLETTER_QA_MODEL", "stronger-qa-model");
+    expect(getOpenRouterConfig("LLM_NEWSLETTER_QA_MODEL")?.model).toBe("stronger-qa-model");
+    expect(getOpenRouterConfig("LLM_REVIEW_MODEL")?.model).toBe("review-model");
+    // An incomplete pair of its own fails closed instead of silently using the shared model.
+    vi.stubEnv("LLM_NEWSLETTER_QA_MODEL", undefined);
+    expect(getOpenRouterConfig("LLM_NEWSLETTER_QA_MODEL")).toBeNull();
+  });
+
   it("never substitutes the other provider's key when a selected key is missing", () => {
     vi.stubEnv("OPENAI_API_KEY", "openai-key");
     vi.stubEnv("OPENAI_RESEARCH_MODEL", "legacy-web");

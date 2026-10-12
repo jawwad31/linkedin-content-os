@@ -8,6 +8,8 @@ import {
   getNewsletterOptions,
 } from "@/features/newsletter/queries";
 import { NewsletterPanel } from "@/features/newsletter/newsletter-panel";
+import { createClient } from "@/lib/supabase/server";
+import { getBusinessContext } from "@/features/posts/generate/service";
 
 export default async function NewsletterPage({
   params,
@@ -27,6 +29,9 @@ export default async function NewsletterPage({
       "ideas_manage" | "posts_draft" | "posts_review" | "posts_publish",
   ) => access.role !== "client_user" || access.permissions.includes(permission);
   const editionId = z.string().uuid().safeParse(query.edition);
+  const profile = await getBusinessContext(await createClient(), clientId).catch(
+    () => null,
+  );
   const loaded = await Promise.all([
     getNewsletterData(clientId, editionId.success ? editionId.data : undefined),
     can("ideas_manage") && can("posts_draft")
@@ -37,33 +42,30 @@ export default async function NewsletterPage({
     const [data, options] = loaded;
     const isNew = query.new === "true";
     return (
-      <div className="flex flex-col gap-6">
-        <PageHeader
-          title="Newsletter"
-          description="Plan, draft and review independent weekly editions from research and your Content Bank."
-        />
-        <NewsletterPanel
-          key={
-            isNew
-              ? `new:${query.sources ?? ""}`
-              : `${data.edition?.id}:${data.edition?.revision}:${data.edition?.status}:${data.edition?.outline_revision}:${data.versions[0]?.qa ? "qa" : "pending"}`
-          }
-          clientId={clientId}
-          {...data}
-          edition={isNew ? null : data.edition}
-          versions={isNew ? [] : data.versions}
-          sources={isNew ? [] : data.sources}
-          options={options}
-          initialSourceIds={(query.sources ?? "")
-            .split(",")
-            .filter((id) => z.string().uuid().safeParse(id).success)
-            .slice(0, 8)}
-          canSelect={can("ideas_manage")}
-          canDraft={can("posts_draft")}
-          canReview={can("posts_review")}
-          canPublish={can("posts_publish")}
-        />
-      </div>
+      <NewsletterPanel
+        key={
+          isNew
+            ? `new:${query.sources ?? ""}`
+            : `${data.edition?.id ?? "list"}:${data.edition?.revision}:${data.edition?.status}`
+        }
+        clientId={clientId}
+        {...data}
+        creating={isNew}
+        edition={isNew ? null : data.edition}
+        versions={isNew ? [] : data.versions}
+        sources={isNew ? [] : data.sources}
+        options={options}
+        initialSourceIds={(query.sources ?? "")
+          .split(",")
+          .filter((id) => z.string().uuid().safeParse(id).success)
+          .slice(0, 8)}
+        hasIcp={!!profile?.primaryIcp?.trim()}
+        hasPersonalReaders={!!profile?.personalReaders?.trim()}
+        canSelect={can("ideas_manage")}
+        canDraft={can("posts_draft")}
+        canReview={can("posts_review")}
+        canPublish={can("posts_publish")}
+      />
     );
   } else {
     return (

@@ -13,7 +13,8 @@ Jawad chose the Avelune Collective design system as the visual target for the re
 - **Icons:** lucide (kept for weight and speed) instead of the Material Symbols icon font used in the mockups.
 - **Navigation:** six items (Content Bank, Calendar, Posts, Newsletter, Research, Settings) on a light rail; Overview, Ideas and Publish are gone from the rail. Overview and Publish redirect to Posts; the Ideas page is still reachable by link until research findings flow through the Content Bank.
 - **Top bar and rail count (built):** on large screens `PageHeader` is the 60px white top bar (title left, the page's one primary action right, hairline edge to edge); the description sits under it. Agency pages and phones keep the plain heading row. The Posts rail item shows a violet count of posts waiting on a person (review, needs edits, approved).
-- **Not yet built:** breadcrumbs on detail pages, the "Advanced" links, and the Newsletter, Research and Settings screens restyled beyond the shared components.
+- **Newsletter (built 2026-10-12):** list of editions with one next action, New edition (sources grouped by type), outline review and confirm, read with QA notes beside the text, approve, copy or export; version history, evidence and the publication record sit under "Advanced".
+- **Not yet built:** breadcrumbs on detail pages, the "Advanced" links on Research, and the Research screens restyled beyond the shared components.
 
 ## Authority
 

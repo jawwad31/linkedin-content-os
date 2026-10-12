@@ -4,15 +4,34 @@ export const PLAYBOOK_STAGES = [
   "planning",
   "content",
   "review",
-  "newsletter",
+  "newsletter-plan",
+  "newsletter-write",
+  "newsletter-qa",
 ] as const;
 
 export type PlaybookStage = (typeof PLAYBOOK_STAGES)[number];
 
 export const PLAYBOOK_MANIFEST: Record<PlaybookStage, readonly string[]> = {
-  newsletter: [
+  "newsletter-plan": [
+    ".agents/skills/newsletter-plan/newsletter-planning.skill.md",
+    ".agents/skills/Shared/editorial-standards.md",
+    ".agents/skills/Shared/newsletter-craft.md",
+    ".agents/skills/Shared/app-rules.md",
     "resources/principles/source-proof-safety.md",
-    "resources/craft/newsletter-editions.md",
+  ],
+  "newsletter-write": [
+    ".agents/skills/newsletter-write/newsletter-writing.skill.md",
+    ".agents/skills/Shared/editorial-standards.md",
+    ".agents/skills/Shared/newsletter-craft.md",
+    ".agents/skills/Shared/app-rules.md",
+    "resources/principles/source-proof-safety.md",
+  ],
+  "newsletter-qa": [
+    ".agents/skills/newsletter-qa/newsletter-qa.skill.md",
+    ".agents/skills/Shared/editorial-standards.md",
+    ".agents/skills/Shared/newsletter-craft.md",
+    ".agents/skills/Shared/app-rules.md",
+    "resources/principles/source-proof-safety.md",
   ],
   "research-classification": [
     ".agents/skills/research/SKILL.md",

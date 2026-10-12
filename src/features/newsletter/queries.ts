@@ -2,12 +2,59 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getContentBankEntries } from "@/features/content-bank/queries";
 import { storedFindingSchema } from "@/features/research/web-research/contracts";
-import type {
-  Edition,
-  EditionVersion,
-  NewsletterSource,
-  SourceOption,
+import {
+  normalizeQa,
+  type Edition,
+  type EditionSummary,
+  type EditionVersion,
+  type NewsletterSource,
+  type Plan,
+  type SourceOption,
 } from "./contracts";
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+/** Name, outline status and QA result for each edition, from its current version only. */
+async function summarize(
+  db: Db,
+  clientId: string,
+  editions: Edition[],
+): Promise<EditionSummary[]> {
+  if (!editions.length) return [];
+  const rows = await db
+    .from("newsletter_versions")
+    .select("edition_id,revision,qa,name:payload->>title,plan_status:payload->plan->>status")
+    .eq("client_id", clientId)
+    .in(
+      "edition_id",
+      editions.map((e) => e.id),
+    )
+    .returns<
+      {
+        edition_id: string;
+        revision: number;
+        qa: unknown;
+        name: string | null;
+        plan_status: Plan["status"] | null;
+      }[]
+    >();
+  if (rows.error) throw new Error("NEWSLETTER_UNAVAILABLE");
+  const current = new Map(
+    (rows.data ?? []).map((r) => [`${r.edition_id}:${r.revision}`, r]),
+  );
+  return editions.map((e) => {
+    const v = current.get(`${e.id}:${e.revision}`);
+    const qa = normalizeQa(v?.qa);
+    return {
+      ...e,
+      name: v?.name ?? "Untitled edition",
+      planStatus: v?.plan_status ?? null,
+      hasQa: !!qa,
+      qaDecision: qa?.decision ?? null,
+      qaNotes: qa?.issues.length ?? 0,
+    };
+  });
+}
 
 export async function getNewsletterData(clientId: string, editionId?: string) {
   const db = await createClient();
@@ -22,7 +69,8 @@ export async function getNewsletterData(clientId: string, editionId?: string) {
     .limit(50)
     .returns<Edition[]>();
   if (editions.error) throw new Error("NEWSLETTER_UNAVAILABLE");
-  const id = editionId ?? editions.data?.[0]?.id;
+  const summaries = await summarize(db, clientId, editions.data ?? []);
+  const id = editionId;
   let edition = editions.data?.find((e) => e.id === id) ?? null;
   if (editionId && !edition) {
     const row = await db
@@ -76,7 +124,7 @@ export async function getNewsletterData(clientId: string, editionId?: string) {
     }
   }
   return {
-    editions: editions.data ?? [],
+    editions: summaries,
     edition,
     versions: versions.data ?? [],
     sources: (sources.data ?? []).map((source) => ({
@@ -114,6 +162,12 @@ export async function getNewsletterOptions(
         usageStatus: e.usageStatus,
         usageCount: e.usageCount,
         reuseConfirmed: false,
+        kind:
+          e.sourceType === "content_resource"
+            ? ("resource" as const)
+            : e.entryType === "trend_reaction"
+              ? ("trend_reaction" as const)
+              : ("experience" as const),
       })),
     ...(findings.data ?? []).flatMap((f) => {
       const parsed = storedFindingSchema.safeParse(f.payload);
@@ -127,6 +181,7 @@ export async function getNewsletterOptions(
               usageStatus: "reference",
               usageCount: 0,
               reuseConfirmed: false,
+              kind: "research" as const,
             },
           ]
         : [];

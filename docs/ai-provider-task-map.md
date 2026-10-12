@@ -90,7 +90,7 @@ Potential narrow uses: relevance classification, category choice, ranking scores
 
 Individual posts, research-selected posts and Calendar drafts reuse planning -> writer -> deterministic checks -> QA -> human review. Valid cached plans may avoid a planner call; bounded transport/schema/corrective retries can add calls. Calendar batch drafting remains off.
 
-RSS fetching/parsing/deduplication, monthly allocation/inventory/reservations/leases, manual Content Bank capture, settings saves, permissions, approvals and publication use code/database/human actions. Supporting MD/TXT retrieval uses scoped keyword/section matching, with no embedding/hosted-file-search call. P08 schedules/monitoring and P09 newsletters remain planned.
+RSS fetching/parsing/deduplication, monthly allocation/inventory/reservations/leases, manual Content Bank capture, settings saves, permissions, approvals and publication use code/database/human actions. Supporting MD/TXT retrieval uses scoped keyword/section matching, with no embedding/hosted-file-search call. Newsletter editions use three AI stages: outline (`LLM_PLANNING_MODEL`), article (`LLM_CONTENT_MODEL`) and QA (`LLM_REVIEW_MODEL`), each with its own skill file under `.agents/skills/`. P08 schedules/monitoring remain planned.
 
 ## Changed files and validation
 
