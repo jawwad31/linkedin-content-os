@@ -2,6 +2,14 @@
 
 Updated 2026-10-09. Jawad selected OpenRouter for all six current AI roles, superseding the earlier direct-provider request. The role configuration and web-search adapter are implemented, validated, pushed and deployed as `e2525e6`, based on `022ec87`; both Railway services reported SUCCESS. Exact deployment results are in CURRENT.md. No live paid model calls were made. Provider value/quality and deferred manual acceptance remain unverified.
 
+## Update 2026-10-12: one way to configure, and no RSS synthesis role
+
+- **Only the explicit pairs are read now.** Each role needs `LLM_<ROLE>_PROVIDER` and `LLM_<ROLE>_MODEL`. The older single-model settings (`OPENROUTER_MODEL`, `OPENROUTER_RESEARCH_MODEL`, `OPENROUTER_PLANNING_MODEL`, `OPENROUTER_CONTENT_MODEL`, `OPENROUTER_REVIEW_MODEL`, `OPENAI_RESEARCH_MODEL`) no longer do anything, and a role with no pair is "not configured" (it never borrows another role's model). Jawad confirmed every Railway service, including `rss-worker`, has the new pairs.
+- **The RSS TrendCard synthesis role is gone** because TrendCards are no longer built (the RSS run fetches articles and marks them relevant or not). `LLM_RSS_SYNTHESIS_PROVIDER` and `LLM_RSS_SYNTHESIS_MODEL` can be deleted from Railway. Five roles remain, plus the three newsletter roles that follow planning, content and review unless set.
+- **Safe to delete from Railway** (they are ignored): `OPENROUTER_MODEL`, `OPENROUTER_RESEARCH_MODEL`, `OPENROUTER_PLANNING_MODEL`, `OPENROUTER_CONTENT_MODEL`, `OPENROUTER_REVIEW_MODEL`, `OPENAI_RESEARCH_MODEL`, `LLM_RSS_SYNTHESIS_PROVIDER`, `LLM_RSS_SYNTHESIS_MODEL`.
+- **Web research provider:** `openrouter` (default here) or `openai` (direct, needs `OPENAI_API_KEY`). No other role may use `openai`.
+- The sections below are the historical record of 2026-10-08/09 and still mention the retired settings and the synthesis role.
+
 ## Six current AI roles and selected models
 
 | Role | Trigger and output | Selected OpenRouter model | Assessment |

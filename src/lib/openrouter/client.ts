@@ -15,30 +15,19 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_TIMEOUT_MS = 30_000;
 
 /**
- * Resolves a new LLM role pair, or the legacy model/default settings for callers
- * without a role key. Never sends a direct-provider assignment to OpenRouter.
+ * Resolves the OpenRouter key and model for one role, given the name of the role's model
+ * setting (for example "LLM_CONTENT_MODEL"). A role not set to OpenRouter, or an unknown name,
+ * is not configured.
  */
 export function getOpenRouterConfig(modelEnvKey?: string): OpenRouterConfig | null {
   const role = (Object.keys(LLM_ROLES) as LlmRole[]).find(
     (role) => `${LLM_ROLES[role].prefix}_MODEL` === modelEnvKey,
   );
-  if (role) {
-    const config = getLlmConfig(role);
-    return config?.provider === "openrouter"
-      ? { apiKey: config.apiKey, model: config.model }
-      : null;
-  }
-  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) return null;
-
-  let model = modelEnvKey ? process.env[modelEnvKey]?.trim() : undefined;
-  if (!model) {
-    model = process.env.OPENROUTER_MODEL?.trim();
-  }
-
-  if (!model) return null;
-
-  return { apiKey, model };
+  if (!role) return null;
+  const config = getLlmConfig(role);
+  return config?.provider === "openrouter"
+    ? { apiKey: config.apiKey, model: config.model }
+    : null;
 }
 
 /**

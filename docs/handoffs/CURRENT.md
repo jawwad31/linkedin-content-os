@@ -9,6 +9,13 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Cleanup pass, second part: model settings (2026-10-12)
+
+- Jawad confirmed every Railway service, including `rss-worker`, has the `LLM_*` pairs, so the fallbacks to the older settings are removed. Uncommitted. No migration.
+- `src/lib/llm/config.ts`: `LLM_ROLES` no longer has `legacyModel`; a role with no `<PREFIX>_PROVIDER` and `_MODEL` is not configured unless it has a newsletter `fallback`. The `rssSynthesis` role is removed (no TrendCard synthesis any more). `src/lib/openrouter/client.ts` `getOpenRouterConfig` resolves role pairs only and returns null for an unknown name; the `OPENROUTER_MODEL` default is gone. `.env.example` and `docs/ai-provider-task-map.md` updated, with the list of Railway variables that can now be deleted.
+- **Risk to know:** a Railway service missing a role's pair now reports that role as not configured instead of using an old setting. The pairs were confirmed present; the first real run of each role is the proof.
+- Tests: `tests/llm-config.test.ts` rewritten (the removal is mutation-checked); `web-research-provider.test.ts` moved to the explicit pairs.
+
 ## Cleanup pass, first part (2026-10-12)
 
 - Scope: task T9 of `docs/planning/remaining-work-plan.md`. Uncommitted. **No migration, no database change.**

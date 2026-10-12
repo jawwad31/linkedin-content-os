@@ -312,7 +312,6 @@ describe("P07 bounded search and evidence mapping", () => {
   });
   it("keeps missing configuration distinct and makes no provider call", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
-    vi.stubEnv("OPENAI_RESEARCH_MODEL", "");
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
     const result = await researchWeb({
@@ -471,7 +470,6 @@ describe("P07 bounded search and evidence mapping", () => {
     vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
     vi.stubEnv("OPENROUTER_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "unused-openai-key");
-    vi.stubEnv("OPENAI_RESEARCH_MODEL", "legacy-model");
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
     expect(
@@ -492,7 +490,8 @@ describe("P07 bounded search and evidence mapping", () => {
   });
   it("sends the exact saved unrelated prompt, excludes profile when off, and bounds the paid call", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("OPENAI_RESEARCH_MODEL", "configured-model");
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
     const fetcher = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify(webResponse())));
@@ -527,7 +526,8 @@ describe("P07 bounded search and evidence mapping", () => {
   });
   it("handles provider rate limits and timeouts without exposing provider bodies or prompts", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("OPENAI_RESEARCH_MODEL", "configured-model");
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
     const fetcher = vi
       .fn()
       .mockResolvedValue(
@@ -591,7 +591,8 @@ describe("P07 bounded search and evidence mapping", () => {
   });
   it("refuses oversized context before a paid call instead of silently truncating profile fields", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("OPENAI_RESEARCH_MODEL", "configured-model");
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
     const result = await researchWeb({
