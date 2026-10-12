@@ -189,7 +189,11 @@ function plain(value: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
-export function extractPage(original: string, url: URL): SourcePage {
+export function extractPage(
+  original: string,
+  url: URL,
+  textLimit: number = SOURCE_LIMITS.text,
+): SourcePage {
   const cleaned = original
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(
@@ -199,7 +203,7 @@ export function extractPage(original: string, url: URL): SourcePage {
   const main =
     cleaned.match(/<(article|main)\b[^>]*>([\s\S]*?)<\/\1>/i)?.[2] ?? cleaned;
   const text = plain(main);
-  if (text.length > SOURCE_LIMITS.text) throw new Error("SOURCE_TOO_LARGE");
+  if (text.length > textLimit) throw new Error("SOURCE_TOO_LARGE");
   if (!text) throw new Error("SOURCE_UNAVAILABLE");
   const title = plain(
     original.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? url.hostname,

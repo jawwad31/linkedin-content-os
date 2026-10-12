@@ -57,3 +57,49 @@ alter table public.founder_experiences drop column if exists source_article_id;
 - **Existing TrendCards** stay in the database and any Content Bank entries made from them keep working. There is no longer a screen for them.
 - **Web research still reads the recent collected articles** as background (up to 20, plus up to 4 imported links), as before. A manual Run web research does not fetch the feeds itself; press Run RSS feeds first for the freshest articles. The scheduled run fetches the feeds first.
 - **A failed web research run now says why** on the card, and the provider's exact reply goes to the server log (Railway) instead of the page.
+
+## Part 2: read the whole article (migration `20261012250000_collected_article_full_text.sql`)
+
+Until now a post drafted from a saved article only had the feed's short teaser (at most 700 characters) and the link. Saving an article now also reads its page once and keeps the readable text, so drafting has the whole piece.
+
+- **When:** at the moment you press Save to Content Bank. The page is read through the same public-page reader the imported research links use (public addresses only, size and time limits).
+- **How much:** up to about 12,000 characters (around 2,000 words), cut at a word boundary. Pages that give back less than 400 characters of text (a paywall notice, "enable JavaScript") count as unreadable.
+- **If the page cannot be read** (the site blocks readers, needs a login, is down): the entry is still saved, the box says so, and drafting uses the feed's summary as before.
+- **Private context only:** the text is stored with the article for that company, goes to the AI as source material, and is never shown on a screen or published.
+- **Already-saved entries** are not re-read. The articles saved before this change only have the teaser.
+
+The migration is additive: two empty columns on `market_signal_items` (`full_text`, `full_text_fetched_at`). No row is changed. Apply it **before** the new version goes live, since saving an article selects the new column.
+
+### 1. Preflight (read only; expect no rows)
+
+```sql
+select column_name from information_schema.columns
+where table_schema = 'public' and table_name = 'market_signal_items'
+  and column_name in ('full_text', 'full_text_fetched_at');
+```
+
+### 2. Apply
+
+Run the migration file as it is.
+
+### 3. Verify (read only)
+
+```sql
+-- expect two rows
+select column_name, data_type from information_schema.columns
+where table_schema = 'public' and table_name = 'market_signal_items'
+  and column_name in ('full_text', 'full_text_fetched_at');
+
+-- expect 0: nothing existing was filled in
+select count(*) from public.market_signal_items where full_text is not null;
+```
+
+### 4. Rollback (only if something went wrong)
+
+Safe until articles have been saved with the new version; after that it throws away the stored article text (the entries and summaries stay).
+
+```sql
+alter table public.market_signal_items
+  drop column if exists full_text,
+  drop column if exists full_text_fetched_at;
+```

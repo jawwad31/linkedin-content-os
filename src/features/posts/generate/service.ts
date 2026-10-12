@@ -59,6 +59,7 @@ import { getServerUser } from "@/lib/supabase/session";
 import { isMissingTableError } from "@/lib/supabase/schema-errors";
 
 import { generatePostRequestSchema } from "./schemas";
+import { toSourceArticle, type SourceArticleRow } from "./source-article";
 import {
   buildStrategyCompatibility,
   validatePlanAgainstCompatibility,
@@ -170,15 +171,6 @@ type TrendCardRow = {
   week_of: string | null;
 };
 
-type SourceArticleRow = {
-  id: string;
-  title: string;
-  summary: string | null;
-  url: string;
-  source_name: string | null;
-  published_at: string | null;
-};
-
 type SourceLoadResult =
   | { ok: true; sourceContext: ContentAgentSourceContext }
   | { ok: false; failure: ServiceResult<never> };
@@ -271,11 +263,6 @@ function idsFromJson(value: unknown): string[] {
   return value.filter(
     (entry): entry is string => uuidSchema.safeParse(entry).success,
   );
-}
-
-function trimLongText(value: string | null, maxLength = 900): string | null {
-  if (!value) return null;
-  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 function toBusinessContext(row: ClientContextRow): ContentAgentBusinessContext {
@@ -683,7 +670,7 @@ async function getSourceArticles(
 
   const { data, error } = await admin
     .from("market_signal_items")
-    .select("id, title, summary, url, source_name, published_at")
+    .select("id, title, summary, url, source_name, published_at, full_text")
     .eq("client_id", clientId)
     .in("id", sourceItemIds)
     .is("deleted_at", null)
@@ -691,14 +678,7 @@ async function getSourceArticles(
 
   if (error || !data) return [];
 
-  return data.map((row) => ({
-    id: row.id,
-    title: row.title,
-    summary: trimLongText(row.summary, 700),
-    url: row.url,
-    source_name: row.source_name,
-    published_at: row.published_at,
-  }));
+  return data.map(toSourceArticle);
 }
 
 async function loadFounderExperienceSource(

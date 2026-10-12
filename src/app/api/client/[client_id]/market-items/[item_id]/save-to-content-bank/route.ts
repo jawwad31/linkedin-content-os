@@ -5,6 +5,8 @@ import {
   statusForErrorCode,
 } from "@/lib/errors/api-response";
 
+export const maxDuration = 60;
+
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ client_id: string; item_id: string }> },

@@ -9,6 +9,16 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Whole article text for saved RSS articles (2026-10-12)
+
+- Scope: Jawad asked why drafting from a saved article only used the title, summary and link. Decision: read the page when Save to Content Bank is pressed. Uncommitted. **Needs one additive migration first:** `20261012250000_collected_article_full_text.sql` (two nullable columns on `market_signal_items`; guide "Part 2" in `docs/rss-articles-to-content-bank.md`).
+- **Reader:** `collected-articles/article-text.ts` (`readArticleText`) uses the existing hardened `fetchPublicText` and `extractPage` from `automation/safe-fetch.ts` (`extractPage` gained an optional text limit, default unchanged). Text is clipped to 12,000 characters at a word boundary; under 400 characters counts as unreadable. Any failure returns unavailable and never blocks saving.
+- **Save flow:** `saveArticleToContentBank` reads the page only when `full_text` is empty and the entry is new, stores it with the session client (existing update policy: admins and research contributors), and returns `fullText: read | had | unavailable | null`. The saved box tells the person which. Route `maxDuration` 60.
+- **Drafting:** `posts/generate/source-article.ts` (`toSourceArticle`) builds each source article for the writer; `text` is added only when it exists; the summary trimming is unchanged byte for byte so stored plan hashes stay valid. `getSourceArticles` selects `full_text`.
+- **Tests:** `article-full-text.test.ts` (7), additions to `rss-articles-to-content-bank.test.ts` and `content-bank-article-sql.test.ts`. Five mutations were caught.
+- **Not verified:** a real page read (paywalled and script-rendered sites will often fail by design), and how much the longer source changes post quality or cost (up to about 3,000 more input tokens per draft).
+- **Left alone:** the web research briefing still reads only the stored summaries of collected articles, not their full text.
+
 ## Research page: Web research and RSS feeds tabs, RSS articles into the Content Bank, clearer failures (2026-10-12)
 
 - Scope: Jawad's request after a failed web research run: two clear sections with their own buttons, RSS articles saved the same way findings are, TrendCards no longer built. Decisions: two tabs (Web research | RSS feeds), Run RSS feeds fetches and marks relevance, web research keeps reading collected articles. Uncommitted and undeployed. **Needs one additive migration applied first:** `20261012240000_content_bank_article_link.sql` (guide with preflight, verify and rollback: `docs/rss-articles-to-content-bank.md`).

@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
 import { articleToEntryFields } from "./article-entry";
+import { readArticleText } from "./article-text";
 import type { CollectedArticleStatus } from "./queries";
 
 export type ServiceResult<T> =
@@ -383,16 +384,27 @@ export async function deleteCollectedArticle(
   return { ok: true, data: undefined };
 }
 
+/** `fullText` says whether the article page was read: now, earlier, or not at all (null when it was already saved). */
+export type SavedArticleEntry = {
+  entryId: string;
+  alreadySaved: boolean;
+  fullText: "read" | "had" | "unavailable" | null;
+};
+
 /**
  * Saves one collected article to the Content Bank as a reusable, unused trend reaction.
  * Uses the signed-in user's own session, so the existing founder_experiences insert policy
  * (research_contribute or admin) is the backstop. Saving the same article again returns the
  * entry that already exists. It never creates a post, an idea or an approval.
+ *
+ * The article's page is read once, here, and its text kept with the article so drafting has
+ * the whole piece and not just the feed's teaser. If the page cannot be read (blocked, paid,
+ * down) the entry is still saved and drafting falls back to the summary.
  */
 export async function saveArticleToContentBank(
   clientId: string,
   itemId: string,
-): Promise<ServiceResult<{ entryId: string; alreadySaved: boolean }>> {
+): Promise<ServiceResult<SavedArticleEntry>> {
   const { user } = await getServerUser();
   if (!user) return AUTH_REQUIRED;
   const ids = z.object({ clientId: uuidSchema, itemId: uuidSchema }).safeParse({ clientId, itemId });
@@ -414,7 +426,7 @@ export async function saveArticleToContentBank(
   const db = await createClient();
   const { data: row, error } = await db
     .from("market_signal_items")
-    .select("id, title, url, summary, source_name, published_at, classification_reason")
+    .select("id, title, url, summary, source_name, published_at, classification_reason, full_text")
     .eq("client_id", clientId)
     .eq("id", itemId)
     .is("deleted_at", null)
@@ -426,6 +438,7 @@ export async function saveArticleToContentBank(
       source_name: string | null;
       published_at: string | null;
       classification_reason: string | null;
+      full_text: string | null;
     }>();
   if (error || !row) return NOT_FOUND;
 
@@ -440,7 +453,20 @@ export async function saveArticleToContentBank(
   const existing = await existingEntry();
   if (existing.error) return saveFailed;
   if (existing.data) {
-    return { ok: true, data: { entryId: existing.data.id, alreadySaved: true } };
+    return { ok: true, data: { entryId: existing.data.id, alreadySaved: true, fullText: null } };
+  }
+
+  let fullText: SavedArticleEntry["fullText"] = row.full_text ? "had" : "unavailable";
+  if (!row.full_text) {
+    const page = await readArticleText(row.url);
+    if (page.ok) {
+      const { error: textError } = await db
+        .from("market_signal_items")
+        .update({ full_text: page.text, full_text_fetched_at: new Date().toISOString() })
+        .eq("client_id", clientId)
+        .eq("id", row.id);
+      if (!textError) fullText = "read";
+    }
   }
 
   const fields = articleToEntryFields({
@@ -473,7 +499,7 @@ export async function saveArticleToContentBank(
     // Another request saved it first; the unique index kept it to one entry.
     const winner = await existingEntry();
     return winner.data
-      ? { ok: true, data: { entryId: winner.data.id, alreadySaved: true } }
+      ? { ok: true, data: { entryId: winner.data.id, alreadySaved: true, fullText: null } }
       : saveFailed;
   }
   if (insertError || !inserted) return saveFailed;
@@ -489,9 +515,10 @@ export async function saveArticleToContentBank(
       entryId: inserted.id,
       origin: "collected_article",
       articleId: row.id,
+      fullText,
     },
   });
   revalidatePath(`/client/${clientId}/research`);
   revalidatePath(`/client/${clientId}/content-bank`);
-  return { ok: true, data: { entryId: inserted.id, alreadySaved: false } };
+  return { ok: true, data: { entryId: inserted.id, alreadySaved: false, fullText } };
 }

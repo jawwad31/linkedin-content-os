@@ -109,3 +109,24 @@ describe("Content Bank entry saved from a collected article", () => {
     expect((await asMember(ws.adminId, other, "Admin")).rows).toHaveLength(1);
   });
 });
+
+describe("the article's stored full text", () => {
+  it("starts empty and can be filled by an admin or a research contributor, not by other members", async () => {
+    const { ws, researcherId, articleId } = await fixture("a-text");
+    const empty = (await db.query<{ full_text: string | null; full_text_fetched_at: string | null }>(
+      "select full_text, full_text_fetched_at from public.market_signal_items where id=$1", [articleId])).rows[0];
+    expect(empty).toEqual({ full_text: null, full_text_fetched_at: null });
+
+    const write = (userId: string, text: string) =>
+      asUser(db, userId, async () => {
+        await db.query("update public.market_signal_items set full_text=$2, full_text_fetched_at=now() where id=$1", [articleId, text]);
+        return (await db.query<{ full_text: string | null }>("select full_text from public.market_signal_items where id=$1", [articleId])).rows[0]?.full_text;
+      });
+    // Row-level security hides the row from a writer without the capability, so the update changes nothing.
+    await write(ws.drafterId, "from the drafter");
+    await write(ws.plannerId, "from the planner");
+    expect((await db.query<{ full_text: string | null }>("select full_text from public.market_signal_items where id=$1", [articleId])).rows[0].full_text).toBeNull();
+    expect(await write(researcherId, "from the researcher")).toBe("from the researcher");
+    expect(await write(ws.adminId, "from the admin")).toBe("from the admin");
+  });
+});

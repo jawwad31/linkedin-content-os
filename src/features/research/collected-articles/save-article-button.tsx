@@ -44,6 +44,7 @@ export function SaveArticleButton({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(savedEntryId);
+  const [fullText, setFullText] = useState<"read" | "had" | "unavailable" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendarEntry, setCalendarEntry] = useState<CalendarEntryChoice | null>(null);
 
@@ -62,6 +63,7 @@ export function SaveArticleButton({
         );
         return;
       }
+      setFullText((body.data.fullText ?? null) as "read" | "had" | "unavailable" | null);
       setEntryId(body.data.entryId as string);
       router.refresh();
     } catch {
@@ -83,7 +85,7 @@ export function SaveArticleButton({
             onClick={save}
             className="max-sm:flex-1"
           >
-            {pending ? "Saving..." : "Save to Content Bank"}
+            {pending ? "Saving and reading the article..." : "Save to Content Bank"}
           </Button>
         </div>
         {!canSave && saveReason ? (
@@ -111,6 +113,16 @@ export function SaveArticleButton({
       <p className="text-small">
         This article is in the Content Bank as a trend reaction. Reusable, unused.
       </p>
+      {fullText === "read" || fullText === "had" ? (
+        <p className="text-caption text-muted-foreground">
+          The whole article was read, so a post can draw on all of it.
+        </p>
+      ) : fullText === "unavailable" ? (
+        <p className="text-caption text-warning-strong">
+          The article page could not be read (the site may block readers or need a
+          login). A post will use the feed&apos;s summary instead.
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {canCreatePosts ? (
           <Link

@@ -157,3 +157,7 @@ Automated checks only. DEFERRED manual checks: open Change password from the sid
 ### Research tabs, RSS articles into the Content Bank, clearer failures (2026-10-12)
 
 Automated checks only. DEFERRED manual checks: apply the migration and run its verify queries; the Research page shows three tabs and the old tab links land on RSS feeds; press Run RSS feeds with at least one feed and confirm new articles appear marked relevant or not, with no TrendCards created; Save to Content Bank on an article shows the saved box, the entry appears in the Content Bank as a trend reaction (reusable, unused) with an Open Research link to the RSS tab, saving again does not duplicate it; Create post from it opens the Create post screen and drafts using the article's link and summary; Add to Calendar works from the saved box; a member without Research sees Save disabled with the reason; Run web research with a wrong model name shows the plain reason on the failed card and the provider's message appears only in the Railway log.
+
+### Whole article text for saved RSS articles (2026-10-12)
+
+Automated checks only. DEFERRED manual checks: apply the migration and run its verify queries; save an article from a plain news or blog site and confirm the box says the whole article was read; save one from a paywalled or script-heavy site and confirm the entry is still created with the honest note; create a post from the first and check the draft uses details from the body of the article, not only the headline; confirm nothing shows the stored text on any screen.

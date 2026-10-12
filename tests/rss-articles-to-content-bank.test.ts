@@ -14,10 +14,14 @@ const state = vi.hoisted(() => ({
     source_name: "Example Blog",
     published_at: "2026-10-01T08:00:00Z",
     classification_reason: "Matches your focus on paid social.",
+    full_text: null,
   } as Record<string, unknown> | null,
   existingEntry: null as { id: string } | null,
   insertError: null as { code: string } | null,
   inserted: [] as Record<string, unknown>[],
+  updates: [] as Record<string, unknown>[],
+  updateError: null as { message: string } | null,
+  readPage: vi.fn(),
   audit: vi.fn(),
 }));
 
@@ -32,6 +36,9 @@ vi.mock("@/lib/access/client-access", () => ({
   canAccessClient: vi.fn(async () => state.canAccess),
   canContributeResearch: vi.fn(async () => state.canContribute),
   canUserDeleteBusinessRecords: vi.fn(async () => true),
+}));
+vi.mock("@/features/research/collected-articles/article-text", () => ({
+  readArticleText: (...args: unknown[]) => state.readPage(...args),
 }));
 vi.mock("@/lib/audit/log", () => ({
   writeAuditLog: (...args: unknown[]) => {
@@ -48,6 +55,14 @@ vi.mock("@/lib/supabase/server", () => ({
           eq: () => chain,
           is: () => chain,
           maybeSingle: async () => ({ data: state.article, error: null }),
+          update: (values: Record<string, unknown>) => {
+            state.updates.push(values);
+            const done: Record<string, unknown> = {
+              eq: () => done,
+              then: (resolve: (value: unknown) => void) => resolve({ error: state.updateError }),
+            };
+            return done;
+          },
         };
         return chain;
       }
@@ -97,6 +112,19 @@ beforeEach(() => {
   state.existingEntry = null;
   state.insertError = null;
   state.inserted = [];
+  state.updates = [];
+  state.updateError = null;
+  state.article = {
+    id: "22222222-2222-4222-8222-222222222222",
+    title: "Meta changes lead ad billing",
+    url: "https://example.com/meta",
+    summary: "Meta now bills lead ads on submissions.",
+    source_name: "Example Blog",
+    published_at: "2026-10-01T08:00:00Z",
+    classification_reason: "Matches your focus on paid social.",
+    full_text: null,
+  };
+  state.readPage.mockReset().mockResolvedValue({ ok: true, text: "The whole article text. ".repeat(40), truncated: false });
   state.audit.mockClear();
 });
 
@@ -179,6 +207,50 @@ describe("saveArticleToContentBank", () => {
     expect(await saveArticleToContentBank(CLIENT, ITEM)).toMatchObject({ ok: false, code: "NOT_FOUND" });
     expect(await saveArticleToContentBank(CLIENT, "not-a-uuid")).toMatchObject({ ok: false });
     expect(state.inserted).toHaveLength(0);
+  });
+});
+
+describe("reading the whole article when it is saved", () => {
+  it("reads the page once, stores its text on the article, and says so", async () => {
+    const result = await saveArticleToContentBank(CLIENT, ITEM);
+    expect(result).toMatchObject({ ok: true, data: { fullText: "read" } });
+    expect(state.readPage).toHaveBeenCalledWith("https://example.com/meta");
+    expect(state.updates).toHaveLength(1);
+    expect(state.updates[0]).toMatchObject({ full_text: expect.stringContaining("The whole article text.") });
+    expect(state.updates[0]).toHaveProperty("full_text_fetched_at");
+    expect(state.audit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ fullText: "read" }) }),
+    );
+  });
+
+  it("still saves the entry, and says so honestly, when the page cannot be read", async () => {
+    state.readPage.mockResolvedValue({ ok: false });
+    const result = await saveArticleToContentBank(CLIENT, ITEM);
+    expect(result).toMatchObject({ ok: true, data: { fullText: "unavailable", alreadySaved: false } });
+    expect(state.inserted).toHaveLength(1);
+    expect(state.updates).toHaveLength(0);
+  });
+
+  it("does not read the page again when its text is already stored", async () => {
+    state.article = { ...state.article!, full_text: "Already read text." };
+    const result = await saveArticleToContentBank(CLIENT, ITEM);
+    expect(result).toMatchObject({ ok: true, data: { fullText: "had" } });
+    expect(state.readPage).not.toHaveBeenCalled();
+  });
+
+  it("reports unavailable if the text could not be stored, and does not read for an already-saved entry", async () => {
+    state.updateError = { message: "denied" };
+    expect(await saveArticleToContentBank(CLIENT, ITEM)).toMatchObject({ ok: true, data: { fullText: "unavailable" } });
+    state.existingEntry = { id: "55555555-5555-4555-8555-555555555555" };
+    state.readPage.mockClear();
+    expect(await saveArticleToContentBank(CLIENT, ITEM)).toMatchObject({ ok: true, data: { alreadySaved: true, fullText: null } });
+    expect(state.readPage).not.toHaveBeenCalled();
+  });
+
+  it("never reads a page for someone who may not save", async () => {
+    state.canContribute = false;
+    await saveArticleToContentBank(CLIENT, ITEM);
+    expect(state.readPage).not.toHaveBeenCalled();
   });
 });
 
