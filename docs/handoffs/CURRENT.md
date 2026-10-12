@@ -16,6 +16,7 @@ Updated: 2026-10-10
 - New server log line `[web-research] briefing could not be validated: ...` giving only the shape (no JSON found and how long, or which fields failed and why), never the model's text. If the card still says this, that line names the cause.
 - Tests: 5 new cases in `tests/web-research-provider.test.ts` (mutation-checked) including that the log never contains the model's text.
 - **Not verified against the real provider.** DEFERRED: run web research on Railway.
+- **Follow-up, same day:** the new log line showed `no JSON object found in 1 text part(s) of 2756 characters, response status completed`, so the model answered in prose and ignored the response-format setting (some models do once a search tool is in play). The instructions now also say in words that the final message is exactly one JSON object with no text or fence around it, and that an empty findings array is the right answer when nothing is usable. The log line also says whether the text starts with `{` and how many `{` it holds. A test checks the sentence is sent (mutation-checked). If it still answers in prose, the next step is a second, tool-free call that turns the prose into the schema, or a different model.
 
 ## Web research 400 fix (2026-10-12)
 
