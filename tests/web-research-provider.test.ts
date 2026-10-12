@@ -388,6 +388,9 @@ describe("P07 bounded search and evidence mapping", () => {
       ],
       text: { format: { type: "json_schema", strict: true } },
     });
+    // OpenRouter rejects the whole request ("Invalid Responses API request") when `include` holds a
+    // value outside its short list, so this OpenAI-only value must never be sent to it.
+    expect(body).not.toHaveProperty("include");
     expect(JSON.parse(body.input).savedPrompt).toBe(
       "Research astronomy releases",
     );

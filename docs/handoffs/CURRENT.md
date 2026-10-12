@@ -9,6 +9,13 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Web research 400 fix (2026-10-12)
+
+- Uncommitted. No migration. The Railway log said `provider replied 400 for model openai/gpt-6-luna: Invalid Responses API request`; the earlier Claude Haiku 400 was most likely the same cause, so the model was never the problem.
+- Cause: `provider.ts` sent `include: ["web_search_call.action.sources"]` to OpenRouter. OpenRouter's request check accepts only five `include` values (file_search_call.results, message.input_image.image_url, computer_call_output.output.image_url, reasoning.encrypted_content, code_interpreter_call.outputs) and rejects the whole request otherwise. It is now sent to direct OpenAI only. OpenRouter sources still arrive as `url_citation` annotations, which `mapWebResponse` already reads.
+- Test: the OpenRouter case in `tests/web-research-provider.test.ts` asserts no `include` is sent (mutation-checked).
+- **Not verified against the real provider.** DEFERRED: run web research once on Railway. If it still fails, the next Deploy Logs line shows the next rejected field.
+
 ## Cleanup pass, second part: model settings (2026-10-12)
 
 - Jawad confirmed every Railway service, including `rss-worker`, has the `LLM_*` pairs, so the fallbacks to the older settings are removed. Uncommitted. No migration.

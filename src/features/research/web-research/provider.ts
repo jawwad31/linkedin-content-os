@@ -554,7 +554,10 @@ export async function researchWeb(input: SearchInput): Promise<ResearchResult> {
                   external_web_access: true,
                 },
               ],
-          include: ["web_search_call.action.sources"],
+          // OpenRouter's request check only accepts a short fixed list of `include` values and
+          // rejects this one with "Invalid Responses API request". It returns the consulted pages
+          // as url_citation annotations on the answer instead, which mapWebResponse already reads.
+          ...(isOpenRouter ? {} : { include: ["web_search_call.action.sources"] }),
           text: {
             format: {
               type: "json_schema",
