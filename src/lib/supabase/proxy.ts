@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   "/clients",
   "/client/",
   "/change-password",
+  "/account/",
   "/no-access",
 ];
 

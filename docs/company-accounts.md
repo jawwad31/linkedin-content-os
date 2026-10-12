@@ -23,6 +23,12 @@ A person who belongs to one account goes straight into it when they sign in. A p
 
 An Account Admin can reset the password of a member who belongs only to that account. A member who also belongs to another account has to be handled in the Supabase dashboard.
 
+## Passwords
+
+- **Change your own (new):** in the app, sidebar footer (and the phone menu), **Change password**. It asks for the current password, then the new one twice (12 or more characters with upper and lower case, a number and a symbol). A wrong current password changes nothing. Passwords are never stored by this app: the new one goes to Supabase Auth, which keeps only a salted bcrypt hash of it (`auth.users.encrypted_password`), so nobody, including you, can read a password from the database.
+- **A team member's:** Settings, Team access, row menu, reset password (sets a temporary one and forces a change at next sign-in). Works for people who belong only to this account.
+- **If you forget your own:** there is no "Forgot password" email yet (it needs email sending set up in Supabase). Reset it from the Supabase SQL Editor with the statements in the answer given in the session (set `auth.users.encrypted_password` with `extensions.crypt(..., extensions.gen_salt('bf'))` and `profiles.must_change_password = true`), then sign in with the temporary password and change it.
+
 ## Move existing Agency Admins to Account Admins (one-off)
 
 Migration: `supabase/migrations/20261012230000_account_admins_replace_agency.sql`. It does two things, both additive (nothing is dropped or deleted):

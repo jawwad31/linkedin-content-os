@@ -116,6 +116,7 @@ export function MobileClientNav({
 
             <div className="mt-auto flex flex-col gap-2 border-t border-border-subtle pt-4">
               <p className="break-words text-small text-muted-foreground">{clientName}</p>
+              <Link href="/account/password" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-muted-foreground")}>Change password</Link>
               <LogoutButton className="w-full justify-start text-muted-foreground" />
             </div>
           </Dialog.Popup>

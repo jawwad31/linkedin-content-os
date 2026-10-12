@@ -149,3 +149,7 @@ Implemented with automated checks only (tsc, eslint, vitest, next build) plus PG
 ### Agency level retired, task after T8 (2026-10-12)
 
 Implemented with automated checks only (tsc, eslint, vitest, next build) plus PGlite tests of the migration and the create script. Not checked in a browser. DEFERRED manual checks: apply `20261012230000_account_admins_replace_agency.sql` (guide in `docs/company-accounts.md`) and confirm the verify query shows every former Agency Admin as an accepted Account Admin; sign in as that person with one company (goes straight in) and with several (Companies list); open Settings, Team access and the Operational logs as an Account Admin, and confirm an Account User cannot see the logs; invite a member and reset a password of a member who belongs only to this account; create a test account with `create-company.sql` and sign in as its first admin.
+
+### Change your own password (2026-10-12)
+
+Automated checks only. DEFERRED manual checks: open Change password from the sidebar and from the phone menu; a wrong current password shows an error and changes nothing; a right one with a strong new password shows success, then sign out and sign in with the new password and confirm the old one no longer works; a weak or mismatched new password is refused; the page redirects to login when signed out.

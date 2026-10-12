@@ -7,11 +7,13 @@ import type { ClientPermission, ClientRole } from "@/lib/access/roles";
 import { writeAuditLog } from "@/lib/audit/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { verifyPassword } from "@/lib/supabase/verify-password";
 import { getServerUser } from "@/lib/supabase/session";
 
 import { findAuthUserByEmail } from "./auth-users";
 import { canAccountAdminResetTarget } from "./policy";
 import {
+  changeOwnPasswordWithCurrentSchema,
   changePasswordSchema,
   provisionAccountUserSchema,
   resetPasswordSchema,
@@ -636,6 +638,62 @@ export async function changeOwnPassword(
     action: "password_changed",
     entityType: "auth_user",
     entityId: user.id,
+  });
+
+  return { ok: true, data: {} };
+}
+
+/**
+ * A signed-in person changes their own password later on, by proving they know
+ * the current one. The new password goes to Supabase Auth, which stores only a
+ * salted hash of it; this app never stores or reads a password.
+ */
+export async function changeOwnPasswordWithCurrent(
+  input: unknown,
+): Promise<AccessManagementResult<Record<string, never>>> {
+  const { user } = await getServerUser();
+  if (!user?.email) return AUTH_REQUIRED;
+
+  const parsed = changeOwnPasswordWithCurrentSchema.safeParse(input);
+  if (!parsed.success) return validationFailure(parsed.error);
+
+  const currentIsRight = await verifyPassword(
+    user.email,
+    parsed.data.currentPassword,
+  );
+  if (!currentIsRight) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Your current password is not correct.",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "This password could not be used. Choose another strong password.",
+    };
+  }
+
+  const admin = createAdminClient();
+  await admin
+    .from("profiles")
+    .update({ password_changed_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  await writeAuditLog({
+    clientId: null,
+    userId: user.id,
+    action: "password_changed",
+    entityType: "auth_user",
+    entityId: user.id,
+    metadata: { self_service: true },
   });
 
   return { ok: true, data: {} };

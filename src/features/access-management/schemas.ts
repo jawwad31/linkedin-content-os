@@ -98,6 +98,29 @@ export const changePasswordSchema = z
     }
   });
 
+export const changeOwnPasswordWithCurrentSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password."),
+    password: strongPasswordSchema,
+    confirmPassword: z.string(),
+  })
+  .superRefine((value, context) => {
+    if (value.password !== value.confirmPassword) {
+      context.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: "Passwords do not match.",
+      });
+    }
+    if (value.password === value.currentPassword) {
+      context.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "Choose a password you have not used just now.",
+      });
+    }
+  });
+
 export type ProvisionAccountUserInput = z.infer<
   typeof provisionAccountUserSchema
 >;

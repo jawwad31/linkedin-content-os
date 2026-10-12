@@ -9,6 +9,14 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Change your own password (2026-10-12)
+
+- Scope: Jawad's request for an in-app change-password screen after agency retirement. Uncommitted. No migration, no database change.
+- **Screen:** `/account/password` (protected prefix `/account/` in `src/lib/supabase/proxy.ts`), linked as "Change password" above Log out in the sidebar and the phone menu. Fields: current password, new password, confirm. `src/features/access-management/account-password-form.tsx`, action `changePasswordAction`, service `changeOwnPasswordWithCurrent`, schema `changeOwnPasswordWithCurrentSchema` (strong password, matches confirmation, differs from current).
+- **How it is checked:** `src/lib/supabase/verify-password.ts` signs in with a stateless anon client (no session kept) to prove the current password; only then `supabase.auth.updateUser` sets the new one, `profiles.password_changed_at` is stamped and a `password_changed` audit entry (`self_service: true`) is written. Passwords are never stored by the app; Supabase Auth keeps a bcrypt hash.
+- **Not built:** "Forgot password" by email (needs Supabase email sending set up); lockout or throttling beyond Supabase's own sign-in rate limits.
+- **Tests:** `tests/change-own-password.test.ts` (6; wrong current password changes nothing: mutation-checked). Not verified: the screen in a browser, and the real Supabase sign-in check with a real user.
+
 ## Agency level retired: Account Admin and Account User only (2026-10-12)
 
 - Scope: Jawad's decision that the product has no agency: one user creates an account, an account is one company, and it has a team. Uncommitted and undeployed. **Needs one additive migration applied before this version goes live** (guide with preflight, verify and rollback: `docs/company-accounts.md`, section "Move existing Agency Admins to Account Admins").

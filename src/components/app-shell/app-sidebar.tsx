@@ -1,4 +1,8 @@
+import Link from "next/link";
+
+import { buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/features/auth/logout-button";
+import { cn } from "@/lib/utils";
 
 import { AppNav } from "./app-nav";
 
@@ -50,6 +54,7 @@ export function AppSidebar({
             {clientName}
           </span>
         </div>
+        <Link href="/account/password" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-muted-foreground")}>Change password</Link>
         <LogoutButton className="w-full justify-start text-muted-foreground" />
       </div>
     </aside>

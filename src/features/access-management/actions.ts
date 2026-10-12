@@ -8,6 +8,7 @@ import { getServerUser } from "@/lib/supabase/session";
 
 import {
   changeOwnPassword,
+  changeOwnPasswordWithCurrent,
   provisionAccountUser,
   resetAccountMemberPassword,
   revokeAccountMembership,
@@ -100,4 +101,17 @@ export async function changeOwnPasswordAction(
 
   const { user } = await getServerUser();
   redirect(user ? await resolveAuthenticatedDestination(user.id) : "/login");
+}
+
+export async function changePasswordAction(
+  _state: UserManagementState,
+  formData: FormData,
+): Promise<UserManagementState> {
+  const result = await changeOwnPasswordWithCurrent({
+    currentPassword: formData.get("currentPassword"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!result.ok) return { error: result.message, success: null };
+  return { error: null, success: "Your password has been changed." };
 }
