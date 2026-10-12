@@ -18,6 +18,8 @@ export type CollectedArticle = {
   classificationReason: string | null;
   publishedAt: string | null;
   url: string;
+  /** The Content Bank entry this article was saved as, if any. */
+  contentBankEntryId: string | null;
 };
 
 type CollectedArticleRow = {
@@ -109,6 +111,21 @@ export async function getRecentCollectedArticles(
 
   if (error) return { ok: false };
 
+  // Articles already saved to the Content Bank. A failed lookup only hides the "saved"
+  // state; saving again is still safe because the database keeps one live entry per article.
+  const savedEntries = new Map<string, string>();
+  if (data.length > 0) {
+    const saved = await supabase
+      .from("founder_experiences")
+      .select("id, source_article_id")
+      .eq("client_id", clientId)
+      .in("source_article_id", data.map((row) => row.id))
+      .is("deleted_at", null);
+    for (const entry of saved.data ?? []) {
+      if (entry.source_article_id) savedEntries.set(entry.source_article_id, entry.id);
+    }
+  }
+
   return {
     ok: true,
     articles: data.map((row) => ({
@@ -120,6 +137,7 @@ export async function getRecentCollectedArticles(
       classificationReason: row.classification_reason,
       publishedAt: row.published_at,
       url: row.url,
+      contentBankEntryId: savedEntries.get(row.id) ?? null,
     })),
     pagination: {
       page: safePage,

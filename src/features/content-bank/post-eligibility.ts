@@ -44,7 +44,8 @@ export function getContentBankPostEligibility(
   if (
     entry.entryType === "trend_reaction" &&
     !entry.sourceTrendCardId &&
-    !entry.sourceResearchFindingId
+    !entry.sourceResearchFindingId &&
+    !entry.sourceArticleId
   ) {
     return {
       eligible: false,

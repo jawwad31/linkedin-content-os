@@ -4,8 +4,8 @@
 // and register-hooks.mjs / ts-resolve-hook.mjs alongside this file — no
 // tsx/ts-node dependency was added). Collect-only by default
 // (RESEARCH_PIPELINE_FULL=false); set RESEARCH_PIPELINE_FULL=true to also
-// classify collected articles and synthesize TrendCards after each
-// client's collection (Feature 17/18).
+// mark collected articles relevant or not after each client's collection
+// (Feature 17). TrendCards are no longer built.
 
 // @next/env's bundled CJS output isn't statically analyzable for named ESM
 // exports under plain Node (no bundler), so `import { loadEnvConfig } from
@@ -16,7 +16,6 @@ import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
 
-import { synthesizeTrendCardsForClient } from "@/features/research/agents/trend-card-synthesizer";
 import { classifyForClient } from "@/features/research/agents/research-classifier";
 import { collectForClient } from "@/features/research/rss-collector";
 // Imported from the run-guard submodule directly, not the feature's
@@ -34,7 +33,7 @@ import { dispatchResearchSchedules } from "@/features/research/automation/execut
 import { automationEnabled } from "@/features/research/automation/contracts";
 import { researchTick } from "./research-tick";
 
-const SYNTHESIZE_STAGE = "synthesize";
+const CLASSIFY_STAGE = "classify";
 
 // Next.js only auto-loads .env.local for its own `next` CLI commands; a
 // plain `node` process (this worker) does not get that for free. Load it
@@ -84,8 +83,6 @@ type CycleSummary = {
   relevantCount: number;
   irrelevantCount: number;
   classificationErrorCount: number;
-  signalsCreated: number;
-  synthesisErrorCount: number;
 };
 
 function readWorkerEnv(): WorkerEnv {
@@ -147,7 +144,6 @@ async function discoverEligibleClientIds(): Promise<string[]> {
 type CycleFnResult = {
   collect: Awaited<ReturnType<typeof collectForClient>>;
   classify: Awaited<ReturnType<typeof classifyForClient>> | null;
-  synthesize: Awaited<ReturnType<typeof synthesizeTrendCardsForClient>> | null;
 };
 
 function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
@@ -165,7 +161,7 @@ function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
   // "not_configured" is a benign, expected ops state — collection still
   // succeeded. Any other failure reason is one error, not a failure of the
   // whole (already-successful) earlier stage.
-  const withClassify: ResearchRunSummary = !result.classify
+  return !result.classify
     ? base
     : result.classify.ok
       ? {
@@ -180,20 +176,6 @@ function toCycleRunSummary(result: CycleFnResult): ResearchRunSummary {
           classificationErrorCount:
             result.classify.reason === "not_configured" ? 0 : 1,
         };
-
-  if (!result.synthesize) return withClassify;
-
-  return result.synthesize.ok
-    ? {
-        ...withClassify,
-        signalsCreated: result.synthesize.summary.signalsCreated,
-        synthesisErrorCount: result.synthesize.summary.synthesisErrorCount,
-      }
-    : {
-        ...withClassify,
-        synthesisErrorCount:
-          result.synthesize.reason === "not_configured" ? 0 : 1,
-      };
 }
 
 /**
@@ -225,8 +207,6 @@ async function runCollectionCycle(
     relevantCount: 0,
     irrelevantCount: 0,
     classificationErrorCount: 0,
-    signalsCreated: 0,
-    synthesisErrorCount: 0,
   };
 
   const clientIds = await discoverEligibleClientIds();
@@ -241,14 +221,11 @@ async function runCollectionCycle(
         const classify = fullPipeline
           ? await classifyForClient(clientId)
           : null;
-        const synthesize = fullPipeline
-          ? await synthesizeTrendCardsForClient(clientId)
-          : null;
-        return { collect, classify, synthesize };
+        return { collect, classify };
       },
       toCycleRunSummary,
       null,
-      fullPipeline ? SYNTHESIZE_STAGE : undefined,
+      fullPipeline ? CLASSIFY_STAGE : undefined,
     );
 
     if (guardResult.ok && guardResult.status === "completed") {
@@ -273,17 +250,6 @@ async function runCollectionCycle(
         result.classify.reason !== "not_configured"
       ) {
         summary.classificationErrorCount += 1;
-      }
-
-      if (result.synthesize?.ok) {
-        summary.signalsCreated += result.synthesize.summary.signalsCreated;
-        summary.synthesisErrorCount +=
-          result.synthesize.summary.synthesisErrorCount;
-      } else if (
-        result.synthesize &&
-        result.synthesize.reason !== "not_configured"
-      ) {
-        summary.synthesisErrorCount += 1;
       }
     } else if (guardResult.ok && guardResult.status === "locked") {
       summary.lockedRuns += 1;

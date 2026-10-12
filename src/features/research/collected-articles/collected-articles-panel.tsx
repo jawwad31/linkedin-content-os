@@ -11,8 +11,11 @@ import {
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cannotReason } from "@/lib/access/permission-copy";
 import {
   canRoleContributeResearch,
+  canRoleDraftPosts,
+  canRoleManageIdeas,
   type ClientPermission,
   type EffectiveClientRole,
 } from "@/lib/access/roles";
@@ -20,6 +23,7 @@ import { formatUtcDate } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 import { CollectedArticleActions, ArticleDeleteButton } from "./collected-article-actions";
+import { SaveArticleButton } from "./save-article-button";
 import type {
   CollectedArticle,
   CollectedArticleCounts,
@@ -85,7 +89,7 @@ function StatusFilterChips({
       {FILTERS.map((filter) => {
         const isActive = filter.value === activeStatus;
         const count = counts ? counts[filter.value] : null;
-        const params = new URLSearchParams();
+        const params = new URLSearchParams({ tab: "rss" });
         if (filter.value !== "all") params.set("articles", filter.value);
         params.set("article_page_size", String(pageSize));
         const href = `/client/${clientId}/research?${params.toString()}`;
@@ -129,6 +133,8 @@ export function CollectedArticlesPanel({
 }) {
   const router = useRouter();
   const canManage = canRoleContributeResearch(role, permissions);
+  const canDraft = canRoleDraftPosts(role, permissions);
+  const canPlan = canRoleManageIdeas(role, permissions);
   const canDelete = role === "client_admin";
   const canBulkManage = canManage || canDelete;
   const selection = useBulkSelection(articles.map((article) => article.id));
@@ -137,7 +143,7 @@ export function CollectedArticlesPanel({
     page: number,
     pageSize: CollectedArticlePageSize = pagination.pageSize,
   ) {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ tab: "rss" });
     if (activeStatus !== "all") params.set("articles", activeStatus);
     params.set("article_page", String(page));
     params.set("article_page_size", String(pageSize));
@@ -149,7 +155,7 @@ export function CollectedArticlesPanel({
       <EmptyState
         icon={Layers}
         title="No collected articles yet"
-        description="Articles will appear here once research is running."
+        description="Add a feed above and press Run RSS feeds. New articles will appear here."
       />
     );
   }
@@ -165,9 +171,9 @@ export function CollectedArticlesPanel({
       />
 
       <p className="text-caption text-muted-foreground">
-        Relevant articles become Used when a TrendCard cites them. Used articles
-        stay available as evidence and cannot be reclassified until their
-        TrendCard dependency is removed.
+        Relevant means the article matches your Research Focus. Saving an
+        article puts it in the Content Bank as a trend reaction you can turn
+        into a post.
       </p>
 
       {canBulkManage && articles.length > 0 ? (
@@ -245,7 +251,24 @@ export function CollectedArticlesPanel({
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-start gap-3">
+            {!selection.isSelectionMode ? (
+              <SaveArticleButton
+                clientId={clientId}
+                articleId={article.id}
+                articleTitle={article.title}
+                savedEntryId={article.contentBankEntryId}
+                canSave={canManage}
+                saveReason={cannotReason("save articles to the Content Bank", ["research_contribute"])}
+                canCreatePosts={canPlan && canDraft}
+                createPostsReason={cannotReason("create posts", [
+                  ...(canPlan ? [] : ["ideas_manage" as const]),
+                  ...(canDraft ? [] : ["posts_draft" as const]),
+                ])}
+                canAddToCalendar={canPlan}
+                addToCalendarReason={cannotReason("add entries to the calendar", ["ideas_manage"])}
+              />
+            ) : null}
             {canManage &&
             article.status !== "used" &&
             !selection.isSelectionMode ? (

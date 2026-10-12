@@ -13,6 +13,7 @@ import type {
 import { createClient } from "@/lib/supabase/server";
 import { getServerUser } from "@/lib/supabase/session";
 
+import { articleToEntryFields } from "./article-entry";
 import type { CollectedArticleStatus } from "./queries";
 
 export type ServiceResult<T> =
@@ -380,4 +381,117 @@ export async function deleteCollectedArticle(
   revalidatePath(`/client/${clientIdResult.data}/dashboard`);
 
   return { ok: true, data: undefined };
+}
+
+/**
+ * Saves one collected article to the Content Bank as a reusable, unused trend reaction.
+ * Uses the signed-in user's own session, so the existing founder_experiences insert policy
+ * (research_contribute or admin) is the backstop. Saving the same article again returns the
+ * entry that already exists. It never creates a post, an idea or an approval.
+ */
+export async function saveArticleToContentBank(
+  clientId: string,
+  itemId: string,
+): Promise<ServiceResult<{ entryId: string; alreadySaved: boolean }>> {
+  const { user } = await getServerUser();
+  if (!user) return AUTH_REQUIRED;
+  const ids = z.object({ clientId: uuidSchema, itemId: uuidSchema }).safeParse({ clientId, itemId });
+  if (!ids.success) return INVALID_INPUT;
+  if (!(await canAccessClient(user.id, clientId))) return NO_ACCESS;
+  if (!(await canContributeResearch(user.id, clientId))) {
+    return {
+      ok: false,
+      code: "FORBIDDEN",
+      message: "You do not have permission to save articles to the Content Bank.",
+    };
+  }
+  const saveFailed = {
+    ok: false as const,
+    code: "UNKNOWN_ERROR",
+    message: "Could not save this article to the Content Bank. Nothing was changed.",
+  };
+
+  const db = await createClient();
+  const { data: row, error } = await db
+    .from("market_signal_items")
+    .select("id, title, url, summary, source_name, published_at, classification_reason")
+    .eq("client_id", clientId)
+    .eq("id", itemId)
+    .is("deleted_at", null)
+    .maybeSingle<{
+      id: string;
+      title: string;
+      url: string;
+      summary: string | null;
+      source_name: string | null;
+      published_at: string | null;
+      classification_reason: string | null;
+    }>();
+  if (error || !row) return NOT_FOUND;
+
+  const existingEntry = () =>
+    db
+      .from("founder_experiences")
+      .select("id")
+      .eq("client_id", clientId)
+      .eq("source_article_id", itemId)
+      .is("deleted_at", null)
+      .maybeSingle<{ id: string }>();
+  const existing = await existingEntry();
+  if (existing.error) return saveFailed;
+  if (existing.data) {
+    return { ok: true, data: { entryId: existing.data.id, alreadySaved: true } };
+  }
+
+  const fields = articleToEntryFields({
+    title: row.title,
+    url: row.url,
+    summary: row.summary,
+    sourceName: row.source_name,
+    publishedAt: row.published_at,
+    classificationReason: row.classification_reason,
+  });
+  const { data: inserted, error: insertError } = await db
+    .from("founder_experiences")
+    .insert({
+      client_id: clientId,
+      title: fields.title,
+      entry_type: "trend_reaction",
+      reaction_type: "observation",
+      source_article_id: row.id,
+      category: "observation",
+      readiness: "ready",
+      allow_reuse: true,
+      what_happened: fields.whatHappened,
+      what_was_learned: fields.whatWasLearned,
+      what_changed: fields.whatChanged,
+      why_it_matters: fields.whyItMatters,
+    })
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (insertError?.code === "23505") {
+    // Another request saved it first; the unique index kept it to one entry.
+    const winner = await existingEntry();
+    return winner.data
+      ? { ok: true, data: { entryId: winner.data.id, alreadySaved: true } }
+      : saveFailed;
+  }
+  if (insertError || !inserted) return saveFailed;
+
+  await writeAuditLog({
+    clientId,
+    userId: user.id,
+    action: "content_bank_entry_created",
+    entityType: "founder_experience",
+    entityId: inserted.id,
+    metadata: {
+      sourceType: "founder_experience",
+      entryId: inserted.id,
+      origin: "collected_article",
+      articleId: row.id,
+    },
+  });
+  revalidatePath(`/client/${clientId}/research`);
+  revalidatePath(`/client/${clientId}/content-bank`);
+  return { ok: true, data: { entryId: inserted.id, alreadySaved: false } };
 }

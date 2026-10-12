@@ -1,14 +1,14 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
 
-const TABS = ["Web Briefings", "RSS Focus & Sources", "Collected Articles", "TrendCards", "Runs"];
+const TABS = ["Web research", "RSS feeds", "Run history"];
 
 export default function ResearchLoading() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Research"
-        description="Research your saved prompt, review evidence, and select findings for content."
+        description="Web research and RSS feeds: review what was found and save what you want to the Content Bank."
       />
       <div className="flex flex-wrap items-center gap-x-6 border-b border-border-subtle">
         {TABS.map((tab, index) => (

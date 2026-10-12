@@ -776,21 +776,44 @@ async function loadTrendCardSource(
 }
 
 /**
- * A trend reaction saved from a research finding has no TrendCard. The finding is
- * its research source: the writer gets the reaction text plus the finding and its
- * dated sources, and an archived or missing finding makes the entry unavailable.
+ * A trend reaction saved from a research finding or a collected article has no
+ * TrendCard. That record is its research source: the writer gets the reaction text
+ * plus the finding and its dated sources (or the article's title, summary and link),
+ * and an archived or missing source makes the entry unavailable.
  */
-async function loadFindingTrendReaction(
+async function loadLinkedTrendReaction(
   admin: AdminClient,
   clientId: string,
   reaction: FounderExperienceRow,
 ): Promise<SourceLoadResult> {
   const { data: link } = await admin
     .from("founder_experiences")
-    .select("source_research_finding_id")
+    .select("source_research_finding_id, source_article_id")
     .eq("id", reaction.id)
     .eq("client_id", clientId)
-    .maybeSingle<{ source_research_finding_id: string | null }>();
+    .maybeSingle<{ source_research_finding_id: string | null; source_article_id: string | null }>();
+  if (!link?.source_research_finding_id && link?.source_article_id) {
+    const articles = await getSourceArticles(admin, clientId, [link.source_article_id]);
+    if (articles.length === 0) return { ok: false, failure: IDEA_NOT_AVAILABLE };
+    return {
+      ok: true,
+      sourceContext: {
+        sourceType: "trend_reaction",
+        sourceIds: [reaction.id],
+        sourceTitle: reaction.title,
+        source: {
+          id: reaction.id,
+          title: reaction.title,
+          reaction_type: reaction.reaction_type,
+          founder_take: reaction.what_was_learned,
+          proof_or_example: reaction.what_happened,
+          what_changed: reaction.what_changed,
+          why_it_matters: reaction.why_it_matters,
+        },
+        sourceArticles: articles,
+      },
+    };
+  }
   if (!link?.source_research_finding_id) {
     return { ok: false, failure: IDEA_NOT_AVAILABLE };
   }
@@ -851,7 +874,7 @@ async function loadTrendReactionSource(
     return { ok: false, failure: IDEA_NOT_AVAILABLE };
   }
   if (!reaction.source_trend_card_id) {
-    return loadFindingTrendReaction(admin, clientId, reaction);
+    return loadLinkedTrendReaction(admin, clientId, reaction);
   }
 
   const card = await getTrendCard(admin, clientId, reaction.source_trend_card_id);

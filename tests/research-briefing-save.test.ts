@@ -135,9 +135,32 @@ describe("a research briefing page", () => {
 });
 
 describe("the Research list for a member", () => {
-  it("shows Run now disabled, with the reason", () => {
+  it("shows Run web research disabled, with the reason", () => {
     const html = render([], { canManage: false, openBriefingId: undefined });
-    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>)[\s\S])*Run now/);
-    expect(html).toContain("You cannot run research.");
+    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>)[\s\S])*Run web research/);
+    expect(html).toContain("You cannot run web research.");
+  });
+});
+
+describe("a failed run says why", () => {
+  it("shows the saved reason on the failed card", () => {
+    const failed = { ...briefing([]), outcome: "failed" as const, error_code: "PROVIDER_AUTH_FAILED" };
+    const html = renderToStaticMarkup(
+      createElement(ResearchWorkbench, {
+        clientId: "c1", settings: null, briefings: [failed], canManage: true,
+        canCreatePosts: true, createPostsReason: null, canSave: true, saveReason: null,
+        canAddToCalendar: true, addToCalendarReason: null, providerConfigured: true,
+        openBriefingId: failed.id,
+      }),
+    );
+    expect(html).toContain("This run did not complete.");
+    expect(html).toContain("rejected the saved API key");
+  });
+
+  it("falls back to a general message for an unknown or missing code", async () => {
+    const { failureReason } = await import("@/features/research/web-research/failure-reason");
+    expect(failureReason(null)).toContain("no clear reason");
+    expect(failureReason("SOMETHING_NEW")).toContain("no clear reason");
+    expect(failureReason("NO_SEARCH_EVIDENCE")).toContain("without actually searching");
   });
 });

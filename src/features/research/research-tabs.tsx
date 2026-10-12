@@ -3,16 +3,18 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export const RESEARCH_TABS = [
-  { id: "briefings", label: "Web Briefings" },
-  { id: "focus", label: "RSS Focus & Sources" },
-  { id: "articles", label: "Collected Articles" },
-  { id: "trendcards", label: "TrendCards" },
-  { id: "runs", label: "Runs" },
+  { id: "briefings", label: "Web research" },
+  { id: "rss", label: "RSS feeds" },
+  { id: "runs", label: "Run history" },
 ] as const;
 
 export type ResearchTabId = (typeof RESEARCH_TABS)[number]["id"];
 
+/** Tab names used before the RSS sections were merged: old links land on the RSS tab. */
+const RETIRED_RSS_TABS = ["focus", "articles", "trendcards"];
+
 export function parseResearchTab(value: string | undefined): ResearchTabId {
+  if (value && RETIRED_RSS_TABS.includes(value)) return "rss";
   return RESEARCH_TABS.some((tab) => tab.id === value)
     ? (value as ResearchTabId)
     : "briefings";

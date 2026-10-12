@@ -59,6 +59,8 @@ export const contentBankEntrySchema = z.object({
   sourceTrendCardId: z.string().uuid().nullable().optional(),
   /** Set when the entry was saved from a research finding (no TrendCard). */
   sourceResearchFindingId: z.string().uuid().nullable().optional(),
+  /** Set when the entry was saved from a collected RSS article (no TrendCard). */
+  sourceArticleId: z.string().uuid().nullable().optional(),
   reactionType: z.enum(REACTION_TYPES).nullable().optional(),
   category: z.enum(CONTENT_BANK_CATEGORIES),
   title: z.string().trim().min(1).max(200),

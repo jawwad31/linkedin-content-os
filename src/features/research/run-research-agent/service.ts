@@ -5,11 +5,6 @@ import { z } from "zod";
 
 import { canAccessClient, canRunResearchAgent } from "@/lib/access/client-access";
 import {
-  NOT_CONFIGURED_ERROR as SYNTHESIS_NOT_CONFIGURED_ERROR,
-  synthesizeTrendCardsForClient,
-  type SynthesizeForClientResult,
-} from "@/features/research/agents/trend-card-synthesizer";
-import {
   classifyForClient,
   NOT_CONFIGURED_ERROR,
   type ClassifyForClientResult,
@@ -25,17 +20,17 @@ import {
 } from "@/features/research/rss-collector";
 import { getServerUser } from "@/lib/supabase/session";
 
-const SYNTHESIZE_STAGE = "synthesize";
+/** The last stage of an RSS run: new articles are fetched, then marked relevant or not. */
+const CLASSIFY_STAGE = "classify";
 
 type PipelineResult = {
   collect: CollectForClientSummary;
   classify: ClassifyForClientResult;
-  synthesize: SynthesizeForClientResult;
 };
 
 function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
   const collect = pipeline.collect;
-  let summary: ResearchRunSummary = {
+  const summary: ResearchRunSummary = {
     sourcesProcessed: collect.sourcesProcessed,
     totalFetched: collect.totalFetched,
     totalNew: collect.totalNew,
@@ -51,7 +46,7 @@ function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
   // isn't treated as an error count. Any other failure reason is reflected
   // as one error instead of failing the whole run — an earlier stage's
   // success should never be erased by a downstream problem.
-  summary = pipeline.classify.ok
+  return pipeline.classify.ok
     ? {
         ...summary,
         classifiedCount: pipeline.classify.summary.classifiedCount,
@@ -64,24 +59,11 @@ function toResearchRunSummary(pipeline: PipelineResult): ResearchRunSummary {
         classificationErrorCount:
           pipeline.classify.reason === "not_configured" ? 0 : 1,
       };
-
-  return pipeline.synthesize.ok
-    ? {
-        ...summary,
-        signalsCreated: pipeline.synthesize.summary.signalsCreated,
-        synthesisErrorCount: pipeline.synthesize.summary.synthesisErrorCount,
-      }
-    : {
-        ...summary,
-        synthesisErrorCount:
-          pipeline.synthesize.reason === "not_configured" ? 0 : 1,
-      };
 }
 
 export type ManualRunData = {
   summary: ResearchRunSummary;
   classificationMessage: string | null;
-  synthesisMessage: string | null;
 };
 
 export type ServiceResult<T> =
@@ -128,8 +110,9 @@ const GENERIC_FAILURE = {
 };
 
 /**
- * Manually runs RSS collection, then classification, then TrendCard
- * synthesis for one client, sharing the same distributed run guard
+ * Manually runs RSS collection, then classification (relevant or not) for one
+ * client. No TrendCards are built: the articles themselves are the result, and a
+ * person saves the ones they want to the Content Bank. Shares the same distributed run guard
  * (Feature 15) and lock_key as the worker so a manual click and a worker
  * cycle can never overlap for the same client. Idea/post generation is not
  * implemented yet.
@@ -161,15 +144,11 @@ export async function runResearchAgentManually(
     async () => {
       const collect = await collectForClient(clientIdResult.data);
       const classify = await classifyForClient(clientIdResult.data, user.id);
-      const synthesize = await synthesizeTrendCardsForClient(
-        clientIdResult.data,
-        user.id,
-      );
-      return { collect, classify, synthesize };
+      return { collect, classify };
     },
     toResearchRunSummary,
     user.id,
-    SYNTHESIZE_STAGE,
+    CLASSIFY_STAGE,
   );
 
   if (guardResult.ok && guardResult.status === "completed") {
@@ -188,51 +167,11 @@ export async function runResearchAgentManually(
       }
     }
 
-    const synthesize = guardResult.result.synthesize;
-    let synthesisMessage: string | null = null;
-    if (!synthesize.ok) {
-      synthesisMessage =
-        synthesize.reason === "not_configured"
-          ? SYNTHESIS_NOT_CONFIGURED_ERROR
-          : "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
-    } else {
-      const cardsCreated = synthesize.summary.signalsCreated;
-      const errorCount = synthesize.summary.synthesisErrorCount;
-      const attemptedCount = synthesize.summary.attemptedItemCount;
-      const itemsMarkedUsed = synthesize.summary.itemsMarkedUsed;
-      const usedExplanation = itemsMarkedUsed
-        ? ` ${itemsMarkedUsed} relevant article${
-            itemsMarkedUsed === 1 ? " is" : "s are"
-          } now shown as Used because ${itemsMarkedUsed === 1 ? "it supports" : "they support"} the new TrendCard${
-            cardsCreated === 1 ? "" : "s"
-          }.`
-        : "";
-
-      if (cardsCreated === 0 && errorCount === 0) {
-        if (attemptedCount === 0) {
-          synthesisMessage = "No relevant articles available to synthesize yet.";
-        } else {
-          synthesisMessage = "No new TrendCards were found from the current evidence.";
-        }
-      } else if (cardsCreated === 0 && errorCount > 0) {
-        synthesisMessage = "TrendCard synthesis could not complete. The available evidence was not fully evaluated.";
-      } else if (cardsCreated > 0 && errorCount === 0) {
-        synthesisMessage = `${cardsCreated} TrendCard${
-          cardsCreated === 1 ? "" : "s"
-        } created.${usedExplanation}`;
-      } else if (cardsCreated > 0 && errorCount > 0) {
-        synthesisMessage = `${cardsCreated} TrendCard${
-          cardsCreated === 1 ? "" : "s"
-        } created.${usedExplanation} Some synthesis work could not complete.`;
-      }
-    }
-
     return {
       ok: true,
       data: {
         summary: toResearchRunSummary(guardResult.result),
         classificationMessage,
-        synthesisMessage,
       },
     };
   }

@@ -29,6 +29,7 @@ type FounderExperienceDbRow = {
   entry_type: "work_log" | "trend_reaction";
   source_trend_card_id: string | null;
   source_research_finding_id: string | null;
+  source_article_id: string | null;
   reaction_type: ReactionType | null;
   category: ContentBankCategory | null;
   readiness: ContentBankReadiness | null;
@@ -96,7 +97,7 @@ export async function getContentBankEntries(
 
   // 1. Fetch founder_experiences
   const feRows = await loadSourceRows<FounderExperienceDbRow>(supabase, "founder_experiences",
-    "id, client_id, title, entry_type, source_trend_card_id, source_research_finding_id, reaction_type, category, readiness, allow_reuse, raw_notes, takeaway, what_happened, what_was_learned, what_changed, why_it_matters, created_at, updated_at", clientId);
+    "id, client_id, title, entry_type, source_trend_card_id, source_research_finding_id, source_article_id, reaction_type, category, readiness, allow_reuse, raw_notes, takeaway, what_happened, what_was_learned, what_changed, why_it_matters, created_at, updated_at", clientId);
   if (!feRows) {
     return { ok: false, error: "Failed to load founder experiences." };
   }
@@ -165,6 +166,7 @@ export async function getContentBankEntries(
       entryType: row.entry_type,
       sourceTrendCardId: row.source_trend_card_id,
       sourceResearchFindingId: row.source_research_finding_id,
+      sourceArticleId: row.source_article_id,
       reactionType: row.reaction_type,
       category,
       title: row.title,

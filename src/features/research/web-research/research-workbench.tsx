@@ -19,6 +19,7 @@ import type {
   Evidence,
   ResearchSettings,
 } from "./contracts";
+import { failureReason } from "./failure-reason";
 
 async function send(clientId: string, action: string, input: unknown) {
   const response = await fetch(`/api/client/${clientId}/web-research`, {
@@ -80,9 +81,9 @@ function EvidenceLink({
 }
 
 /**
- * Web Briefings. The list shows one saved prompt, the schedule and the briefings;
- * ?briefing=ID opens one briefing on its own page. Advanced sources, classification
- * and run history arrive as `advancedSlot` and render only on the list.
+ * Web research. The list shows one saved prompt, the schedule and the briefings;
+ * ?briefing=ID opens one briefing on its own page. The tab strip and the imported
+ * sources arrive as `tabsSlot` and `sourcesSlot` and render only on the list.
  */
 export function ResearchWorkbench({
   clientId,
@@ -98,7 +99,8 @@ export function ResearchWorkbench({
   providerConfigured,
   openBriefingId,
   scheduleSlot,
-  advancedSlot,
+  sourcesSlot,
+  tabsSlot,
 }: {
   clientId: string;
   settings: ResearchSettings | null;
@@ -117,7 +119,10 @@ export function ResearchWorkbench({
   providerConfigured: boolean;
   openBriefingId?: string;
   scheduleSlot?: ReactNode;
-  advancedSlot?: ReactNode;
+  /** Imported article links that web research may read; plain section, not hidden. */
+  sourcesSlot?: ReactNode;
+  /** The Web research / RSS feeds / Run history tab strip, shown under the header on the list. */
+  tabsSlot?: ReactNode;
 }) {
   const router = useRouter();
   const [saved, setSaved] = useState(settings);
@@ -199,12 +204,12 @@ export function ResearchWorkbench({
         disabled={!!busy || active || dirty || !saved.revision}
         onClick={() => perform("run", () => run(saved.revision))}
       >
-        {busy === "run" ? "Researching…" : "Run now"}
+        {busy === "run" ? "Researching…" : "Run web research"}
       </Button>
     ) : !canManage && !openBriefing ? (
       // Members see the control, disabled: only an account admin may run research.
       <Button variant="brand" disabled>
-        Run now
+        Run web research
       </Button>
     ) : undefined;
   return (
@@ -225,9 +230,14 @@ export function ResearchWorkbench({
               ],
             }
           : { title: "Research" })}
-        description="Research your saved prompt, review evidence, and select findings for content."
+        description={
+          openBriefing
+            ? "Research your saved prompt, review evidence, and select findings for content."
+            : "Web research: your saved prompt and live web search. Review the findings and save the ones you want to the Content Bank."
+        }
         action={runNowAction}
       />
+      {!openBriefing ? tabsSlot : null}
       {openBriefing ? (
         <p className="rounded-card border border-dashed border-border-grey bg-white px-4 py-3 text-small text-muted-foreground">
           Research does not create posts or approvals. Nothing here is used
@@ -349,7 +359,7 @@ export function ResearchWorkbench({
         </Card>
       ) : !openBriefing ? (
         <p className="text-small text-muted-foreground">
-          You cannot run research. Account admins manage the private research
+          You cannot run web research. Account admins manage the private research
           prompt and run it. You can review the saved findings below.
         </p>
       ) : null}
@@ -391,10 +401,15 @@ export function ResearchWorkbench({
           </CardHeader>
           <CardContent className="space-y-5">
             {openBriefing.outcome === "failed" ? (
-              <p className="text-small text-danger-strong">
-                This run did not complete. Check provider setup and retry with
-                Run now. Any retained candidate evidence is shown below.
-              </p>
+              <div className="space-y-1">
+                <p className="text-small font-medium text-danger-strong">
+                  This run did not complete.
+                </p>
+                <p className="text-small text-danger-strong">
+                  {failureReason(openBriefing.error_code)} Any retained
+                  candidate evidence is shown below.
+                </p>
+              </div>
             ) : null}
             {openBriefing.outcome === "not_configured" ? (
               <p className="text-small text-warning-strong">
@@ -653,7 +668,7 @@ export function ResearchWorkbench({
               })}
             </div>
           )}
-          {advancedSlot}
+          {sourcesSlot}
         </>
       )}
       <AddToCalendarDialog

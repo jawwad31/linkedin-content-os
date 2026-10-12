@@ -557,6 +557,38 @@ describe("P07 bounded search and evidence mapping", () => {
     expect(timeout.errorCode).toBe("TIMEOUT");
     expect(JSON.stringify(timeout)).not.toContain("private details");
   });
+  it("tells apart a missing model, no credit and a refused request, and keeps the provider message out of the saved result", async () => {
+    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openrouter");
+    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
+    vi.stubEnv("OPENROUTER_API_KEY", "router-test-key");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const input = {
+      clientId: "account",
+      userId: "actor",
+      settings: { revision: 1, prompt: INITIAL_RESEARCH_PROMPT, lookbackDays: 7, useProfileContext: false },
+      profile: null,
+      previous: [],
+    };
+    for (const [status, code] of [
+      [404, "PROVIDER_MODEL_NOT_FOUND"],
+      [402, "PROVIDER_CREDITS"],
+      [400, "PROVIDER_BAD_REQUEST"],
+      [500, "PROVIDER_ERROR"],
+    ] as const) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ error: { message: "secret prompt echo" } }), { status }),
+        ),
+      );
+      const result = await researchWeb(input);
+      expect(result.errorCode).toBe(code);
+      expect(result.coverageGaps).toEqual([`The provider replied with status ${status}.`]);
+      expect(JSON.stringify(result)).not.toContain("secret prompt echo");
+    }
+    // The administrator can still read the provider's own words in the server log.
+    expect(logged.mock.calls.map((call) => String(call[0])).join(" ")).toContain("secret prompt echo");
+  });
   it("refuses oversized context before a paid call instead of silently truncating profile fields", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     vi.stubEnv("OPENAI_RESEARCH_MODEL", "configured-model");

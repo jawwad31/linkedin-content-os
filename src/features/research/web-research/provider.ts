@@ -88,6 +88,44 @@ function fingerprint(finding: Finding): string {
     )
     .digest("hex");
 }
+/**
+ * The provider's own explanation of a failed call, flattened and trimmed. It is for the
+ * server log only: it is never saved with the briefing or shown to the team.
+ */
+export async function providerErrorDetail(
+  response: Pick<Response, "text">,
+): Promise<string> {
+  let message = "";
+  try {
+    const body = (await response.text()).slice(0, 4000);
+    try {
+      const parsed = JSON.parse(body) as {
+        error?: { message?: unknown } | string;
+        message?: unknown;
+      };
+      const candidate =
+        typeof parsed.error === "string"
+          ? parsed.error
+          : parsed.error?.message ?? parsed.message;
+      message = typeof candidate === "string" ? candidate : body;
+    } catch {
+      message = body;
+    }
+  } catch {
+    /* No readable body. */
+  }
+  return message.replace(/\s+/g, " ").trim().slice(0, 300);
+}
+
+export function providerFailureCode(status: number): string {
+  if (status === 429) return "PROVIDER_RATE_LIMITED";
+  if (status === 401 || status === 403) return "PROVIDER_AUTH_FAILED";
+  if (status === 402) return "PROVIDER_CREDITS";
+  if (status === 404) return "PROVIDER_MODEL_NOT_FOUND";
+  if (status === 400) return "PROVIDER_BAD_REQUEST";
+  return "PROVIDER_ERROR";
+}
+
 function baseResult(errorCode: string | null = null): ResearchResult {
   return {
     outcome: "failed",
@@ -531,13 +569,13 @@ export async function researchWeb(input: SearchInput): Promise<ResearchResult> {
       },
     );
     if (!response.ok) {
-      await response.body?.cancel();
-      result = baseResult(
-        response.status === 429
-          ? "PROVIDER_RATE_LIMITED"
-          : response.status === 401 || response.status === 403
-            ? "PROVIDER_AUTH_FAILED"
-            : "PROVIDER_ERROR",
+      const detail = await providerErrorDetail(response);
+      console.error(
+        `[web-research] provider replied ${response.status} for model ${model}: ${detail || "(no message)"}`,
+      );
+      result = baseResult(providerFailureCode(response.status));
+      result.coverageGaps.push(
+        `The provider replied with status ${response.status}.`,
       );
     } else
       result = mapWebResponse(
@@ -547,11 +585,21 @@ export async function researchWeb(input: SearchInput): Promise<ResearchResult> {
         input.sources,
       );
   } catch (error) {
-    result = baseResult(
-      error instanceof Error && /Timeout|Abort/.test(error.name)
-        ? "TIMEOUT"
-        : "PROVIDER_ERROR",
-    );
+    const timedOut = error instanceof Error && /Timeout|Abort/.test(error.name);
+    result = baseResult(timedOut ? "TIMEOUT" : "PROVIDER_ERROR");
+    if (!timedOut) {
+      // Only our own short reason codes are kept; a parser message could quote the answer.
+      const reason =
+        error instanceof Error && /^[A-Z_]{3,40}$/.test(error.message)
+          ? ` (${error.message})`
+          : "";
+      console.error(
+        `[web-research] provider answer unusable for model ${model}: ${error instanceof Error ? error.name : "unknown"}`,
+      );
+      result.coverageGaps.push(
+        `The provider's answer could not be used${reason}.`,
+      );
+    }
   }
   try {
     await writeLlmLog({

@@ -268,7 +268,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                 <Detail label="What changed" value={entry.whatChanged} />
                 <Detail label="Why it matters" value={entry.whyItMatters} />
                 <Detail label="Reaction type" value={entry.reactionType} />
-                {entry.sourceTrendCardId || entry.sourceResearchFindingId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
+                {entry.sourceTrendCardId || entry.sourceResearchFindingId || entry.sourceArticleId ? <a href={`/client/${clientId}/research${entry.sourceArticleId ? "?tab=rss" : ""}`} className="text-small text-link underline">Open Research</a> : null}
               </>}
               <p className="text-caption text-muted-foreground">Created {formatUtcDate(entry.createdAt)} · Updated {formatUtcDate(entry.updatedAt)} · {entry.usageCount} recorded successful uses</p>
               <UsageHistory clientId={clientId} entry={entry} />

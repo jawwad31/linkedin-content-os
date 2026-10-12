@@ -153,3 +153,7 @@ Implemented with automated checks only (tsc, eslint, vitest, next build) plus PG
 ### Change your own password (2026-10-12)
 
 Automated checks only. DEFERRED manual checks: open Change password from the sidebar and from the phone menu; a wrong current password shows an error and changes nothing; a right one with a strong new password shows success, then sign out and sign in with the new password and confirm the old one no longer works; a weak or mismatched new password is refused; the page redirects to login when signed out.
+
+### Research tabs, RSS articles into the Content Bank, clearer failures (2026-10-12)
+
+Automated checks only. DEFERRED manual checks: apply the migration and run its verify queries; the Research page shows three tabs and the old tab links land on RSS feeds; press Run RSS feeds with at least one feed and confirm new articles appear marked relevant or not, with no TrendCards created; Save to Content Bank on an article shows the saved box, the entry appears in the Content Bank as a trend reaction (reusable, unused) with an Open Research link to the RSS tab, saving again does not duplicate it; Create post from it opens the Create post screen and drafts using the article's link and summary; Add to Calendar works from the saved box; a member without Research sees Save disabled with the reason; Run web research with a wrong model name shows the plain reason on the failed card and the provider's message appears only in the Railway log.

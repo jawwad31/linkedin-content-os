@@ -120,20 +120,31 @@ async function resolveContentBankSource(
   }
   if (data.entry_type === "trend_reaction") {
     if (!data.source_trend_card_id) {
-      // Saved from a research finding: the finding is its research source. It
-      // only has to still exist for this workspace and not be archived.
-      const finding = await supabase.from("founder_experiences")
-        .select("source_research_finding_id").eq("id", data.id).eq("client_id", clientId)
-        .maybeSingle<{ source_research_finding_id: string | null }>();
-      const findingId = finding.data?.source_research_finding_id;
-      if (finding.error || !findingId) {
+      // Saved from a research finding or a collected article: that record is its
+      // research source. It only has to still exist for this workspace (and, for a
+      // finding, not be archived).
+      const link = await supabase.from("founder_experiences")
+        .select("source_research_finding_id,source_article_id").eq("id", data.id).eq("client_id", clientId)
+        .maybeSingle<{ source_research_finding_id: string | null; source_article_id: string | null }>();
+      const findingId = link.data?.source_research_finding_id;
+      const articleId = link.data?.source_article_id;
+      if (link.error || (!findingId && !articleId)) {
         return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This trend reaction no longer has its research source.") };
       }
-      const research = await supabase.from("research_findings").select("id")
-        .eq("id", findingId).eq("client_id", clientId).neq("approval_status", "archived")
-        .maybeSingle<{ id: string }>();
-      if (research.error || !research.data) {
-        return { ok: false, result: failure("SOURCE_UNAVAILABLE", "The research finding for this trend reaction is no longer available.") };
+      if (findingId) {
+        const research = await supabase.from("research_findings").select("id")
+          .eq("id", findingId).eq("client_id", clientId).neq("approval_status", "archived")
+          .maybeSingle<{ id: string }>();
+        if (research.error || !research.data) {
+          return { ok: false, result: failure("SOURCE_UNAVAILABLE", "The research finding for this trend reaction is no longer available.") };
+        }
+      } else {
+        const article = await supabase.from("market_signal_items").select("id")
+          .eq("id", articleId!).eq("client_id", clientId).is("deleted_at", null)
+          .maybeSingle<{ id: string }>();
+        if (article.error || !article.data) {
+          return { ok: false, result: failure("SOURCE_UNAVAILABLE", "The collected article for this trend reaction is no longer available.") };
+        }
       }
       return { ok: true, source: {
         sourceId: data.id,
