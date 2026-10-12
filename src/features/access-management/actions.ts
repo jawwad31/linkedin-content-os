@@ -61,7 +61,6 @@ export async function provisionAgencyUserAction(
   });
   if (!result.ok) return { error: result.message, success: null };
 
-  revalidatePath("/agency/settings");
   return {
     error: null,
     success: result.data.createdNewUser
@@ -83,7 +82,6 @@ export async function updateAccountMembershipAction(
   });
   if (!result.ok) return { error: result.message, success: null };
   revalidatePath(`/client/${clientId}/settings`);
-  revalidatePath("/agency/settings");
   return { error: null, success: "Account access updated." };
 }
 
@@ -98,7 +96,6 @@ export async function revokeAccountMembershipAction(
   const result = await revokeAccountMembership(clientId, membershipId);
   if (!result.ok) return { error: result.message, success: null };
   revalidatePath(`/client/${clientId}/settings`);
-  revalidatePath("/agency/settings");
   return { error: null, success: "Account access revoked." };
 }
 
@@ -127,7 +124,6 @@ export async function revokeAgencyMembershipAction(
   void _formData;
   const result = await revokeAgencyMembership(membershipId);
   if (!result.ok) return { error: result.message, success: null };
-  revalidatePath("/agency/settings");
   return { error: null, success: "Agency access revoked." };
 }
 

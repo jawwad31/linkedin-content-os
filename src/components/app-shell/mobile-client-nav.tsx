@@ -8,25 +8,19 @@ import { Menu, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/features/auth/logout-button";
-import type { EffectiveClientRole } from "@/lib/access/roles";
 import { cn } from "@/lib/utils";
 
 import { getNavItems, isNavItemActive } from "./nav-items";
-import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
 /** On a phone the sidebar becomes a menu: a slim header with the page name, and a drawer. */
 export function MobileClientNav({
   clientId,
   clientName,
-  role,
-  accessibleClientCount,
   showResearch,
   postsNeedingYou,
 }: {
   clientId: string;
   clientName: string;
-  role: EffectiveClientRole;
-  accessibleClientCount: number;
   showResearch: boolean;
   postsNeedingYou: number;
 }) {
@@ -122,12 +116,6 @@ export function MobileClientNav({
 
             <div className="mt-auto flex flex-col gap-2 border-t border-border-subtle pt-4">
               <p className="break-words text-small text-muted-foreground">{clientName}</p>
-              <WorkspaceSwitchLink
-                role={role}
-                accessibleClientCount={accessibleClientCount}
-                variant="light"
-                onClick={() => setOpen(false)}
-              />
               <LogoutButton className="w-full justify-start text-muted-foreground" />
             </div>
           </Dialog.Popup>

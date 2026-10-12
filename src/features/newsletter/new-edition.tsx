@@ -20,7 +20,6 @@ const GROUPS: { kind: SourceOption["kind"]; label: string }[] = [
   { kind: "experience", label: "Content Bank · Experiences" },
   { kind: "trend_reaction", label: "Content Bank · Trend reactions" },
   { kind: "resource", label: "Content Bank · Resources" },
-  { kind: "research", label: "Research briefings" },
 ];
 const today = () => new Date().toISOString().slice(0, 10);
 const MAX_SOURCES = 8;
@@ -149,7 +148,7 @@ export function NewEdition({
         <legend className="mb-1 text-small font-medium">Who it is for</legend>
         {readerChoices
           .map(([value, label]) => (
-            <label key={value} className="flex items-center gap-2 text-small">
+            <label key={value} className="flex min-h-[38px] items-center gap-2 text-small">
               <input
                 type="radio"
                 name="reader"
@@ -173,8 +172,8 @@ export function NewEdition({
         <div className="flex flex-col gap-4 rounded-card border border-border-subtle bg-white p-4">
           {!options.length ? (
             <p className="text-small text-muted-foreground">
-              Add a ready Content Bank entry or approve a research finding
-              first.
+              Add a ready Content Bank entry first. A research finding becomes
+              a source once you save it to the Content Bank.
             </p>
           ) : null}
           {GROUPS.map((group) => {
@@ -192,7 +191,7 @@ export function NewEdition({
                   );
                   return (
                     <div key={o.id} className="flex flex-col gap-1">
-                      <label className="flex items-start gap-2 text-small">
+                      <label className="flex min-h-[38px] items-start gap-2 text-small">
                         <input
                           type="checkbox"
                           className="mt-1"
@@ -293,7 +292,7 @@ export function NewEdition({
             : message ||
               `${selected.length} ${selected.length === 1 ? "source" : "sources"} chosen. Planning takes 20 to 60 seconds.`}
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link
             href={`/client/${clientId}/newsletter`}
             className="inline-flex h-[38px] items-center px-3 text-small text-muted-foreground underline"

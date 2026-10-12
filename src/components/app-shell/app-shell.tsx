@@ -11,7 +11,6 @@ export function AppShell({
   clientName,
   role,
   permissions,
-  accessibleClientCount,
   postsNeedingYou,
   children,
 }: {
@@ -19,7 +18,6 @@ export function AppShell({
   clientName: string;
   role: EffectiveClientRole;
   permissions: ClientPermission[];
-  accessibleClientCount: number;
   postsNeedingYou: number;
   children: ReactNode;
 }) {
@@ -30,16 +28,12 @@ export function AppShell({
       <MobileClientNav
         clientId={clientId}
         clientName={clientName}
-        role={role}
-        accessibleClientCount={accessibleClientCount}
         showResearch={showResearch}
         postsNeedingYou={postsNeedingYou}
       />
       <AppSidebar
         clientId={clientId}
         clientName={clientName}
-        role={role}
-        accessibleClientCount={accessibleClientCount}
         showResearch={showResearch}
         postsNeedingYou={postsNeedingYou}
       />

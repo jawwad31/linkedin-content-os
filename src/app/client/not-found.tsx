@@ -24,7 +24,7 @@ export default function ClientNotFound() {
             href="/clients"
             className={buttonVariants({ variant: "secondary", className: "w-full" })}
           >
-            Back to Clients
+            Back to Companies
           </Link>
         </CardContent>
       </Card>

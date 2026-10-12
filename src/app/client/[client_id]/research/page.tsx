@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ListError } from "@/components/ui/list-error";
 import { PageHeader } from "@/components/ui/page-header";
 import { CollectedArticlesPanel } from "@/features/research/collected-articles/collected-articles-panel";
 import {
@@ -42,7 +43,12 @@ import {
 import { ResearchWorkbench } from "@/features/research/web-research/research-workbench";
 import { getAutomationView } from "@/features/research/automation/service";
 import { AutomationPanel } from "@/features/research/automation/automation-panel";
-import { canDraftPosts, canManageIdeas } from "@/lib/access/client-access";
+import {
+  canContributeResearch,
+  canDraftPosts,
+  canManageIdeas,
+} from "@/lib/access/client-access";
+import { cannotReason } from "@/lib/access/permission-copy";
 
 export default async function ResearchPage({
   params,
@@ -102,77 +108,202 @@ export default async function ResearchPage({
           Promise.all([
             canDraftPosts(user.id, clientId),
             canManageIdeas(user.id, clientId),
+            canContributeResearch(user.id, clientId),
           ]),
           getAutomationView(clientId, canManage),
         ])
       : null;
 
+  // The Web Briefings view draws its own header (with Run now) inside the workbench
+  // and hides the tab strip. If the view cannot load, the plain header and tabs return.
+  const briefingsInWorkbench =
+    activeTab === "briefings" &&
+    webResult !== null &&
+    webResult[0].status === "fulfilled" &&
+    webResult[1].status === "fulfilled" &&
+    webResult[2].status === "fulfilled";
+  const automation = webResult?.[3] ?? null;
+  const automationView =
+    automation?.status === "fulfilled" ? automation.value : null;
+  const scheduleSlot = automationView ? (
+    <AutomationPanel
+      key={`${clientId}:${automationView.schedule.version}:${automationView.versions[0]?.id ?? "none"}:${automationView.sources.map((s) => s.enabled).join()}`}
+      clientId={clientId}
+      view={automationView}
+      part="schedule"
+    />
+  ) : automation?.status === "rejected" ? (
+    <p role="alert" className="text-small text-danger-strong">
+      Research automation could not be loaded. An administrator must check its
+      deployment setup.
+    </p>
+  ) : null;
+  // Collected Articles filter and page links carry no tab, so they land here: keep Advanced open.
+  const advancedSlot = (
+    <details
+      className="text-small"
+      open={!!(articlesParam || articlePageParam || articlePageSizeParam)}
+    >
+      <summary className="cursor-pointer text-link underline">Advanced</summary>
+      <p className="mt-2 text-caption text-muted-foreground">
+        Source and feed management, Research Focus, classification results and
+        run history. Nothing here is used until you choose it.
+      </p>
+      <div className="mt-4 space-y-6">
+        {role && result ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>RSS feeds</CardTitle>
+              <CardDescription>
+                Add RSS or Atom feed URLs to follow new articles. Daily research
+                refreshes active feeds and uses recent articles alongside fresh
+                web search. Your saved prompt guides the briefing even when no
+                feeds are configured.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {result.ok ? (
+                <RssSourcesPanel
+                  clientId={clientId}
+                  role={role}
+                  sources={result.sources}
+                />
+              ) : (
+                <ListError />
+              )}
+              {canRoleRunResearchAgent(role) ? (
+                <RunResearchAgentButton clientId={clientId} />
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+        {automationView?.canManage ? (
+          <AutomationPanel
+            key={`sources:${clientId}:${automationView.schedule.version}:${automationView.versions[0]?.id ?? "none"}`}
+            clientId={clientId}
+            view={automationView}
+            part="sources"
+          />
+        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle>Research Focus</CardTitle>
+            <CardDescription>
+              Steers which collected articles are treated as relevant and which
+              become TrendCards. Does not filter RSS collection.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && keywordsResult?.ok ? (
+              <ResearchKeywordsForm
+                clientId={clientId}
+                role={role}
+                keywords={keywordsResult.keywords}
+              />
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Collected Articles</CardTitle>
+            <CardDescription>
+              Articles gathered from active RSS sources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && articlesResult ? (
+              articlesResult.ok ? (
+                <CollectedArticlesPanel
+                  clientId={clientId}
+                  role={role}
+                  permissions={access?.permissions ?? []}
+                  articles={articlesResult.articles}
+                  activeStatus={articleStatus}
+                  pagination={articlesResult.pagination}
+                  counts={
+                    articleCountsResult?.ok ? articleCountsResult.counts : null
+                  }
+                />
+              ) : (
+                <ListError />
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>TrendCards</CardTitle>
+            <CardDescription>
+              Evidence-backed TrendCards synthesized from collected articles,
+              grouped by week.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && cardsResult ? (
+              cardsResult.ok ? (
+                <TrendCardsPanel
+                  clientId={clientId}
+                  role={role}
+                  permissions={access?.permissions ?? []}
+                  cards={cardsResult.cards}
+                />
+              ) : (
+                <ListError />
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Research Runs</CardTitle>
+            <CardDescription>
+              History of manual and worker research runs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {role && runsResult ? (
+              runsResult.ok ? (
+                <ResearchRunsPanel runs={runsResult.runs} />
+              ) : (
+                <ListError />
+              )
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    </details>
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Research"
-        description="Research your saved prompt, review evidence, and select findings for content."
-        action={
-          activeTab === "focus" && role && canRoleRunResearchAgent(role) ? (
-            <RunResearchAgentButton clientId={clientId} />
-          ) : undefined
-        }
-      />
+      {briefingsInWorkbench ? null : (
+        <PageHeader
+          title="Research"
+          description="Research your saved prompt, review evidence, and select findings for content."
+          action={
+            activeTab === "focus" && role && canRoleRunResearchAgent(role) ? (
+              <RunResearchAgentButton clientId={clientId} />
+            ) : undefined
+          }
+        />
+      )}
 
-      <ResearchTabs
-        clientId={clientId}
-        activeTab={activeTab}
-        counts={{
-          articles: articleCountsResult?.ok
-            ? articleCountsResult.counts.all
-            : undefined,
-          trendcards: cardsResult?.ok ? cardsResult.cards.length : undefined,
-        }}
-      />
+      {briefingsInWorkbench ? null : (
+        <ResearchTabs
+          clientId={clientId}
+          activeTab={activeTab}
+          counts={{
+            articles: articleCountsResult?.ok
+              ? articleCountsResult.counts.all
+              : undefined,
+            trendcards: cardsResult?.ok ? cardsResult.cards.length : undefined,
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {activeTab === "briefings" && webResult ? (
           <div className="lg:col-span-2">
-            {webResult[3].status === "fulfilled" && webResult[3].value ? (
-              <div className="mb-6">
-                <AutomationPanel
-                  key={`${clientId}:${webResult[3].value.schedule.version}:${webResult[3].value.versions[0]?.id ?? "none"}:${webResult[3].value.sources.map((s) => s.enabled).join()}`}
-                  clientId={clientId}
-                  view={webResult[3].value}
-                />
-              </div>
-            ) : webResult[3].status === "rejected" ? (
-              <p role="alert" className="mb-4 text-small text-danger-strong">
-                Research automation could not be loaded. An administrator must
-                check its deployment setup.
-              </p>
-            ) : null}
-            {role && result ? (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>RSS feeds</CardTitle>
-                  <CardDescription>
-                    Add RSS or Atom feed URLs to follow new articles. Daily
-                    research refreshes active feeds and uses recent articles
-                    alongside fresh web search. Your saved prompt guides the
-                    briefing even when no feeds are configured.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {result.ok ? (
-                    <RssSourcesPanel
-                      clientId={clientId}
-                      role={role}
-                      sources={result.sources}
-                    />
-                  ) : (
-                    <p role="alert" className="text-small text-danger-strong">
-                      RSS feeds could not be loaded. Refresh and try again.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null}
             {webResult[0].status === "fulfilled" &&
             webResult[1].status === "fulfilled" &&
             webResult[2].status === "fulfilled" ? (
@@ -182,15 +313,27 @@ export default async function ResearchPage({
                 settings={webResult[0].value}
                 briefings={webResult[1].value}
                 canManage={canManage}
-                canCreatePosts={webResult[2].value.every(Boolean)}
+                canCreatePosts={webResult[2].value[0] && webResult[2].value[1]}
+                createPostsReason={cannotReason("create posts", [
+                  ...(webResult[2].value[1] ? [] : ["ideas_manage" as const]),
+                  ...(webResult[2].value[0] ? [] : ["posts_draft" as const]),
+                ])}
+                canSave={webResult[2].value[2]}
+                saveReason={cannotReason("save findings to the Content Bank", [
+                  "research_contribute" as const,
+                ])}
+                canAddToCalendar={webResult[2].value[1]}
+                addToCalendarReason={cannotReason(
+                  "add entries to the calendar",
+                  ["ideas_manage" as const],
+                )}
                 providerConfigured={!!getLlmConfig("webResearch")}
+                openBriefingId={briefingParam}
+                scheduleSlot={scheduleSlot}
+                advancedSlot={advancedSlot}
               />
             ) : (
-              <p role="alert" className="text-small text-danger-strong">
-                Web research could not be loaded. Refresh and try again; if this
-                persists, ask an administrator to check the P07 migration.
-                Existing RSS tabs remain available.
-              </p>
+              <ListError />
             )}
           </div>
         ) : null}
@@ -231,9 +374,7 @@ export default async function ResearchPage({
                       sources={result.sources}
                     />
                   ) : (
-                    <p className="text-small text-danger-strong">
-                      We could not load RSS sources. Please try again.
-                    </p>
+                    <ListError />
                   )
                 ) : null}
               </CardContent>
@@ -266,9 +407,7 @@ export default async function ResearchPage({
                     }
                   />
                 ) : (
-                  <p className="text-small text-danger-strong">
-                    We could not load collected articles. Please try again.
-                  </p>
+                  <ListError />
                 )
               ) : null}
             </CardContent>
@@ -294,9 +433,7 @@ export default async function ResearchPage({
                     cards={cardsResult.cards}
                   />
                 ) : (
-                  <p className="text-small text-danger-strong">
-                    We could not load TrendCards. Please try again.
-                  </p>
+                  <ListError />
                 )
               ) : null}
             </CardContent>
@@ -316,9 +453,7 @@ export default async function ResearchPage({
                 runsResult.ok ? (
                   <ResearchRunsPanel runs={runsResult.runs} />
                 ) : (
-                  <p className="text-small text-danger-strong">
-                    We could not load research runs. Please try again.
-                  </p>
+                  <ListError />
                 )
               ) : null}
             </CardContent>

@@ -139,7 +139,7 @@ function ReplanBody({
             Drafting and drafted posts stay where they are.
           </p>
         </div>
-        <Dialog.Close className="rounded-full p-1 text-muted-foreground hover:bg-soft-white" aria-label="Close">
+        <Dialog.Close className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-full text-muted-foreground hover:bg-soft-white" aria-label="Close">
           <X className="h-4 w-4" />
         </Dialog.Close>
       </div>

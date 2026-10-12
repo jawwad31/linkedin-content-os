@@ -11,6 +11,8 @@ export type ActionMenuItem = {
   icon?: LucideIcon;
   onSelect: () => void;
   destructive?: boolean;
+  /** Set when the person may not use this action: the item stays visible, disabled, with this reason. */
+  disabledReason?: string | null;
 };
 
 /**
@@ -33,7 +35,7 @@ export function ActionMenu({
       <Menu.Trigger
         aria-label={label}
         disabled={disabled}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-[30px] w-[30px]")}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "sm:h-[30px] sm:w-[30px]")}
       >
         <MoreHorizontal aria-hidden="true" className="h-[18px] w-[18px]" />
       </Menu.Trigger>
@@ -42,17 +44,22 @@ export function ActionMenu({
           <Menu.Popup className="flex w-[210px] flex-col gap-0.5 rounded-card border border-border-default bg-white p-1.5 shadow-md outline-none">
             {items.map((item) => {
               const Icon = item.icon;
+              const disabled = Boolean(item.disabledReason);
               return (
                 <Menu.Item
                   key={item.label}
-                  onClick={item.onSelect}
+                  disabled={disabled}
+                  onClick={disabled ? undefined : item.onSelect}
                   className={cn(
-                    "flex cursor-default items-center gap-2.5 rounded-control px-2.5 py-2 text-small outline-none data-[highlighted]:bg-surface-hover",
+                    "flex cursor-default flex-col gap-0.5 rounded-control px-2.5 py-2 text-small outline-none data-[highlighted]:bg-surface-hover data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60",
                     item.destructive ? "text-danger-strong" : "text-near-black",
                   )}
                 >
-                  {Icon ? <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" /> : null}
-                  {item.label}
+                  <span className="flex items-center gap-2.5">
+                    {Icon ? <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" /> : null}
+                    {item.label}
+                  </span>
+                  {disabled ? <span className="text-caption text-muted-foreground">{item.disabledReason}</span> : null}
                 </Menu.Item>
               );
             })}

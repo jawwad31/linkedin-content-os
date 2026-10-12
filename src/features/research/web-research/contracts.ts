@@ -109,6 +109,8 @@ export type StoredFinding = Finding & {
   fingerprint: string;
   approval_status: "pending" | "approved" | "archived";
   content_idea_id: string | null;
+  /** The Content Bank trend reaction saved from this finding, once there is one. */
+  content_bank_entry_id: string | null;
 };
 export type ResearchOutcome =
   "success" | "empty" | "partial" | "failed" | "not_configured";

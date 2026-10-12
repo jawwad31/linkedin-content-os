@@ -9,6 +9,7 @@ import {
   createResearchPosts,
   reviewWebFinding,
   runWebResearch,
+  saveFindingToContentBank,
   saveWebResearchSettings,
 } from "@/features/research/web-research/service";
 
@@ -37,7 +38,13 @@ export async function POST(
   }
   const parsed = z
     .object({
-      action: z.enum(["save", "run", "review", "create_posts"]),
+      action: z.enum([
+        "save",
+        "run",
+        "review",
+        "create_posts",
+        "save_to_content_bank",
+      ]),
       input: z.unknown(),
     })
     .strict()
@@ -56,7 +63,9 @@ export async function POST(
           ? await runWebResearch(clientId, input)
           : parsed.data.action === "review"
             ? await reviewWebFinding(clientId, input)
-            : await createResearchPosts(clientId, input);
+            : parsed.data.action === "save_to_content_bank"
+              ? await saveFindingToContentBank(clientId, input)
+              : await createResearchPosts(clientId, input);
     return result.ok
       ? apiSuccess(result.data)
       : apiFailure(

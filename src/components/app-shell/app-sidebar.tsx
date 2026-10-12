@@ -1,8 +1,6 @@
 import { LogoutButton } from "@/features/auth/logout-button";
-import type { EffectiveClientRole } from "@/lib/access/roles";
 
 import { AppNav } from "./app-nav";
-import { WorkspaceSwitchLink } from "./workspace-switch-link";
 
 function initials(name: string): string {
   const letters = name
@@ -20,15 +18,11 @@ function initials(name: string): string {
 export function AppSidebar({
   clientId,
   clientName,
-  role,
-  accessibleClientCount,
   showResearch,
   postsNeedingYou,
 }: {
   clientId: string;
   clientName: string;
-  role: EffectiveClientRole;
-  accessibleClientCount: number;
   showResearch: boolean;
   postsNeedingYou: number;
 }) {
@@ -56,11 +50,6 @@ export function AppSidebar({
             {clientName}
           </span>
         </div>
-        <WorkspaceSwitchLink
-          role={role}
-          accessibleClientCount={accessibleClientCount}
-          variant="light"
-        />
         <LogoutButton className="w-full justify-start text-muted-foreground" />
       </div>
     </aside>

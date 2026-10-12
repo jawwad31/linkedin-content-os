@@ -190,7 +190,7 @@ export function PostsView({
                   </div>
                   
                   {!selection.isSelectionMode ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <Link
                         href={`/client/${clientId}/posts/${post.id}/review`}
                         className={buttonVariants({

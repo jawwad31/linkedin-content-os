@@ -237,7 +237,13 @@ export function ReadScreen({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={payload.title} action={tag} />
+      <PageHeader
+        breadcrumb={[
+          { label: "Newsletter", href: `/client/${clientId}/newsletter` },
+          { label: payload.title },
+        ]}
+        action={tag}
+      />
       <p className="text-small text-muted-foreground">
         {published
           ? `Version ${edition.revision} · published ${edition.published_on ?? ""}`

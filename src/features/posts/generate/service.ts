@@ -775,6 +775,57 @@ async function loadTrendCardSource(
   };
 }
 
+/**
+ * A trend reaction saved from a research finding has no TrendCard. The finding is
+ * its research source: the writer gets the reaction text plus the finding and its
+ * dated sources, and an archived or missing finding makes the entry unavailable.
+ */
+async function loadFindingTrendReaction(
+  admin: AdminClient,
+  clientId: string,
+  reaction: FounderExperienceRow,
+): Promise<SourceLoadResult> {
+  const { data: link } = await admin
+    .from("founder_experiences")
+    .select("source_research_finding_id")
+    .eq("id", reaction.id)
+    .eq("client_id", clientId)
+    .maybeSingle<{ source_research_finding_id: string | null }>();
+  if (!link?.source_research_finding_id) {
+    return { ok: false, failure: IDEA_NOT_AVAILABLE };
+  }
+  const { data, error } = await admin
+    .from("research_findings")
+    .select("id,payload,approval_status")
+    .eq("client_id", clientId)
+    .eq("id", link.source_research_finding_id)
+    .neq("approval_status", "archived")
+    .maybeSingle();
+  const checked = storedFindingSchema.safeParse(data?.payload);
+  if (error || !data || !checked.success) {
+    return { ok: false, failure: IDEA_NOT_AVAILABLE };
+  }
+  return {
+    ok: true,
+    sourceContext: {
+      sourceType: "trend_reaction",
+      sourceIds: [reaction.id],
+      sourceTitle: reaction.title,
+      source: {
+        id: reaction.id,
+        title: reaction.title,
+        reaction_type: reaction.reaction_type,
+        founder_take: reaction.what_was_learned,
+        proof_or_example: reaction.what_happened,
+        what_changed: reaction.what_changed,
+        why_it_matters: reaction.why_it_matters,
+        research_finding: { ...checked.data, findingId: data.id },
+      },
+      sourceArticles: checked.data.sources.map((source) => ({ ...source })),
+    },
+  };
+}
+
 async function loadTrendReactionSource(
   admin: AdminClient,
   clientId: string,
@@ -796,8 +847,11 @@ async function loadTrendReactionSource(
   if (options.requireReadySource) reactionQuery = reactionQuery.eq("readiness", "ready");
   const { data: reaction, error } = await reactionQuery.maybeSingle<FounderExperienceRow>();
 
-  if (error || !reaction || !reaction.source_trend_card_id) {
+  if (error || !reaction) {
     return { ok: false, failure: IDEA_NOT_AVAILABLE };
+  }
+  if (!reaction.source_trend_card_id) {
+    return loadFindingTrendReaction(admin, clientId, reaction);
   }
 
   const card = await getTrendCard(admin, clientId, reaction.source_trend_card_id);

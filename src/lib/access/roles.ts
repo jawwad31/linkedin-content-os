@@ -14,20 +14,20 @@ export const CLIENT_PERMISSIONS = [
 export type ClientPermission = (typeof CLIENT_PERMISSIONS)[number];
 
 export const CLIENT_PERMISSION_LABELS: Record<ClientPermission, string> = {
-  research_contribute: "Research Contributor",
-  founder_experience_manage: "Founder Experience Manager",
-  ideas_manage: "Idea Creator",
-  posts_draft: "Post Drafter",
-  posts_review: "Reviewer",
-  posts_publish: "Publisher",
+  research_contribute: "Research",
+  founder_experience_manage: "Manage experiences",
+  ideas_manage: "Manage ideas",
+  posts_draft: "Draft posts",
+  posts_review: "Review",
+  posts_publish: "Publish",
 };
 
 export const CLIENT_PERMISSION_DESCRIPTIONS: Record<ClientPermission, string> = {
   research_contribute:
-    "Mark collected articles relevant or irrelevant and add Trend Reactions.",
-  founder_experience_manage: "Add and edit Founder Experiences.",
-  ideas_manage: "Generate Ideas and manage Founder Direction and strategy overrides.",
-  posts_draft: "Generate and redraft Posts.",
+    "Mark collected articles relevant or irrelevant, add trend reactions, and save research findings to the Content Bank.",
+  founder_experience_manage: "Add and edit experiences in the Content Bank.",
+  ideas_manage: "Add Content Bank entries to the Calendar and, together with Draft posts, create posts from them.",
+  posts_draft: "Draft and redraft posts.",
   posts_review: "Mark Posts as needing edits, approve them, or reject them.",
   posts_publish: "Mark approved Posts as published.",
 };

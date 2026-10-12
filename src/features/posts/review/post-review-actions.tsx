@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cannotReason } from "@/lib/access/permission-copy";
 
 import type { ReviewPostStatus } from "./queries";
 import { EDIT_NOTE_MAX_LENGTH } from "./schemas";
@@ -77,6 +78,11 @@ export function PostReviewActions({
   const canRedraft = hasRedraftPermission && status === "needs_edit";
   const canReject = canReview && (status === "review" || status === "needs_edit");
   const canEdit = canReview && status !== "published" && status !== "rejected";
+  // Edit and Redraft stay on screen when the person lacks the capability: disabled, with one reason line.
+  const editStatusOpen = status !== "published" && status !== "rejected";
+  const showRedraft = status === "needs_edit";
+  const reviewReason = canReview ? null : cannotReason("approve posts", ["posts_review"]);
+  const redraftReason = showRedraft && !hasRedraftPermission ? cannotReason("redraft posts", ["posts_draft"]) : null;
 
   async function submit(action: ActionName, body?: Record<string, unknown>) {
     setState({ status: "pending", action });
@@ -117,7 +123,7 @@ export function PostReviewActions({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-card border border-border-grey bg-white p-4 shadow-xs">
+    <div className="sticky bottom-0 z-20 -mx-4 flex max-h-[55vh] flex-col gap-3 overflow-y-auto rounded-none border-x-0 border-b-0 border-t border-border-grey bg-white p-4 shadow-md sm:static sm:mx-0 sm:max-h-none sm:gap-4 sm:overflow-visible sm:rounded-card sm:border sm:shadow-xs">
       {noteAction ? (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -182,15 +188,14 @@ export function PostReviewActions({
         </div>
       ) : null}
 
-      {canReview ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <Button
             type="button"
             variant="brand"
             size="sm"
             disabled={!canApprove || isPending}
             onClick={() => void submit("approve", { version })}
-            className="w-full sm:w-auto"
+            className="col-span-2 w-full sm:col-auto sm:w-auto"
           >
             <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
             {state.status === "pending" && state.action === "approve" ? "Approving..." : `Approve version ${version}`}
@@ -217,20 +222,27 @@ export function PostReviewActions({
             <XCircle aria-hidden="true" className="h-4 w-4" />
             Reject
           </Button>
-          {canEdit ? (
+          {editStatusOpen ? (canEdit ? (
             <Link
               href={`/client/${clientId}/posts/${postId}/edit`}
-              className="inline-flex h-9 items-center justify-center rounded-control border border-border-grey bg-white px-4 text-small font-medium text-near-black hover:bg-soft-white"
+              className="inline-flex h-[38px] w-full items-center justify-center rounded-control border sm:w-auto border-border-grey bg-white px-4 text-small font-medium text-near-black hover:bg-soft-white"
             >
               Edit
             </Link>
-          ) : null}
-          {canRedraft ? (
+          ) : (
+            <span
+              aria-disabled="true"
+              className="inline-flex h-[38px] w-full items-center justify-center rounded-control border sm:w-auto border-border-grey bg-white px-4 text-small font-medium text-near-black opacity-45"
+            >
+              Edit
+            </span>
+          )) : null}
+          {showRedraft ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={isPending}
+              disabled={!hasRedraftPermission || isPending}
               onClick={() => void submit("redraft")}
               className="w-full sm:w-auto"
             >
@@ -238,12 +250,9 @@ export function PostReviewActions({
               {state.status === "pending" && state.action === "redraft" ? "Redrafting..." : "Redraft"}
             </Button>
           ) : null}
-        </div>
-      ) : (
-        <p className="text-small text-muted-foreground">
-          You cannot approve posts. Ask an account admin to add the Review capability.
-        </p>
-      )}
+      </div>
+      {reviewReason ? <p className="text-small text-muted-foreground">{reviewReason}</p> : null}
+      {redraftReason ? <p className="text-small text-muted-foreground">{redraftReason}</p> : null}
 
       {canReview ? (
         <p className="text-caption text-muted-foreground">

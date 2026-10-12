@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { PostEditor } from "@/features/posts/review/post-editor";
 import { getReviewPost } from "@/features/posts/review/queries";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import { canRoleReviewPosts } from "@/lib/access/roles";
+import { breadcrumbLabel } from "@/lib/format/breadcrumb-label";
 import { getServerUser } from "@/lib/supabase/session";
 
 export default async function EditPostPage({
@@ -58,13 +60,17 @@ export default async function EditPostPage({
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      {back}
-      <div>
-        <h1 className="text-page-title-mobile font-heading font-semibold text-near-black sm:text-page-title">
-          Editing version {version}
-        </h1>
-        <p className="mt-1 text-small text-muted-foreground">Plain text. Nothing is posted anywhere.</p>
-      </div>
+      <PageHeader
+        breadcrumb={[
+          { label: "Posts", href: `/client/${clientId}/posts` },
+          {
+            label: breadcrumbLabel(post.hook ?? post.finalPost, "Untitled post"),
+            href: reviewHref,
+          },
+          { label: `Editing version ${version}` },
+        ]}
+        description="Plain text. Nothing is posted anywhere."
+      />
       {canEdit ? (
         <PostEditor
           clientId={clientId}

@@ -19,6 +19,8 @@ export const scheduleSchema = z
         }
       }),
     time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    /** ISO day of the week, 1 = Monday to 7 = Sunday. Missing or null means every day. */
+    weekday: z.number().int().min(1).max(7).nullable().optional(),
   })
   .strict();
 export const sourceSchema = z
@@ -42,6 +44,8 @@ export type ScheduleView = {
   enabled: boolean;
   timezone: string;
   local_time: string;
+  /** ISO day of the week, 1 = Monday to 7 = Sunday; null means daily. */
+  weekday: number | null;
   next_due_at: string | null;
   last_due_at: string | null;
 };

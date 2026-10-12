@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { ListError } from "@/components/ui/list-error";
 import { PageHeader } from "@/components/ui/page-header";
 import { ContentBankPanel } from "@/features/content-bank/content-bank-panel";
 import { getContentBankEntries } from "@/features/content-bank/queries";
@@ -29,9 +30,7 @@ export default async function ContentBankPage({
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Content Bank" />
-        <p className="text-small text-danger-strong">
-          We could not load the Content Bank. Please try again.
-        </p>
+        <ListError />
       </div>
     );
   }

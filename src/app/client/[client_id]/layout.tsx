@@ -34,7 +34,6 @@ export default async function ClientLayout({
       clientName={access.clientName}
       role={access.role}
       permissions={access.permissions}
-      accessibleClientCount={access.accessibleClientCount}
       postsNeedingYou={count ?? 0}
     >
       {children}

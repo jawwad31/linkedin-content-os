@@ -130,7 +130,7 @@ function AddToCalendarBody({
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-body-lg font-heading font-semibold text-near-black">Add to Calendar</h2>
         <Dialog.Close
-          className="rounded-full p-1 text-muted-foreground hover:bg-soft-white"
+          className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-full text-muted-foreground hover:bg-soft-white"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
@@ -201,7 +201,7 @@ function AddToCalendarBody({
             <>
               <fieldset className="flex flex-col gap-2">
                 <legend className="text-small font-medium text-near-black">Which month?</legend>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {counts.months.map((entryMonth, index) => (
                     <Button
                       key={entryMonth.monthKey}

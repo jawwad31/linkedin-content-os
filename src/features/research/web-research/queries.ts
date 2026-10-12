@@ -105,6 +105,23 @@ export async function getWebBriefings(
   ]);
   if (findings.error || runs.error)
     throw new Error("RESEARCH_RESULTS_UNAVAILABLE");
+  // Findings already saved to the Content Bank. A failed lookup only hides the
+  // "saved" state; saving again is still safe because the database keeps one
+  // live entry per finding.
+  const savedEntries = new Map<string, string>();
+  const findingIds = (findings.data ?? []).map((f) => f.id);
+  if (findingIds.length > 0) {
+    const saved = await db
+      .from("founder_experiences")
+      .select("id,source_research_finding_id")
+      .eq("client_id", clientId)
+      .in("source_research_finding_id", findingIds)
+      .is("deleted_at", null);
+    for (const entry of saved.data ?? []) {
+      if (entry.source_research_finding_id)
+        savedEntries.set(entry.source_research_finding_id, entry.id);
+    }
+  }
   return data.map((row) => ({
     ...row,
     coverage_gaps: Array.isArray(row.coverage_gaps)
@@ -129,6 +146,7 @@ export async function getWebBriefings(
                 fingerprint: f.fingerprint,
                 approval_status: f.approval_status,
                 content_idea_id: f.content_idea_id,
+                content_bank_entry_id: savedEntries.get(f.id) ?? null,
               },
             ]
           : [];

@@ -15,6 +15,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { BeliefShiftDisplay } from "@/components/shared/belief-shift-display";
 import { getReviewPost, type ReviewPostStatus } from "@/features/posts/review/queries";
 import { PostDeleteButton } from "@/features/posts/review/post-delete-button";
@@ -27,6 +28,7 @@ import {
   canRoleReviewPosts,
 } from "@/lib/access/roles";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
+import { breadcrumbLabel } from "@/lib/format/breadcrumb-label";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/date";
 import { getServerUser } from "@/lib/supabase/session";
 import type { FormatRecommendation } from "@/lib/ai/playbooks/contracts";
@@ -340,20 +342,21 @@ export default async function PostReviewPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href={`/client/${clientId}/posts`}
-        className="inline-flex items-center gap-1.5 text-small text-muted-foreground hover:text-near-black focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Posts
-      </Link>
+      <PageHeader
+        breadcrumb={[
+          { label: "Posts", href: `/client/${clientId}/posts` },
+          { label: breadcrumbLabel(post.hook ?? post.finalPost, "Untitled post") },
+        ]}
+        action={
+          canDelete ? (
+            <PostDeleteButton clientId={clientId} post={post} redirectToPosts />
+          ) : undefined
+        }
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="break-words text-page-title-mobile font-heading font-semibold text-near-black sm:text-page-title">
-              Post Review
-            </h1>
             <Badge variant={STATUS_BADGE_VARIANT[post.status]}>
               {STATUS_LABELS[post.status] ?? post.status}
             </Badge>
@@ -394,9 +397,6 @@ export default async function PostReviewPage({
             </p>
           ) : null}
         </div>
-        {canDelete ? (
-          <PostDeleteButton clientId={clientId} post={post} redirectToPosts />
-        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[13fr_7fr] lg:items-start">
@@ -430,7 +430,7 @@ export default async function PostReviewPage({
           </div>
 
           {/* Review decision: approve names the exact version that was read. */}
-          {post.status === "published" || post.status === "approved" ? null : canReview || canRedraft ? (
+          {post.status === "published" || post.status === "approved" ? null : (
             <PostReviewActions
               clientId={clientId}
               postId={post.id}
@@ -439,10 +439,6 @@ export default async function PostReviewPage({
               canReview={canReview}
               canRedraft={canRedraft}
             />
-          ) : (
-            <div className="rounded-control border border-border-grey bg-white px-4 py-3 text-small text-muted-foreground">
-              Your Account access does not include Post review actions.
-            </div>
           )}
         </div>
 

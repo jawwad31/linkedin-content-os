@@ -120,7 +120,7 @@ export function NewsletterList({
                 </Badge>
                 <Link
                   href={`/client/${clientId}/newsletter?edition=${e.id}`}
-                  className="shrink-0 text-small font-medium text-link underline"
+                  className="inline-flex min-h-[38px] shrink-0 items-center text-small font-medium text-link underline"
                 >
                   {d.action}
                 </Link>

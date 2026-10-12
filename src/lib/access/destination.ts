@@ -1,43 +1,27 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { getAccessibleClients } from "@/features/clients/queries";
 
+/**
+ * Where a signed-in person lands. Everyone with exactly one company goes straight
+ * into it; someone who can reach several (an agency admin) sees the Companies list
+ * once, at /clients, and picks one. There is no agency area and no workspace
+ * switcher inside a company.
+ */
 export async function resolveAuthenticatedDestination(
   userId: string,
 ): Promise<string> {
-  const supabase = await createClient();
+  const result = await getAccessibleClients(userId);
 
-  const { data: agencyRows, error: agencyError } = await supabase
-    .from("agency_members")
-    .select("agency_id")
-    .eq("user_id", userId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .limit(1)
-    .returns<{ agency_id: string }[]>();
-
-  if (!agencyError && agencyRows.length > 0) {
-    return "/agency";
-  }
-
-  const { data: accessRows, error: accessError } = await supabase
-    .from("client_access")
-    .select("client_id")
-    .eq("user_id", userId)
-    .eq("invitation_status", "accepted")
-    .returns<{ client_id: string }[]>();
-
-  if (accessError) {
+  if (!result.ok) {
     return "/no-access";
   }
 
-  const clientIds = Array.from(new Set(accessRows.map((row) => row.client_id)));
-
-  if (clientIds.length === 1) {
-    return `/client/${clientIds[0]}/posts`;
+  if (result.clients.length === 1) {
+    return `/client/${result.clients[0].id}/posts`;
   }
 
-  if (clientIds.length > 1) {
+  if (result.clients.length > 1) {
     return "/clients";
   }
 

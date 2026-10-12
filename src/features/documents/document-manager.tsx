@@ -144,7 +144,7 @@ export function DocumentManager({
             type="button"
             onClick={() => setSelectedPurpose("all")}
             className={cn(
-              "rounded-full px-3 py-1 text-caption font-medium transition-colors",
+              "min-h-[38px] rounded-full px-3 py-1 text-caption font-medium transition-colors sm:min-h-0",
               selectedPurpose === "all"
                 ? "bg-near-black text-white"
                 : "bg-surface-container-low text-muted-foreground hover:bg-surface-container",
@@ -160,7 +160,7 @@ export function DocumentManager({
                 type="button"
                 onClick={() => setSelectedPurpose(purpose)}
                 className={cn(
-                  "rounded-full px-3 py-1 text-caption font-medium transition-colors",
+                  "min-h-[38px] rounded-full px-3 py-1 text-caption font-medium transition-colors sm:min-h-0",
                   selectedPurpose === purpose
                     ? "bg-near-black text-white"
                     : "bg-surface-container-low text-muted-foreground hover:bg-surface-container",
@@ -292,7 +292,7 @@ export function DocumentManager({
         <Card className="border-2 border-brand-purple/30 bg-surface-container-lowest shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-card-title">{previewDoc.filename}</CardTitle>
+              <CardTitle className="text-card-title break-words">{previewDoc.filename}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline">v{previewDoc.version}</Badge>
                 <Badge variant="neutral">
@@ -310,7 +310,7 @@ export function DocumentManager({
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-border-grey bg-surface-container-low p-4 max-h-96 overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-mono text-caption text-foreground">
+              <pre className="whitespace-pre-wrap break-words font-mono text-caption text-foreground">
                 {previewDoc.contentText}
               </pre>
             </div>
@@ -342,7 +342,7 @@ export function DocumentManager({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-link" />
-                    <span className="font-semibold text-small truncate max-w-xs">
+                    <span className="min-w-0 font-semibold text-small truncate max-w-xs">
                       {doc.filename}
                     </span>
                   </div>
@@ -380,7 +380,7 @@ export function DocumentManager({
                   <button
                     type="button"
                     onClick={() => setPreviewDoc(doc)}
-                    className="inline-flex items-center gap-1 text-caption font-medium text-link hover:underline"
+                    className="inline-flex min-h-[38px] items-center gap-1 text-caption font-medium text-link hover:underline"
                   >
                     <Eye className="h-3.5 w-3.5" />
                     Preview
@@ -391,7 +391,7 @@ export function DocumentManager({
                       <button
                         type="button"
                         onClick={() => handleArchive(doc)}
-                        className="text-caption text-muted-foreground hover:text-warning-strong p-1"
+                        className="text-caption text-muted-foreground hover:text-warning-strong inline-flex h-[38px] w-[38px] items-center justify-center"
                         title="Archive version"
                       >
                         <Archive className="h-3.5 w-3.5" />
@@ -401,7 +401,7 @@ export function DocumentManager({
                       <button
                         type="button"
                         onClick={() => handleDelete(doc)}
-                        className="text-caption text-muted-foreground hover:text-danger-strong p-1"
+                        className="text-caption text-muted-foreground hover:text-danger-strong inline-flex h-[38px] w-[38px] items-center justify-center"
                         title="Delete document"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

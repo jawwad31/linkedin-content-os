@@ -222,7 +222,12 @@ export function OutlineScreen({
   if (!plan || plan.status !== "ready") {
     return (
       <div className="flex max-w-3xl flex-col gap-6">
-        <PageHeader title={payload.title} />
+        <PageHeader
+          breadcrumb={[
+            { label: "Newsletter", href: `/client/${clientId}/newsletter` },
+            { label: payload.title },
+          ]}
+        />
         <div className="flex flex-col gap-3 rounded-card border border-border-subtle bg-white p-5">
           {!plan ? (
             <p className="text-small">
@@ -276,7 +281,10 @@ export function OutlineScreen({
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader
-        title={payload.title}
+        breadcrumb={[
+          { label: "Newsletter", href: `/client/${clientId}/newsletter` },
+          { label: payload.title },
+        ]}
         description={
           confirmed && !dirty
             ? "Outline confirmed. The draft did not finish; draft it again below."
@@ -302,7 +310,7 @@ export function OutlineScreen({
           {[...new Set([plan.recommendedTitle, ...(plan.titleOptions ?? [])])]
             .filter((t): t is string => !!t)
             .map((t) => (
-              <label key={t} className="flex items-start gap-2 text-small">
+              <label key={t} className="flex min-h-[38px] items-start gap-2 text-small">
                 <input
                   type="radio"
                   name="title"
@@ -430,7 +438,7 @@ export function OutlineScreen({
                 {ledger
                   .filter((f) => f.writingPermission !== "omit")
                   .map((f: PlanFact) => (
-                    <label key={f.factId} className="flex items-start gap-2 text-small">
+                    <label key={f.factId} className="flex min-h-[38px] items-start gap-2 text-small">
                       <input
                         type="checkbox"
                         className="mt-1"
@@ -458,7 +466,7 @@ export function OutlineScreen({
                 value={newPoints}
                 onChange={(e) => setNewPoints(e.target.value)}
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="secondary"

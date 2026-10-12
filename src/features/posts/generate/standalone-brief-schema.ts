@@ -60,6 +60,8 @@ export type StandaloneContentBankOption = {
   allowReuse: boolean;
   eligible: boolean;
   eligibilityMessage: string | null;
+  /** The entry's own takeaway, used to prefill the form. Empty when it has none. */
+  suggestedTakeaway: string;
   canOffer: boolean;
   details: Array<{ label: string; value: string }>;
 };

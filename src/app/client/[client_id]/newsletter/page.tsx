@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ListError } from "@/components/ui/list-error";
 import { PageHeader } from "@/components/ui/page-header";
 import { getServerUser } from "@/lib/supabase/session";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
@@ -71,10 +72,7 @@ export default async function NewsletterPage({
     return (
       <div className="space-y-4">
         <PageHeader title="Newsletter" description="Weekly editions" />
-        <p role="alert" className="text-small">
-          Newsletter data is unavailable. Please try again after the schema is
-          ready.
-        </p>
+        <ListError />
       </div>
     );
   }

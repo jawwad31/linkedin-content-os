@@ -103,7 +103,7 @@ export function PublishHandoff({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpened(true)}
-            className="inline-flex h-9 items-center gap-2 rounded-control border border-border-grey bg-white px-4 text-small font-medium text-near-black hover:bg-soft-white"
+            className="inline-flex h-[38px] items-center gap-2 rounded-control border border-border-grey bg-white px-4 text-small font-medium text-near-black hover:bg-soft-white"
           >
             Open LinkedIn <ExternalLink className="h-4 w-4" aria-hidden="true" />
           </a>

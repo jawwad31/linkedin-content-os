@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { FileText, Users } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import {
   Card,
@@ -8,9 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ListError } from "@/components/ui/list-error";
 import { PageHeader } from "@/components/ui/page-header";
 import { AccountTeamManagement } from "@/features/access-management/team-management";
 import { AccountUserProvisionForm } from "@/features/access-management/user-provision-form";
+import {
+  InviteMemberButton,
+  InviteMemberPanel,
+  InviteMemberScope,
+} from "@/features/access-management/invite-member";
 import { getAccountTeam } from "@/features/access-management/queries";
 import { SettingsTabs, type SettingsTab } from "@/features/setup/settings-tabs";
 import { BusinessContextSection } from "@/features/setup/business-context-section";
@@ -41,81 +47,74 @@ export default async function SetupPage({
   }
 
   const role = await getCurrentUserRoleForClient(user.id, clientId);
+  const description = "Manage this Account's content context, reference documents, and user access.";
 
   return (
-    <div>
-      <PageHeader
-        title="Settings"
-        description="Manage this Account's content context, reference documents, and user access."
-      />
-
+    <InviteMemberScope>
       {role ? (
-        <div className="mt-6">
-          <SettingsTabs
-            initialTab={typeof tab === "string" ? tab : undefined}
-            tabs={[
-              {
-                id: "business",
-                label: "Business context",
-                content: <BusinessContextSection clientId={clientId} role={role} />,
-              },
-              {
-                id: "documents",
-                label: "Documents",
-                content: (
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        <FileText aria-hidden="true" className="h-5 w-5 text-link" />
-                        <CardTitle>Supporting Documents & Evidence</CardTitle>
-                      </div>
-                      <CardDescription>
-                        Upload markdown briefs, customer interviews, and evidence files. Scoped retrieval
-                        extracts relevant proof during drafting without polluting prompt logs.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <DocumentsSection clientId={clientId} role={role} />
-                    </CardContent>
-                  </Card>
-                ),
-              },
-              ...(canRoleManageClientUsers(role)
-                ? [{
-                    id: "team" as const,
-                    label: "Team access",
-                    content: (
-                      <Card>
-                        <CardHeader>
-                          <div className="flex items-center gap-2">
-                            <Users aria-hidden="true" className="h-5 w-5 text-link" />
-                            <CardTitle>Team Access</CardTitle>
-                          </div>
-                          <CardDescription>
-                            Create users with immediate access, choose Account User permissions,
-                            and manage passwords. No email is sent.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-6">
-                          <AccountUserProvisionForm clientId={clientId} />
-                          <TeamAccessList clientId={clientId} />
-                        </CardContent>
-                      </Card>
-                    ),
-                  }]
-                : []),
-              ...(canRoleViewOperationalLogs(role)
-                ? [{
-                    id: "logs" as const,
-                    label: "Activity & AI logs",
-                    content: <OperationalLogsSection clientId={clientId} />,
-                  }]
-                : []),
-            ] satisfies SettingsTab[]}
-          />
-        </div>
-      ) : null}
-    </div>
+        <SettingsTabs
+          title="Settings"
+          description={description}
+          initialTab={typeof tab === "string" ? tab : undefined}
+          tabs={[
+            {
+              id: "business",
+              label: "Business context",
+              content: <BusinessContextSection clientId={clientId} role={role} />,
+            },
+            {
+              id: "documents",
+              label: "Documents",
+              content: (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <FileText aria-hidden="true" className="h-5 w-5 text-link" />
+                      <CardTitle>Supporting Documents & Evidence</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Upload markdown briefs, customer interviews, and evidence files. Scoped retrieval
+                      extracts relevant proof during drafting without polluting prompt logs.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <DocumentsSection clientId={clientId} role={role} />
+                  </CardContent>
+                </Card>
+              ),
+            },
+            ...(canRoleManageClientUsers(role)
+              ? [{
+                  id: "team" as const,
+                  label: "Team access",
+                  action: <InviteMemberButton />,
+                  content: (
+                    <div className="flex flex-col gap-6">
+                      <p className="max-w-3xl text-small text-muted-foreground">
+                        Create users with immediate access, choose Account User permissions,
+                        and manage passwords. No email is sent.
+                      </p>
+                      <InviteMemberPanel>
+                        <AccountUserProvisionForm clientId={clientId} />
+                      </InviteMemberPanel>
+                      <TeamAccessList clientId={clientId} />
+                    </div>
+                  ),
+                }]
+              : []),
+            ...(canRoleViewOperationalLogs(role)
+              ? [{
+                  id: "logs" as const,
+                  label: "Activity & AI logs",
+                  content: <OperationalLogsSection clientId={clientId} />,
+                }]
+              : []),
+          ] satisfies SettingsTab[]}
+        />
+      ) : (
+        <PageHeader title="Settings" description={description} />
+      )}
+    </InviteMemberScope>
   );
 }
 
@@ -134,11 +133,7 @@ async function TeamAccessList({ clientId }: { clientId: string }) {
   const result = await getAccountTeam(clientId);
 
   if (!result.ok) {
-    return (
-      <p className="text-small text-danger-strong">
-        We could not load team access. Please try again.
-      </p>
-    );
+    return <ListError />;
   }
 
   return <AccountTeamManagement clientId={clientId} members={result.members} />;
@@ -158,9 +153,7 @@ async function OperationalLogsSection({ clientId }: { clientId: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-small text-danger-strong">
-            We could not load operational logs. Please try again.
-          </p>
+          <ListError />
         </CardContent>
       </Card>
     );

@@ -94,8 +94,15 @@ describe("CalendarView", () => {
 
   it("dims the actions and says who can grant them when the user cannot plan", () => {
     const html = render({ canPlan: false, slots: [slot({})] });
-    expect(html).toContain("You need the Manage ideas capability to change the calendar. Ask an account admin to add it.");
+    expect(html).toContain("You cannot add entries to the calendar. Ask an account admin to add the Manage ideas capability.");
     expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Add entry/);
+  });
+
+  it("keeps Add entry disabled in the empty state for a user who cannot plan", () => {
+    const html = render({ canPlan: false, slots: [] });
+    expect(html).toContain("Nothing on the calendar yet");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Add entry/);
+    expect(html.match(/Add entry/g)?.length).toBe(1);
   });
 });
 

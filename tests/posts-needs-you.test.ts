@@ -118,7 +118,8 @@ describe("review decision bar", () => {
   it("tells a user without the Review capability who can grant it", () => {
     const html = render({ canReview: false });
     expect(html).toContain("You cannot approve posts. Ask an account admin to add the Review capability.");
-    expect(html).not.toContain("Approve version");
+    // The decision buttons stay visible but disabled (wireframe s9), never enabled.
+    expect(html).toMatch(/<button[^>]*\sdisabled=""[^>]*>(?:(?!<\/button>)[\s\S])*Approve version/);
   });
 
   it("only offers Redraft after edits were requested", () => {

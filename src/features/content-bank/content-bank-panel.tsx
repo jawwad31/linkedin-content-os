@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, BookOpen, CalendarPlus, ChevronDown, FileText, FilePenLine, Lightbulb, Link2, Mail, Pencil, Plus, RefreshCw, Search, Trash2, TrendingUp, type LucideIcon } from "lucide-react";
+import { Archive, BookOpen, CalendarPlus, ChevronDown, FileText, FilePenLine, Lightbulb, Mail, Pencil, Plus, RefreshCw, Search, Trash2, TrendingUp, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { DestructiveConfirmDialog } from "@/components/shared/destructive-confirm-dialog";
@@ -19,6 +19,7 @@ import {
   type EffectiveClientRole, type ClientPermission,
 } from "@/lib/access/roles";
 import { formatUtcDate } from "@/lib/format/date";
+import { cannotReason, missingPermissions } from "@/lib/access/permission-copy";
 
 import {
   CONTENT_BANK_CATEGORY_LABELS, CONTENT_BANK_READINESS, USAGE_STATUSES,
@@ -67,8 +68,7 @@ function UsageHistory({ clientId, entry }: { clientId: string; entry: ContentBan
       <Detail label="Takeaway" value={use.takeaway} />
       {use.newsletterId ? <a href={`/client/${clientId}/newsletter?edition=${use.newsletterId}`} className="text-small text-link underline">Open newsletter edition</a>
         : use.postId ? <a href={`/client/${clientId}/posts/${use.postId}/review`} className="text-small text-link underline">Open post</a>
-        : use.contentIdeaId ? <a href={`/client/${clientId}/ideas`} className="text-small text-link underline">Open Ideas</a>
-          : use.channel === "newsletter" || use.channel === "calendar_slot" ? <a href={`/client/${clientId}/${use.channel === "newsletter" ? "newsletter" : "calendar"}`} className="text-small text-link underline">Open {use.channel === "newsletter" ? "Newsletter" : "Calendar"}</a>
+        : use.channel === "newsletter" || use.channel === "calendar_slot" ? <a href={`/client/${clientId}/${use.channel === "newsletter" ? "newsletter" : "calendar"}`} className="text-small text-link underline">Open {use.channel === "newsletter" ? "Newsletter" : "Calendar"}</a>
             : <p className="text-caption text-muted-foreground">No linked output is available.</p>}
       <span className="text-caption text-muted-foreground">Updated {formatUtcDate(use.updatedAt)}</span>
     </div>)}
@@ -113,6 +113,12 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   const canDraftPosts = canRoleDraftPosts(role, permissions);
   const canCreatePost = canManageIdeas && canDraftPosts;
   const canUseNewsletter = canCreatePost;
+  // One-line reasons for disabled controls. Capability gaps are disabled with a reason;
+  // resource management is admin-only, so it is hidden for everyone else.
+  const createPostMissing = missingPermissions(role, permissions, ["ideas_manage", "posts_draft"]);
+  const createPostReason = cannotReason("create posts", createPostMissing);
+  const calendarReason = canManageIdeas ? null : cannotReason("add entries to the calendar", ["ideas_manage"]);
+  const newsletterReason = canUseNewsletter ? null : cannotReason("use entries in a newsletter", createPostMissing);
   function canEdit(entry: ContentBankEntry) {
     return entry.sourceType === "content_resource" ? isAdmin
       : entry.entryType === "trend_reaction" ? canManageReactions : canManageExperiences;
@@ -130,6 +136,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
   const filteredEntries = selectedType === "all" ? matchingEntries : matchingEntries.filter((entry) => entryType(entry) === selectedType);
   const typeCount = (type: Exclude<TypeTab, "all">) => matchingEntries.filter((entry) => entryType(entry) === type).length;
   const canCapture = canManageExperiences || isAdmin;
+  const captureReason = canCapture ? null : cannotReason("add entries", ["founder_experience_manage"]);
 
   function mutate(entry: ContentBankEntry, action: "reuse" | "archive") {
     if (action === "archive" && !window.confirm(`Mark "${entry.title}" archived? Its record and usage history will be retained.`)) return;
@@ -149,17 +156,19 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
     <PageHeader
       title="Content Bank"
       action={<div className="flex flex-wrap items-center gap-3">
-        <span className="relative">
-          <Search aria-hidden="true" className="absolute left-3 top-[7px] h-4 w-4 text-muted-foreground" />
-          <Input aria-label="Search entries" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search entries" className="h-[30px] w-full pl-9 sm:w-[260px]" />
+        <span className="relative w-full sm:w-[260px]">
+          <Search aria-hidden="true" className="absolute left-3 top-[11px] h-4 w-4 text-muted-foreground sm:top-[7px]" />
+          <Input aria-label="Search entries" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search entries" className="h-[38px] w-full pl-9 sm:h-[30px]" />
         </span>
-        {canCapture ? <Button type="button" variant="brand" disabled={isPending || editor !== null} onClick={() => { setEditor("new"); setError(null); setSuccess(null); }}>
+        {entries.length > 0 ? <Button type="button" variant="brand" disabled={isPending || editor !== null || !canCapture} onClick={() => { setEditor("new"); setError(null); setSuccess(null); }}>
           <Plus className="h-4 w-4" /> New entry
         </Button> : null}
       </div>}
     />
     {error ? <p role="alert" className="text-small text-danger-strong">{error}</p> : null}
     {success ? <p role="status" className="text-small text-success-strong">{success}</p> : null}
+    {captureReason ? <p className="text-small text-muted-foreground">{captureReason}</p> : null}
+    {createPostReason ? <p className="text-small text-muted-foreground">{createPostReason}</p> : null}
     {editor ? <ContentBankEntryForm key={editor === "new" ? "new" : `${editor.sourceType}:${editor.id}`}
       clientId={clientId} entry={editor === "new" ? undefined : editor}
       canManageExperiences={canManageExperiences} canManageResources={isAdmin}
@@ -175,7 +184,12 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
       activeId={selectedType}
       onChange={setSelectedType}
     />
-    {filteredEntries.length === 0 ? <EmptyState icon={BookOpen} title="No Content Bank entries found" description="Capture an experience or resource, or change your search." />
+    {entries.length === 0 ? <EmptyState icon={BookOpen} title="No entries yet"
+      description="Entries are the source material for posts. Add an experience, a trend reaction or a resource."
+      action={<Button type="button" variant="brand" disabled={isPending || editor !== null || !canCapture} onClick={() => { setEditor("new"); setError(null); setSuccess(null); }}>
+        <Plus className="h-4 w-4" /> New entry
+      </Button>} />
+      : filteredEntries.length === 0 ? <EmptyState icon={BookOpen} title="No Content Bank entries found" description="Capture an experience or resource, or change your search." />
       : <ul className="overflow-hidden rounded-card border border-border-subtle bg-white shadow-xs">
         {filteredEntries.map((entry) => {
           const key = `${entry.sourceType}:${entry.id}`;
@@ -187,7 +201,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
           const expanded = expandedKey === key;
           const postEligibility = getContentBankPostEligibility(entry);
           const calendarEligibility = getContentBankPostEligibility(entry, "calendar");
-          const createPostHref = `/client/${clientId}/posts?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
+          const createPostHref = `/client/${clientId}/posts/new?sourceType=${encodeURIComponent(entry.sourceType)}&sourceId=${encodeURIComponent(entry.id)}`;
           const calendarChoice: CalendarEntryChoice = {
             sourceId: entry.id,
             sourceType: entry.sourceType,
@@ -196,14 +210,16 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
             reuseLabel: entry.allowReuse ? "Reusable" : "Single-use",
           };
           const busy = isPending || editor !== null;
+          // Resource management is admin-only: those items are hidden for everyone else.
+          const resourceHidden = isResource && !isAdmin;
+          const editReason = editable ? null : cannotReason("change this entry", [entry.entryType === "trend_reaction" ? "research_contribute" : "founder_experience_manage"]);
           const menuItems: ActionMenuItem[] = [
-            ...(canManageIdeas && calendarEligibility.eligible ? [{ label: "Add to Calendar", icon: CalendarPlus, onSelect: () => setCalendarEntry(calendarChoice) }] : []),
+            ...(calendarEligibility.eligible ? [{ label: "Add to Calendar", icon: CalendarPlus, onSelect: () => setCalendarEntry(calendarChoice), disabledReason: calendarReason }] : []),
             { label: expanded ? "Hide details" : "View details", icon: ChevronDown, onSelect: () => setExpandedKey(expanded ? null : key) },
-            ...(editable && !busy ? [{ label: "Edit", icon: Pencil, onSelect: () => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); } }] : []),
-            ...(editable && !busy ? [{ label: entry.allowReuse ? "Make single-use" : "Make reusable", icon: RefreshCw, onSelect: () => mutate(entry, "reuse") }] : []),
-            ...(available && canUseNewsletter ? [{ label: "Use in newsletter", icon: Mail, onSelect: () => router.push(`/client/${clientId}/newsletter?new=true&sources=${entry.id}`) }] : []),
-            ...(available && canManageIdeas ? [{ label: "Open Ideas", icon: Link2, onSelect: () => router.push(`/client/${clientId}/ideas`) }] : []),
-            ...(editable && entry.readiness !== "archived" && !busy ? [{ label: "Archive", icon: Archive, onSelect: () => mutate(entry, "archive") }] : []),
+            ...(!resourceHidden && !busy ? [{ label: "Edit", icon: Pencil, disabledReason: editReason, onSelect: () => { setEditor(entry); setError(null); setSuccess(null); window.scrollTo({ top: 0, behavior: "smooth" }); } }] : []),
+            ...(!resourceHidden && !busy ? [{ label: entry.allowReuse ? "Make single-use" : "Make reusable", icon: RefreshCw, disabledReason: editReason, onSelect: () => mutate(entry, "reuse") }] : []),
+            ...(available ? [{ label: "Use in newsletter", icon: Mail, disabledReason: newsletterReason, onSelect: () => router.push(`/client/${clientId}/newsletter?new=true&sources=${entry.id}`) }] : []),
+            ...(!resourceHidden && entry.readiness !== "archived" && !busy ? [{ label: "Archive", icon: Archive, disabledReason: editReason, onSelect: () => mutate(entry, "archive") }] : []),
             ...(isAdmin && entry.sourceType === "founder_experience" && !busy ? [{ label: "Delete", icon: Trash2, destructive: true, onSelect: () => setDeleteTarget(entry) }] : []),
           ];
           return <li key={key} className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 border-t border-border-subtle px-5 py-4 first:border-t-0 sm:grid-cols-[40px_minmax(0,1fr)_auto]">
@@ -225,7 +241,9 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
               {canManageIdeas && !calendarEligibility.eligible && (!canCreatePost || calendarEligibility.message !== postEligibility.message) ? <p className="text-caption text-muted-foreground">Add to Calendar unavailable: {calendarEligibility.message}</p> : null}
             </div>
             <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
-              {canCreatePost && postEligibility.eligible ? <Link href={createPostHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              {!canCreatePost ? <Button type="button" variant="outline" size="sm" disabled>
+                <FilePenLine className="h-4 w-4" /> Create post
+              </Button> : postEligibility.eligible ? <Link href={createPostHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 <FilePenLine className="h-4 w-4" /> Create post
               </Link> : null}
               <ActionMenu label={`More actions for ${entry.title}`} items={menuItems} />
@@ -250,7 +268,7 @@ export function ContentBankPanel({ clientId, role, permissions, entries }: {
                 <Detail label="What changed" value={entry.whatChanged} />
                 <Detail label="Why it matters" value={entry.whyItMatters} />
                 <Detail label="Reaction type" value={entry.reactionType} />
-                {entry.sourceTrendCardId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
+                {entry.sourceTrendCardId || entry.sourceResearchFindingId ? <a href={`/client/${clientId}/research`} className="text-small text-link underline">Open Research</a> : null}
               </>}
               <p className="text-caption text-muted-foreground">Created {formatUtcDate(entry.createdAt)} · Updated {formatUtcDate(entry.updatedAt)} · {entry.usageCount} recorded successful uses</p>
               <UsageHistory clientId={clientId} entry={entry} />

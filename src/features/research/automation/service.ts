@@ -52,6 +52,7 @@ export async function getAutomationView(
       enabled: false,
       timezone: "Asia/Karachi",
       local_time: "09:00",
+      weekday: null,
       next_due_at: null,
       last_due_at: null,
     },
@@ -63,7 +64,7 @@ export async function getAutomationView(
   const [schedule, sources, versions] = await Promise.all([
     db
       .from("research_schedules")
-      .select("version,enabled,timezone,local_time,next_due_at,last_due_at")
+      .select("version,enabled,timezone,local_time,weekday,next_due_at,last_due_at")
       .eq("client_id", clientId)
       .maybeSingle(),
     db
@@ -115,6 +116,7 @@ export async function manageAutomation(
       p_enabled: p.enabled,
       p_timezone: p.timezone,
       p_time: p.time,
+      p_weekday: p.weekday ?? null,
     });
     return error || !data?.ok ? fail(data?.code) : { ok: true as const, data };
   }

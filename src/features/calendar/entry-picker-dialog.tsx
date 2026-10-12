@@ -38,7 +38,7 @@ export function EntryPickerDialog({
               <h2 className="text-body-lg font-heading font-semibold text-near-black">Add entry</h2>
               <p className="mt-1 text-small text-muted-foreground">Choose a Content Bank entry, then pick its date.</p>
             </div>
-            <Dialog.Close className="rounded-full p-1 text-muted-foreground hover:bg-soft-white" aria-label="Close">
+            <Dialog.Close className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-full text-muted-foreground hover:bg-soft-white" aria-label="Close">
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>

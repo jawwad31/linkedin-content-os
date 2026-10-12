@@ -6,7 +6,6 @@ import { createServerClient } from "@supabase/ssr";
 import { getSupabasePublicEnv } from "./env";
 
 const PROTECTED_PREFIXES = [
-  "/agency",
   "/clients",
   "/client/",
   "/change-password",

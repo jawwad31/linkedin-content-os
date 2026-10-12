@@ -1,7 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getContentBankEntries } from "@/features/content-bank/queries";
-import { storedFindingSchema } from "@/features/research/web-research/contracts";
 import {
   normalizeQa,
   type Edition,
@@ -136,17 +135,10 @@ export async function getNewsletterData(clientId: string, editionId?: string) {
 export async function getNewsletterOptions(
   clientId: string,
 ): Promise<SourceOption[]> {
-  const db = await createClient();
+  // Research findings reach a newsletter through the Content Bank: save a finding
+  // there as a trend reaction first. Editions that already hold a finding keep it.
   const bank = await getContentBankEntries(clientId);
-  const findings = await db
-    .from("research_findings")
-    .select("id,payload")
-    .eq("client_id", clientId)
-    .eq("approval_status", "approved")
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (!bank.ok || findings.error)
-    throw new Error("NEWSLETTER_SOURCES_UNAVAILABLE");
+  if (!bank.ok) throw new Error("NEWSLETTER_SOURCES_UNAVAILABLE");
   return [
     ...bank.entries
       .filter(
@@ -169,22 +161,5 @@ export async function getNewsletterOptions(
               ? ("trend_reaction" as const)
               : ("experience" as const),
       })),
-    ...(findings.data ?? []).flatMap((f) => {
-      const parsed = storedFindingSchema.safeParse(f.payload);
-      return parsed.success
-        ? [
-            {
-              id: f.id,
-              type: "research_finding" as const,
-              title: parsed.data.title,
-              allowReuse: true,
-              usageStatus: "reference",
-              usageCount: 0,
-              reuseConfirmed: false,
-              kind: "research" as const,
-            },
-          ]
-        : [];
-    }),
   ];
 }

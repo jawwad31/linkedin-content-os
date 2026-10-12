@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AddToCalendarDialog,
+  type CalendarEntryChoice,
+} from "@/features/calendar/add-to-calendar-dialog";
 import type {
   BriefingView,
   Candidate,
@@ -72,20 +79,45 @@ function EvidenceLink({
   );
 }
 
+/**
+ * Web Briefings. The list shows one saved prompt, the schedule and the briefings;
+ * ?briefing=ID opens one briefing on its own page. Advanced sources, classification
+ * and run history arrive as `advancedSlot` and render only on the list.
+ */
 export function ResearchWorkbench({
   clientId,
   settings,
   briefings,
   canManage,
   canCreatePosts,
+  createPostsReason,
+  canSave,
+  saveReason,
+  canAddToCalendar,
+  addToCalendarReason,
   providerConfigured,
+  openBriefingId,
+  scheduleSlot,
+  advancedSlot,
 }: {
   clientId: string;
   settings: ResearchSettings | null;
   briefings: BriefingView[];
   canManage: boolean;
+  /** Create post needs both Manage ideas and Draft posts. */
   canCreatePosts: boolean;
+  /** One-line reason shown beside a disabled "Create post" control. */
+  createPostsReason?: string | null;
+  /** Save to Content Bank needs the research contribution capability. */
+  canSave: boolean;
+  saveReason?: string | null;
+  /** Add to Calendar needs Manage ideas. */
+  canAddToCalendar: boolean;
+  addToCalendarReason?: string | null;
   providerConfigured: boolean;
+  openBriefingId?: string;
+  scheduleSlot?: ReactNode;
+  advancedSlot?: ReactNode;
 }) {
   const router = useRouter();
   const [saved, setSaved] = useState(settings);
@@ -97,15 +129,11 @@ export function ResearchWorkbench({
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [created, setCreated] = useState<
-    {
-      findingId: string;
-      ideaId: string;
-      postId: string | null;
-      error: string | null;
-    }[]
-  >([]);
+  // Findings saved during this visit; the server list covers the rest after a refresh.
+  const [savedNow, setSavedNow] = useState<Record<string, string>>({});
+  const [calendarEntry, setCalendarEntry] = useState<CalendarEntryChoice | null>(
+    null,
+  );
   const runKey = useRef<{ revision: number; key: string } | null>(null);
   const dirty =
     !!saved &&
@@ -113,6 +141,10 @@ export function ResearchWorkbench({
       lookbackDays !== saved.lookbackDays ||
       useProfileContext !== saved.useProfileContext);
   const active = briefings.some((b) => b.outcome === "running");
+  const openBriefing = openBriefingId
+    ? (briefings.find((b) => b.id === openBriefingId) ?? null)
+    : null;
+  const briefingMissing = !!openBriefingId && !openBriefing;
   async function perform(label: string, fn: () => Promise<void>) {
     setBusy(label);
     setError(null);
@@ -158,18 +190,51 @@ export function ResearchWorkbench({
     runKey.current = null;
     setMessage(outcomes[result.outcome] ?? "Research saved.");
   }
-  function toggle(id: string) {
-    setSelected((current) =>
-      current.includes(id)
-        ? current.filter((x) => x !== id)
-        : current.length < 3
-          ? [...current, id]
-          : current,
-    );
-  }
+  // The one primary action on this page: runs the saved revision only. Unsaved
+  // edits must be saved first (Save and run in the prompt card).
+  const runNowAction =
+    canManage && saved && !openBriefing ? (
+      <Button
+        variant="brand"
+        disabled={!!busy || active || dirty || !saved.revision}
+        onClick={() => perform("run", () => run(saved.revision))}
+      >
+        {busy === "run" ? "Researching…" : "Run now"}
+      </Button>
+    ) : !canManage && !openBriefing ? (
+      // Members see the control, disabled: only an account admin may run research.
+      <Button variant="brand" disabled>
+        Run now
+      </Button>
+    ) : undefined;
   return (
     <div className="space-y-6">
-      {canManage && saved ? (
+      <PageHeader
+        {...(openBriefing
+          ? {
+              breadcrumb: [
+                {
+                  label: "Research",
+                  href: `/client/${clientId}/research?tab=briefings`,
+                },
+                {
+                  label:
+                    openBriefing.findings[0]?.title ??
+                    outcomes[openBriefing.outcome],
+                },
+              ],
+            }
+          : { title: "Research" })}
+        description="Research your saved prompt, review evidence, and select findings for content."
+        action={runNowAction}
+      />
+      {openBriefing ? (
+        <p className="rounded-card border border-dashed border-border-grey bg-white px-4 py-3 text-small text-muted-foreground">
+          Research does not create posts or approvals. Nothing here is used
+          until you choose it.
+        </p>
+      ) : null}
+      {!openBriefing && canManage && saved ? (
         <Card>
           <CardHeader>
             <CardTitle>Saved research prompt</CardTitle>
@@ -209,7 +274,7 @@ export function ResearchWorkbench({
                   value={lookbackDays}
                   disabled={!!busy}
                   onChange={(e) => setLookbackDays(Number(e.target.value))}
-                  className="w-16 rounded-control border border-border-grey bg-white px-2 py-1"
+                  className="h-[38px] w-16 rounded-control border border-border-grey bg-white px-2 py-1"
                 />{" "}
                 days
               </label>
@@ -245,12 +310,6 @@ export function ResearchWorkbench({
                 }
               >
                 {busy === "save" ? "Saving…" : "Save prompt"}
-              </Button>
-              <Button
-                disabled={!!busy || active || dirty || !saved.revision}
-                onClick={() => perform("run", () => run(saved.revision))}
-              >
-                {busy === "run" ? "Researching…" : "Run saved prompt"}
               </Button>
               {dirty || !saved.revision ? (
                 <Button
@@ -288,12 +347,13 @@ export function ResearchWorkbench({
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : !openBriefing ? (
         <p className="text-small text-muted-foreground">
-          Administrators manage the private research prompt. You can review the
-          saved findings below.
+          You cannot run research. Account admins manage the private research
+          prompt and run it. You can review the saved findings below.
         </p>
-      )}
+      ) : null}
+      {!openBriefing ? scheduleSlot : null}
       {error ? (
         <p role="alert" className="text-small text-danger-strong">
           {error}
@@ -302,9 +362,7 @@ export function ResearchWorkbench({
       {message || busy ? (
         <p role="status" aria-live="polite" className="text-small">
           {busy
-            ? busy === "create"
-              ? "Drafting selected findings. Each post will go to review…"
-              : "Working… Keep this page open for the result."
+            ? "Working… Keep this page open for the result."
             : message}
         </p>
       ) : null}
@@ -316,134 +374,61 @@ export function ResearchWorkbench({
           </Button>
         </div>
       ) : null}
-      {canCreatePosts ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            disabled={!!busy || !selected.length}
-            onClick={() =>
-              perform("create", async () => {
-                const data = await send(clientId, "create_posts", {
-                  findingIds: selected,
-                });
-                setCreated(data.items);
-                setMessage(
-                  `${data.items.filter((item: { postId: string | null }) => item.postId).length} post(s) ready for human review.`,
-                );
-              })
-            }
-          >
-            {busy === "create"
-              ? "Drafting…"
-              : `Create separate posts${selected.length ? ` (${selected.length})` : ""}`}
-          </Button>
-          <p className="text-caption text-muted-foreground">
-            Select up to three approved findings. Each becomes its own post;
-            repeat selections reuse its idea.
-          </p>
-          {selected.length ? <Link className="text-small font-medium text-link underline" href={`/client/${clientId}/newsletter?new=true&sources=${selected.join(",")}`}>Add selected findings to newsletter</Link> : null}
-        </div>
-      ) : null}
-      {created.length ? (
-        <ul className="space-y-2 text-small">
-          {created.map((item) => (
-            <li key={item.findingId}>
-              <Link
-                className="text-link underline"
-                href={
-                  item.postId
-                    ? `/client/${clientId}/posts/${item.postId}/review`
-                    : `/client/${clientId}/ideas`
-                }
-              >
-                {item.postId ? "Open post review" : "Open selected idea"}
-              </Link>
-              {item.error ? (
-                <p role="alert" className="text-danger-strong">
-                  {item.error}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {!briefings.length ? (
-        <p className="rounded-control border border-dashed border-border-grey p-6 text-small text-muted-foreground">
-          No web briefings yet. Save your prompt and run it to collect evidence
-          and suggested angles.
+      {briefingMissing ? (
+        <p role="alert" className="text-small text-danger-strong">
+          That briefing is not available. Showing all briefings.
         </p>
       ) : null}
-      {briefings.map((briefing) => (
-        <Card key={briefing.id} id={`briefing-${briefing.id}`}>
+      {openBriefing ? (
+        <Card id={`briefing-${openBriefing.id}`}>
           <CardHeader>
-            <CardTitle>{outcomes[briefing.outcome]}</CardTitle>
+            <CardTitle>{outcomes[openBriefing.outcome]}</CardTitle>
             <p className="text-caption text-muted-foreground">
-              {new Date(briefing.created_at).toLocaleString()} · Prompt version{" "}
-              {briefing.revision} · {briefing.candidate_count} candidate sources
+              {new Date(openBriefing.created_at).toLocaleString()} · Prompt
+              version {openBriefing.revision} ·{" "}
+              {openBriefing.candidate_count} candidate sources
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
-            {briefing.summary ? (
-              <p className="whitespace-pre-wrap text-small">
-                {briefing.summary}
-              </p>
-            ) : null}
-            {briefing.outcome === "failed" ? (
+            {openBriefing.outcome === "failed" ? (
               <p className="text-small text-danger-strong">
                 This run did not complete. Check provider setup and retry with
-                Run saved prompt. Any retained candidate evidence is shown
-                below.
+                Run now. Any retained candidate evidence is shown below.
               </p>
             ) : null}
-            {briefing.outcome === "not_configured" ? (
+            {openBriefing.outcome === "not_configured" ? (
               <p className="text-small text-warning-strong">
                 Web research is not configured. This was not an empty successful
                 search.
               </p>
             ) : null}
-            {briefing.coverage_gaps.length ? (
+            {openBriefing.coverage_gaps.length ? (
               <div className="rounded-control bg-soft-white p-3">
                 <p className="text-small font-medium">
                   Coverage and uncertainty
                 </p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-small">
-                  {briefing.coverage_gaps.map((gap, i) => (
+                  {openBriefing.coverage_gaps.map((gap, i) => (
                     <li key={i}>{gap}</li>
                   ))}
                 </ul>
               </div>
             ) : null}
-            {briefing.findings.map((finding) => (
+            {openBriefing.findings.map((finding, index) => (
               <article
                 key={finding.id}
                 className="min-w-0 space-y-3 rounded-control border border-border-grey p-4"
               >
                 <div className="flex items-start gap-3">
-                  {canCreatePosts && finding.approval_status === "approved" ? (
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${finding.title}`}
-                      checked={selected.includes(finding.id)}
-                      disabled={
-                        !!busy ||
-                        (!selected.includes(finding.id) && selected.length >= 3)
-                      }
-                      onChange={() => toggle(finding.id)}
-                      className="mt-1"
-                    />
-                  ) : null}
-                  <h3 className="min-w-0 break-words text-body font-medium">
-                    {finding.title}
-                  </h3>
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-caption text-muted-foreground">
+                      Finding {index + 1}
+                    </p>
+                    <h3 className="min-w-0 break-words text-body font-medium">
+                      {finding.title}
+                    </h3>
+                  </div>
                 </div>
-                <p className="text-caption text-muted-foreground">
-                  {finding.category === "confirmed_change"
-                    ? "Confirmed change"
-                    : "Trend analysis"}{" "}
-                  · {finding.confidence} confidence ·{" "}
-                  {finding.novelty.replace("_", " ")} · Consequence{" "}
-                  {finding.consequence}/5 · Relevance {finding.relevance}/5 ·{" "}
-                  {finding.approval_status}
-                </p>
                 <p className="whitespace-pre-wrap text-small">
                   <strong>What changed: </strong>
                   {finding.whatChanged}
@@ -460,75 +445,144 @@ export function ResearchWorkbench({
                   <strong>Suggested angle: </strong>
                   {finding.angle}
                 </p>
-                <ul className="space-y-3">
-                  {finding.sources.map((source) => (
-                    <EvidenceLink
-                      key={source.url}
-                      source={source}
-                      fetchedAt={
-                        briefing.candidates.find((c) => c.url === source.url)
-                          ?.fetchedAt
-                      }
-                    />
-                  ))}
-                </ul>
-                {canManage &&
-                !finding.content_idea_id &&
-                finding.approval_status !== "archived" ? (
-                  <div className="flex flex-wrap gap-2">
-                    {finding.approval_status !== "approved" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!!busy}
-                        onClick={() =>
-                          perform("review", async () => {
-                            await send(clientId, "review", {
-                              findingId: finding.id,
-                              status: "approved",
-                            });
-                            setMessage(
-                              "Finding approved for selection. This does not approve a post.",
-                            );
-                          })
+                <div className="space-y-2">
+                  <p className="text-caption font-medium text-muted-foreground">
+                    Sources and dates
+                  </p>
+                  <ul className="space-y-3">
+                    {finding.sources.map((source) => (
+                      <EvidenceLink
+                        key={source.url}
+                        source={source}
+                        fetchedAt={
+                          openBriefing.candidates.find((c) => c.url === source.url)
+                            ?.fetchedAt
                         }
+                      />
+                    ))}
+                  </ul>
+                </div>
+                {(() => {
+                  const entryId =
+                    savedNow[finding.id] ?? finding.content_bank_entry_id;
+                  if (entryId) {
+                    const choice: CalendarEntryChoice = {
+                      sourceId: entryId,
+                      sourceType: "founder_experience",
+                      title: finding.title,
+                      typeLabel: "Trend reaction",
+                      reuseLabel: "Reusable",
+                    };
+                    return (
+                      <div
+                        role="status"
+                        className="space-y-3 rounded-control bg-surface-sunken p-3"
                       >
-                        Approve finding
-                      </Button>
-                    ) : null}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!!busy}
-                      onClick={() =>
-                        perform("review", async () => {
-                          await send(clientId, "review", {
-                            findingId: finding.id,
-                            status: "archived",
-                          });
-                          setSelected((ids) =>
-                            ids.filter((id) => id !== finding.id),
-                          );
-                        })
-                      }
-                    >
-                      Archive finding
-                    </Button>
-                  </div>
-                ) : null}
-                {finding.content_idea_id ? (
-                  <Link
-                    href={`/client/${clientId}/ideas`}
-                    className="text-small text-link underline"
-                  >
-                    Selected idea is available in Ideas
-                  </Link>
-                ) : null}
+                        <p className="text-small">
+                          Finding {index + 1} is now in Content Bank as a trend
+                          reaction. Reusable, unused.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {canCreatePosts ? (
+                            <Link
+                              href={`/client/${clientId}/posts/new?sourceType=founder_experience&sourceId=${encodeURIComponent(entryId)}`}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Create post
+                            </Link>
+                          ) : (
+                            <Button size="sm" variant="outline" disabled>
+                              Create post
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!canAddToCalendar}
+                            onClick={() => setCalendarEntry(choice)}
+                          >
+                            Add to Calendar
+                          </Button>
+                          <Link
+                            href={`/client/${clientId}/content-bank`}
+                            className="text-small text-link underline"
+                          >
+                            Open Content Bank
+                          </Link>
+                        </div>
+                        {!canCreatePosts && createPostsReason ? (
+                          <p className="text-caption text-muted-foreground">
+                            {createPostsReason}
+                          </p>
+                        ) : null}
+                        {!canAddToCalendar && addToCalendarReason ? (
+                          <p className="text-caption text-muted-foreground">
+                            {addToCalendarReason}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  if (finding.approval_status === "archived") return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="brand"
+                          disabled={!!busy || !canSave}
+                          onClick={() =>
+                            perform("save_finding", async () => {
+                              const data = await send(
+                                clientId,
+                                "save_to_content_bank",
+                                { findingId: finding.id },
+                              );
+                              setSavedNow((current) => ({
+                                ...current,
+                                [finding.id]: data.entryId,
+                              }));
+                            })
+                          }
+                        >
+                          {busy === "save_finding"
+                            ? "Saving…"
+                            : "Save to Content Bank"}
+                        </Button>
+                        {canManage && !finding.content_idea_id ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!!busy}
+                            onClick={() =>
+                              perform("review", async () => {
+                                await send(clientId, "review", {
+                                  findingId: finding.id,
+                                  status: "archived",
+                                });
+                              })
+                            }
+                          >
+                            Archive finding
+                          </Button>
+                        ) : null}
+                      </div>
+                      {!canSave && saveReason ? (
+                        <p className="text-caption text-muted-foreground">
+                          {saveReason}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </article>
             ))}
             <details>
               <summary className="cursor-pointer text-small font-medium">
-                All discovered candidate sources ({briefing.candidates.length})
+                All discovered candidate sources ({openBriefing.candidates.length})
               </summary>
               <p className="my-2 text-caption text-muted-foreground">
                 All URLs returned by this bounded search are retained, including
@@ -536,7 +590,7 @@ export function ResearchWorkbench({
                 exhaustive inventory of the web.
               </p>
               <ul className="space-y-4">
-                {briefing.candidates.map((source: Candidate) => (
+                {openBriefing.candidates.map((source: Candidate) => (
                   <EvidenceLink
                     key={source.url}
                     source={source}
@@ -547,7 +601,66 @@ export function ResearchWorkbench({
             </details>
           </CardContent>
         </Card>
-      ))}
+      ) : (
+        <>
+          {!briefings.length ? (
+            <EmptyState
+              icon={Search}
+              title="No briefings yet"
+              description={
+                canManage
+                  ? "Write a prompt, then run it now or on a schedule."
+                  : "An administrator writes the research prompt, then runs it now or on a schedule."
+              }
+              action={canManage ? (
+                <Button
+                  type="button"
+                  variant="brand"
+                  onClick={() => document.getElementById("web-research-prompt")?.focus()}
+                >
+                  Write a prompt
+                </Button>
+              ) : undefined}
+            />
+          ) : (
+            <div className="divide-y divide-border-subtle overflow-hidden rounded-card border border-border-subtle bg-white">
+              {briefings.map((briefing) => {
+                const createdAt = new Date(briefing.created_at).toLocaleString();
+                return (
+                  <div
+                    key={briefing.id}
+                    className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <p className="break-words text-body font-medium text-near-black">
+                        {briefing.findings[0]?.title ??
+                          outcomes[briefing.outcome]}
+                      </p>
+                      <p className="text-caption text-muted-foreground">
+                        {createdAt} · {briefing.candidate_count} sources ·{" "}
+                        {outcomes[briefing.outcome]}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/client/${clientId}/research?tab=briefings&briefing=${briefing.id}`}
+                      aria-label={`Open briefing from ${createdAt}`}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      Open
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {advancedSlot}
+        </>
+      )}
+      <AddToCalendarDialog
+        clientId={clientId}
+        entry={calendarEntry}
+        onClose={() => setCalendarEntry(null)}
+      />
     </div>
   );
 }

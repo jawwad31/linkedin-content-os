@@ -9,6 +9,7 @@ import { CalendarDays, CalendarPlus, Check, CircleDashed, Diamond, TriangleAlert
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cannotReason } from "@/lib/access/permission-copy";
 import { cn } from "@/lib/utils";
 
 import { cancelCalendarSlotsAction } from "./actions";
@@ -42,7 +43,7 @@ const STATE_STYLE: Record<DatedSlotState, string> = {
   failed: "border-danger/30 bg-danger/10 text-danger-strong",
 };
 
-const NO_PERMISSION = "You need the Manage ideas capability to change the calendar. Ask an account admin to add it.";
+const NO_PERMISSION = cannotReason("add entries to the calendar", ["ideas_manage"]) ?? "";
 
 const titleOf = (slot: CalendarSlotRecord) =>
   slot.sourceTitle ?? `${bucketLabel(slot.bucket)} slot from the old plan`;
@@ -166,9 +167,11 @@ export function CalendarView({
           >
             Replan month
           </Button>
-          <Button type="button" variant="brand" size="sm" disabled={!canPlan} onClick={() => setPicking(true)}>
-            <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add entry
-          </Button>
+          {empty ? null : (
+            <Button type="button" variant="brand" size="sm" disabled={!canPlan} onClick={() => setPicking(true)}>
+              <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add entry
+            </Button>
+          )}
         </div>
       </div>
 
@@ -194,6 +197,11 @@ export function CalendarView({
           icon={CalendarDays}
           title="Nothing on the calendar yet"
           description="Pick a Content Bank entry, then choose the date to post it."
+          action={
+            <Button type="button" variant="brand" size="sm" disabled={!canPlan} onClick={() => setPicking(true)}>
+              <CalendarPlus className="h-4 w-4" aria-hidden="true" /> Add entry
+            </Button>
+          }
         />
       ) : (
         <>
@@ -348,7 +356,7 @@ function SlotPanel({
           </p>
           <h2 className="break-words text-body-lg font-heading font-semibold text-near-black">{titleOf(slot)}</h2>
         </div>
-        <Dialog.Close className="rounded-full p-1 text-muted-foreground hover:bg-soft-white" aria-label="Close">
+        <Dialog.Close className="inline-flex h-[38px] w-[38px] items-center justify-center rounded-full text-muted-foreground hover:bg-soft-white" aria-label="Close">
           <X className="h-4 w-4" />
         </Dialog.Close>
       </div>
@@ -364,7 +372,7 @@ function SlotPanel({
         {slot.postId ? (
           <Link
             href={`/client/${clientId}/posts/${slot.postId}/review`}
-            className="inline-flex h-9 items-center rounded-control bg-accent-primary px-4 text-small font-medium text-on-accent-primary hover:bg-accent-primary-hover"
+            className="inline-flex h-[38px] items-center rounded-control bg-accent-primary px-4 text-small font-medium text-on-accent-primary hover:bg-accent-primary-hover"
           >
             Open post
           </Link>
