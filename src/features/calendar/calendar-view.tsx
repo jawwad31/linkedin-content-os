@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@base-ui/react/dialog";
-import { CalendarDays, CalendarPlus, Check, CircleDashed, Diamond, TriangleAlert, X, type LucideIcon } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, CheckCheck, CircleDashed, Diamond, TriangleAlert, X, type LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,9 @@ const STATE_ICON: Record<DatedSlotState, LucideIcon> = {
   drafting: CircleDashed,
   drafted: Check,
   failed: TriangleAlert,
+  approved: Check,
+  published: CheckCheck,
+  rejected: X,
 };
 
 const STATE_STYLE: Record<DatedSlotState, string> = {
@@ -41,6 +44,9 @@ const STATE_STYLE: Record<DatedSlotState, string> = {
   drafting: "border-warning/40 bg-warning/10 text-warning-strong",
   drafted: "border-success/30 bg-success/10 text-success-strong",
   failed: "border-danger/30 bg-danger/10 text-danger-strong",
+  approved: "border-success/30 bg-success/10 text-success-strong",
+  published: "border-success/30 bg-success/10 text-success-strong",
+  rejected: "border-danger/30 bg-danger/10 text-danger-strong",
 };
 
 const NO_PERMISSION = cannotReason("add entries to the calendar", ["ideas_manage"]) ?? "";

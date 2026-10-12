@@ -1,13 +1,26 @@
 import type { CalendarSlotRecord } from "./queries";
 
-/** The three states the calendar shows, plus Failed so a stopped draft is never hidden. */
-export type DatedSlotState = "reserved" | "drafting" | "drafted" | "failed";
+/**
+ * The states the calendar shows: the three draft stages, Failed so a stopped draft is never
+ * hidden, and what became of the post once it has been reviewed.
+ */
+export type DatedSlotState =
+  | "reserved"
+  | "drafting"
+  | "drafted"
+  | "failed"
+  | "approved"
+  | "published"
+  | "rejected";
 
 export const SLOT_STATE_LABELS: Record<DatedSlotState, string> = {
   reserved: "Reserved",
   drafting: "Drafting",
   drafted: "Drafted",
   failed: "Draft failed",
+  approved: "Approved",
+  published: "Published",
+  rejected: "Rejected",
 };
 
 export const SLOT_STATE_HELP: Record<DatedSlotState, string> = {
@@ -15,6 +28,9 @@ export const SLOT_STATE_HELP: Record<DatedSlotState, string> = {
   drafting: "A post is being written.",
   drafted: "A post exists and needs review.",
   failed: "Drafting stopped. The entry was not used.",
+  approved: "The post is approved and ready to publish.",
+  published: "The post has been published.",
+  rejected: "This post was rejected. Open it to see why.",
 };
 
 /**
@@ -22,7 +38,15 @@ export const SLOT_STATE_HELP: Record<DatedSlotState, string> = {
  * never held an entry (planned or placeholder) have no state: they are listed under
  * "Needs a date" instead.
  */
-export function slotState(slot: Pick<CalendarSlotRecord, "status" | "postId">): DatedSlotState | null {
+export function slotState(
+  slot: Pick<CalendarSlotRecord, "status" | "postId"> & { postStatus?: string | null },
+): DatedSlotState | null {
+  if (slot.postId) {
+    // A post that has been reviewed shows its outcome, not "needs review".
+    if (slot.postStatus === "rejected") return "rejected";
+    if (slot.postStatus === "approved") return "approved";
+    if (slot.postStatus === "published") return "published";
+  }
   if (slot.postId || slot.status === "drafted") return "drafted";
   if (slot.status === "queued" || slot.status === "drafting") return "drafting";
   if (slot.status === "failed") return "failed";

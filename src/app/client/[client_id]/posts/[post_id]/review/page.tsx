@@ -57,7 +57,7 @@ const STATUS_BADGE_VARIANT: Record<
 };
 
 const SOURCE_LABELS: Record<string, string> = {
-  founder_experience: "Founder Experience",
+  founder_experience: "Experience",
   trend_card: "TrendCard",
   trend_reaction: "Trend Reaction",
 };

@@ -69,6 +69,19 @@ describe("CalendarView", () => {
     expect(html).toContain("Tue, Oct 13");
   });
 
+  it("shows a reviewed post's outcome on the grid, not 'Drafted'", () => {
+    const html = render({
+      slots: [
+        slot({ id: "r", scheduledDate: "2026-10-13", status: "drafted", postId: "p1", postStatus: "rejected", sourceTitle: "Rejected one" }),
+        slot({ id: "a", scheduledDate: "2026-10-14", status: "drafted", postId: "p2", postStatus: "approved", sourceTitle: "Approved one" }),
+        slot({ id: "p", scheduledDate: "2026-10-15", status: "drafted", postId: "p3", postStatus: "published", sourceTitle: "Published one" }),
+      ],
+    });
+    for (const word of ["Rejected", "Approved", "Published"]) expect(html).toContain(word);
+    // "Drafted" appears once, in the legend of draft stages, and on none of the three chips.
+    expect((html.match(/Drafted/g) ?? []).length).toBe(1);
+  });
+
   it("allows two entries on one day", () => {
     const html = render({
       slots: [

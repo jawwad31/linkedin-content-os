@@ -9,6 +9,16 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Cleanup pass, first part (2026-10-12)
+
+- Scope: task T9 of `docs/planning/remaining-work-plan.md`. Uncommitted. **No migration, no database change.**
+- **Dead code removed (found by tracing imports from every page, route, the proxy and the worker; none had a test):** the old Ideas screen components (`features/ideas/management/` panel, controls, launchers, queries), the TrendCards panel, review controls and queries, the TrendCard synthesizer, `resources/queries.ts`, `use-collapsible-cards.ts` and the unused browser Supabase client. The five `/api/client/[client_id]/trend-cards/**` routes (nothing called them) are gone, and so are the TrendCard service functions only they used (founder take, approve, archive, react) plus the founder-take schema. Re-running the trace now reports zero unreachable files.
+- **Kept on purpose:** the idea API routes (`ideas/generate`, `ideas/[idea_id]` delete, archive, founder-direction, strategy-overrides) and `features/ideas/generate`, because Jawad's question about whether to generate content ideas (for posts and for the calendar) is parked, not decided. `ideas/[idea_id]/generate-post` is live (Create post uses it). `trend-cards/service.ts` keeps `deleteTrendCard` and `trend-cards/schemas.ts` keeps the reaction types, both still used (bulk delete, Content Bank). Drafting from older TrendCard-linked entries still works. The calendar allocation code and `parseCalendarSettings` stay: `calendar/queries.ts` and a test file still use them.
+- **Wording:** user-facing "Founder Experience" is now "Content Bank entry" in the standalone drafting messages and "Experience" on the post review source label. Audit-log labels keep the old names because they describe past events.
+- **Calendar:** a slot whose post was rejected, approved or published now shows that outcome (Rejected, Approved, Published) instead of "Drafted: needs review" (`calendar/slot-state.ts`, `calendar-view.tsx`).
+- **Database permission check:** read-only queries and what to expect are in `docs/database-permission-check.md`. **Not run** (no database access here); Jawad runs them and the Security Advisor and sends the results.
+- **Still open from T9:** superseded `OPENROUTER_*_MODEL` fallbacks in `lib/llm/config.ts` (kept until Jawad confirms every Railway service, including `rss-worker`, has the `LLM_*` pairs); the permission-check results; the content-ideas decision.
+
 ## Account menu at the foot of the rail (2026-10-12)
 
 - Jawad's request: Change password and Log out must not be always visible. The foot of the rail (and the phone drawer) now shows only the company name with its initials; clicking it opens a small menu with **Change password** and **Log out** (`src/components/app-shell/account-menu.tsx`, base-ui Menu, opens upward). Profile settings are deliberately not built yet; add an entry to the `entries` list in that file when they exist. Uncommitted. No migration.

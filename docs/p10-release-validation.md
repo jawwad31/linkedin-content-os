@@ -165,3 +165,7 @@ Automated checks only. DEFERRED manual checks: apply the migration and run its v
 ### Account menu (2026-10-12)
 
 Automated checks only. DEFERRED manual checks: the foot of the rail shows only the company name; clicking it opens Change password and Log out; Change password opens the screen; Log out signs out; Escape and clicking elsewhere close the menu; in the phone drawer the menu opens above the drawer and both entries work.
+
+### Cleanup pass, first part (2026-10-12)
+
+Automated checks only. DEFERRED manual checks: the Research, Content Bank, Posts, Calendar and Settings pages all still open and work after the removals; Create post from a Content Bank entry still drafts (it uses the retained generate-post route); an older entry made from a TrendCard still drafts; on the Calendar a slot whose post was rejected, approved and published shows Rejected, Approved and Published; run the queries in `docs/database-permission-check.md` and the Security Advisor.

@@ -12,7 +12,7 @@ import {
   monthWeeks,
   todayInTimezone,
 } from "@/features/calendar/dates";
-import { bucketLabel, isMovable, slotState } from "@/features/calendar/slot-state";
+import { SLOT_STATE_HELP, SLOT_STATE_LABELS, bucketLabel, isMovable, slotState } from "@/features/calendar/slot-state";
 
 describe("calendar dates", () => {
   it("accepts only real calendar days", () => {
@@ -79,6 +79,18 @@ describe("calendar slot states", () => {
     expect(slotState({ status: "drafted", postId: "p1" })).toBe("drafted");
     expect(slotState({ status: "reserved", postId: "p1" })).toBe("drafted");
     expect(slotState({ status: "failed", postId: null })).toBe("failed");
+  });
+
+  it("shows what became of a reviewed post instead of saying it needs review", () => {
+    expect(slotState({ status: "drafted", postId: "p1", postStatus: "review" })).toBe("drafted");
+    expect(slotState({ status: "drafted", postId: "p1", postStatus: "needs_edit" })).toBe("drafted");
+    expect(slotState({ status: "drafted", postId: "p1", postStatus: "rejected" })).toBe("rejected");
+    expect(slotState({ status: "drafted", postId: "p1", postStatus: "approved" })).toBe("approved");
+    expect(slotState({ status: "drafted", postId: "p1", postStatus: "published" })).toBe("published");
+    // A status without a post never changes the state.
+    expect(slotState({ status: "reserved", postId: null, postStatus: "rejected" })).toBe("reserved");
+    expect(SLOT_STATE_LABELS.rejected).toBe("Rejected");
+    expect(SLOT_STATE_HELP.rejected).not.toMatch(/needs review/);
   });
 
   it("gives old-plan placeholders no state", () => {

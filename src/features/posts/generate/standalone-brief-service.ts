@@ -113,10 +113,10 @@ async function resolveContentBankSource(
       source_trend_card_id: string | null;
     }>();
   if (error || !data) {
-    return { ok: false, result: failure("NOT_FOUND", "This Founder Experience is no longer available in this workspace.") };
+    return { ok: false, result: failure("NOT_FOUND", "This Content Bank entry is no longer available in this workspace.") };
   }
   if (data.readiness !== "ready") {
-    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Founder Experience is no longer ready. Return to Content Bank and choose another source.") };
+    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Content Bank entry is no longer ready. Return to Content Bank and choose another source.") };
   }
   if (data.entry_type === "trend_reaction") {
     if (!data.source_trend_card_id) {
@@ -170,7 +170,7 @@ async function resolveContentBankSource(
     } };
   }
   if (data.entry_type !== "work_log" || data.source_trend_card_id) {
-    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Founder Experience is not eligible for direct drafting.") };
+    return { ok: false, result: failure("SOURCE_UNAVAILABLE", "This Content Bank entry is not eligible for direct drafting.") };
   }
   return { ok: true, source: {
     sourceId: data.id,
