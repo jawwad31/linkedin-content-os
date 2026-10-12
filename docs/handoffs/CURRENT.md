@@ -9,6 +9,14 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Web research: briefing could not be validated (2026-10-12)
+
+- Uncommitted. No migration. After the 400 fix the search ran (27 candidate sources) but the card said "Sources were collected, but the briefing could not be validated" (`INVALID_RESPONSE`).
+- Cause not confirmed from a log. Likely the model's text was not a bare JSON object: a remark before the answer, a code fence, or the answer split over several messages (the old code glued every message together and parsed once). `readBriefingJson` in `web-research/provider.ts` now tries the joined text, then each message from the last, and for each the plain text, a fenced block, and the first `{` to the last `}`. The result still goes through the same schema check, so nothing unvalidated is accepted.
+- New server log line `[web-research] briefing could not be validated: ...` giving only the shape (no JSON found and how long, or which fields failed and why), never the model's text. If the card still says this, that line names the cause.
+- Tests: 5 new cases in `tests/web-research-provider.test.ts` (mutation-checked) including that the log never contains the model's text.
+- **Not verified against the real provider.** DEFERRED: run web research on Railway.
+
 ## Web research 400 fix (2026-10-12)
 
 - Uncommitted. No migration. The Railway log said `provider replied 400 for model openai/gpt-6-luna: Invalid Responses API request`; the earlier Claude Haiku 400 was most likely the same cause, so the model was never the problem.

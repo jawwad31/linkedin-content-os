@@ -449,6 +449,49 @@ describe("P07 bounded search and evidence mapping", () => {
       ).outcome,
     ).toBe("partial");
   });
+  describe("finding the briefing in the model's text", () => {
+    const answer = () => {
+      const raw = webResponse();
+      const text = raw.output[1].content![0].text!;
+      return { raw, text };
+    };
+    it.each([
+      ["a code fence", (t: string) => ["```json\n" + t + "\n```"]],
+      ["a remark before the answer", (t: string) => ["Here is the briefing:\n" + t]],
+      ["a remark and a fence", (t: string) => ["Done searching.\n```json\n" + t + "\n```\nHope this helps."]],
+      ["a remark in an earlier message", (t: string) => ["I will search now.", t]],
+    ])("still reads the briefing when it comes with %s", (_name, shape) => {
+      const { raw, text } = answer();
+      const parts = shape(text);
+      raw.output[1].content = parts.map((part) => ({
+        type: "output_text",
+        text: part,
+        annotations: [],
+      }));
+      const result = mapWebResponse(raw, [], now);
+      expect(result.outcome).toBe("success");
+      expect(result.findings).toHaveLength(1);
+    });
+    it("logs only the shape of the problem, never the model's text, when nothing can be read", () => {
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const { raw } = answer();
+      raw.output[1].content![0].text = "SECRET-PROFILE-VALUE and no briefing here";
+      expect(mapWebResponse(raw, [], now)).toMatchObject({
+        outcome: "partial",
+        errorCode: "INVALID_RESPONSE",
+      });
+      const line = String(logged.mock.calls[0][0]);
+      expect(line).toContain("no JSON object found");
+      expect(line).not.toContain("SECRET-PROFILE-VALUE");
+      // An object that is the wrong shape reports which fields, not their values.
+      raw.output[1].content![0].text = JSON.stringify({ summary: 5, secret: "SECRET-X" });
+      mapWebResponse(raw, [], now);
+      const shapeLine = String(logged.mock.calls[1][0]);
+      expect(shapeLine).toContain("summary");
+      expect(shapeLine).not.toContain("SECRET-X");
+      logged.mockRestore();
+    });
+  });
   it("retains Router candidates after failed search/synthesis and incomplete generation", () => {
     const raw = webResponse();
     raw.output[0].type = "openrouter:web_search";

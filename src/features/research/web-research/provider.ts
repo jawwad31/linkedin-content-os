@@ -126,6 +126,42 @@ export function providerFailureCode(status: number): string {
   return "PROVIDER_ERROR";
 }
 
+/**
+ * Finds the briefing object in the model's text. Models that search often write a short
+ * remark before the answer, split the answer over several messages, or wrap it in a code fence,
+ * so a plain parse of everything glued together fails even though the briefing is fine.
+ * Whatever is found still goes through the full schema check afterwards.
+ */
+function readBriefingJson(texts: string[]): unknown {
+  const asObject = (text: string): unknown => {
+    const trimmed = text.trim();
+    const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)?.[1];
+    const first = trimmed.indexOf("{");
+    const last = trimmed.lastIndexOf("}");
+    for (const attempt of [
+      trimmed,
+      fenced,
+      first >= 0 && last > first ? trimmed.slice(first, last + 1) : undefined,
+    ]) {
+      if (!attempt) continue;
+      try {
+        const value: unknown = JSON.parse(attempt);
+        if (value && typeof value === "object" && !Array.isArray(value))
+          return value;
+      } catch {
+        /* Try the next reading. */
+      }
+    }
+    return undefined;
+  };
+  // Everything together first (the normal case), then the last message first.
+  for (const text of [texts.join(""), ...[...texts].reverse()]) {
+    const value = asObject(text);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
 function baseResult(errorCode: string | null = null): ResearchResult {
   return {
     outcome: "failed",
@@ -214,12 +250,7 @@ export function mapWebResponse(
   result.tokenOutput = Number.isSafeInteger(raw.usage?.output_tokens)
     ? raw.usage!.output_tokens!
     : null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(texts.join(""));
-  } catch {
-    /* Retain consulted candidates even if synthesis failed. */
-  }
+  const parsed = readBriefingJson(texts);
   const header = z
     .object({
       summary: z.string().max(2000),
@@ -228,6 +259,18 @@ export function mapWebResponse(
     })
     .safeParse(parsed);
   if (!header.success) {
+    // Server log only, and only the shape of the problem: never the model's text, which can
+    // carry the saved prompt or profile context.
+    console.error(
+      `[web-research] briefing could not be validated: ${
+        parsed === undefined
+          ? `no JSON object found in ${texts.length} text part(s) of ${texts.join("").length} characters, response status ${raw.status ?? "unknown"}`
+          : header.error.issues
+              .slice(0, 6)
+              .map((issue) => `${issue.path.join(".") || "(root)"} ${issue.code}`)
+              .join("; ")
+      }`,
+    );
     result.candidates = [...consulted.values()];
     result.errorCode = "INVALID_RESPONSE";
     result.outcome = consulted.size ? "partial" : "failed";
