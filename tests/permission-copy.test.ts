@@ -23,7 +23,6 @@ describe("cannotReason", () => {
 describe("missingPermissions", () => {
   it("never reports a gap for an account admin", () => {
     expect(missingPermissions("client_admin", [], ["ideas_manage", "posts_draft"])).toEqual([]);
-    expect(missingPermissions("agency_admin", [], ["posts_review"])).toEqual([]);
   });
 
   it("lists only the capabilities an account user lacks", () => {

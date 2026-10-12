@@ -61,7 +61,9 @@ Session:
 
 ## Roles
 
-### agency_admin (Agency Admin)
+> **The agency level is retired (2026-10-12).** One account is one company with a team of Account Admins and Account Users. The application no longer reads `agency_members` or grants anything because of it; the sections below that mention Agency Admin describe the old model and the database records that still exist, unused. Migration `20261012230000_account_admins_replace_agency.sql` gave former Agency Admins an ordinary `client_admin` row in each company. Dropping the agency tables is a separate, destructive step that has not been taken. Account Admins now also read their own company's operational logs. See `docs/company-accounts.md`.
+
+### agency_admin (Agency Admin) - retired
 
 Can:
 
@@ -161,7 +163,7 @@ Unauthorized behavior:
 ## Client Access Model
 
 Access to Client Workspace records is scoped and isolated:
-- **Agency Admins**: Receive implicit Client Workspace access through their `agency_members` record linked to `clients.agency_id`. They do not require a direct `client_access` row.
+- **Agency Admins (retired)**: used to receive implicit access through `agency_members` linked to `clients.agency_id`. The application no longer honours this; a former Agency Admin now needs a direct `client_access` row (the migration above created them). The database helpers still accept `agency_members` rows, which stay dormant.
 - **Account Admins and Account Users**: Receive scoped access to specific Accounts through a matching `client_access` row where `invitation_status = 'accepted'`. The database role IDs remain `client_admin` and `client_user` for compatibility.
 
 Every client-owned table must include:
@@ -452,7 +454,7 @@ There is no active invitation workflow in v1.
 
 Rules:
 
-- Agency Admins can manage Agency and Account membership inside their Agency.
+- (Retired) Agency Admins managed Agency and Account membership. There is no screen or action for this any more.
 - Account Admins can manage only Account Admin and Account User membership in their assigned Account.
 - Account Users cannot manage users or self-assign access.
 - Existing pending rows are revoked by the migration; pending email-claim RLS policies and invitation API routes are removed.
@@ -531,7 +533,7 @@ Hard delete (using SQL DELETE) is allowed and implemented for these six specific
 - Posts (`posts`)
 
 Allowed roles:
-- `agency_admin`, when the Client Workspace belongs to that administrator's Agency.
+- (Retired) `agency_admin`: the application no longer grants this.
 - `client_admin`, for that exact Client Workspace.
 - Blocked: `client_user`, unauthenticated users, users from another Client Workspace, and administrators from another Agency.
 

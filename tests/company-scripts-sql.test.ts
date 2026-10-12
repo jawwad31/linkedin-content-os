@@ -166,22 +166,42 @@ describe("delete-company.sql", () => {
 });
 
 describe("create-company.sql", () => {
-  const create = (agencyId: string, name: string) =>
-    db.query<{ id: string; name: string; agency_id: string }>(
-      fill(script("create-company.sql"), { __AGENCY_ID__: agencyId, __COMPANY_NAME__: name }).replace(/;\s*$/, ""),
+  const create = (name: string, adminEmail: string) =>
+    db.query<{ id: string; name: string; first_admin: string }>(
+      fill(script("create-company.sql"), { __COMPANY_NAME__: name, __ADMIN_EMAIL__: adminEmail }).replace(/;\s*$/, ""),
     );
+  const emailOf = async (userId: string) =>
+    (await db.query<{ email: string }>("select email from auth.users where id=$1", [userId])).rows[0].email;
 
-  it("adds one empty company under the agency and returns its id", async () => {
+  it("adds one company with the given person as its Account Admin, and asks for no agency", async () => {
+    expect(script("create-company.sql")).not.toMatch(/__AGENCY_ID__/);
     const ws = await seedWorkspace(db, "creator");
-    const { rows } = await create(ws.agencyId, "  New Co  ");
+    const email = (await emailOf(ws.adminId)).toUpperCase();
+    const { rows } = await create("  New Co  ", `  ${email}  `);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ name: "New Co", agency_id: ws.agencyId });
-    expect(total(await counts(rows[0].id))).toBe(0);
+    expect(rows[0].name).toBe("New Co");
+    const access = await db.query<{ user_id: string; role: string; invitation_status: string; permissions: string[] }>(
+      "select user_id, role, invitation_status, permissions from public.client_access where client_id=$1",
+      [rows[0].id],
+    );
+    expect(access.rows).toEqual([
+      { user_id: ws.adminId, role: "client_admin", invitation_status: "accepted", permissions: [] },
+    ]);
+    const agency = await db.query("select 1 from public.clients c join public.agencies a on a.id=c.agency_id where c.id=$1", [rows[0].id]);
+    expect(agency.rows).toHaveLength(1);
+    // The new admin can open the company through the normal access rules.
+    await asUser(db, ws.adminId, async () => {
+      const seen = await db.query("select 1 from public.clients where id=$1", [rows[0].id]);
+      expect(seen.rows).toHaveLength(1);
+    });
   });
 
-  it("adds nothing for an unknown agency or a one-letter name", async () => {
+  it("creates nothing for an email with no login or a one-letter name", async () => {
     const ws = await seedWorkspace(db, "creator-bad");
-    expect((await create(randomUUID(), "Valid Name")).rows).toHaveLength(0);
-    expect((await create(ws.agencyId, "A")).rows).toHaveLength(0);
+    const before = (await db.query<{ n: number }>("select count(*)::int n from public.clients")).rows[0].n;
+    expect((await create("Valid Name", "nobody@example.test")).rows).toHaveLength(0);
+    expect((await create("A", await emailOf(ws.adminId))).rows).toHaveLength(0);
+    const after = (await db.query<{ n: number }>("select count(*)::int n from public.clients")).rows[0].n;
+    expect(after).toBe(before);
   });
 });

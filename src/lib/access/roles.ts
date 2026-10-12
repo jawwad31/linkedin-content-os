@@ -1,6 +1,5 @@
-export type AgencyRole = "agency_admin";
 export type ClientRole = "client_admin" | "client_user";
-export type EffectiveClientRole = AgencyRole | ClientRole;
+export type EffectiveClientRole = ClientRole;
 
 export const CLIENT_PERMISSIONS = [
   "research_contribute",
@@ -49,21 +48,14 @@ export const CLIENT_ROLE_LABELS: Record<ClientRole, string> = {
   client_user: "Account User",
 };
 
-export const EFFECTIVE_ROLE_LABELS: Record<EffectiveClientRole, string> = {
-  agency_admin: "Agency Admin",
-  ...CLIENT_ROLE_LABELS,
-};
+export const EFFECTIVE_ROLE_LABELS: Record<EffectiveClientRole, string> = CLIENT_ROLE_LABELS;
 
 export function hasClientPermission(
   role: EffectiveClientRole,
   permissions: readonly ClientPermission[],
   permission: ClientPermission,
 ): boolean {
-  return (
-    role === "agency_admin" ||
-    role === "client_admin" ||
-    permissions.includes(permission)
-  );
+  return role === "client_admin" || permissions.includes(permission);
 }
 
 export function canRoleContributeResearch(
@@ -109,31 +101,31 @@ export function canRolePublishPosts(
 }
 
 export function canRoleManageClientUsers(role: EffectiveClientRole): boolean {
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }
 
 export function canRoleManageClientSetup(role: EffectiveClientRole): boolean {
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }
 
 export function canRoleManageResearchSources(
   role: EffectiveClientRole,
 ): boolean {
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }
 
 export function canRoleRunResearchAgent(role: EffectiveClientRole): boolean {
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }
 
 export function canRoleManageWorkflowReview(
   role: EffectiveClientRole,
 ): boolean {
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }
 
 export function canRoleViewOperationalLogs(
   role: EffectiveClientRole,
 ): boolean {
-  return role === "agency_admin";
+  return role === "client_admin";
 }

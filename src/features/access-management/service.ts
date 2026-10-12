@@ -2,7 +2,6 @@ import "server-only";
 
 import { z } from "zod";
 
-import { getAgencyAccessForUser } from "@/lib/access/agency-access";
 import { getCurrentUserAccessForClient } from "@/lib/access/client-access";
 import type { ClientPermission, ClientRole } from "@/lib/access/roles";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -15,7 +14,6 @@ import { canAccountAdminResetTarget } from "./policy";
 import {
   changePasswordSchema,
   provisionAccountUserSchema,
-  provisionAgencyUserSchema,
   resetPasswordSchema,
   updateAccountMembershipSchema,
 } from "./schemas";
@@ -29,8 +27,7 @@ export type AccessManagementResult<T> =
 type AccountAuthorization = {
   userId: string;
   clientId: string;
-  agencyId: string;
-  role: "agency_admin" | "client_admin";
+  role: "client_admin";
 };
 
 type ProvisionedAuthUser = {
@@ -44,9 +41,8 @@ export type ProvisionedMembership = {
   userId: string;
   email: string;
   createdNewUser: boolean;
-  scope: "agency" | "account";
-  role: "agency_admin" | ClientRole;
-  clientId: string | null;
+  role: ClientRole;
+  clientId: string;
 };
 
 const uuidSchema = z.string().uuid();
@@ -81,11 +77,11 @@ const DUPLICATE_ACCESS = {
   message: "This user already has the selected access.",
 };
 
-const RESET_REQUIRES_AGENCY_ADMIN = {
+const RESET_NEEDS_DASHBOARD = {
   ok: false as const,
   code: "FORBIDDEN",
   message:
-    "An Agency Admin must reset this password because the user has Agency or another Account access.",
+    "This person also belongs to another account, so their password cannot be reset from here.",
 };
 
 const UNKNOWN_ERROR = {
@@ -115,26 +111,20 @@ async function authorizeAccountManagement(
   admin: AdminClient,
 ): Promise<AccountAuthorization | null> {
   const access = await getCurrentUserAccessForClient(userId, clientId);
-  if (
-    !access ||
-    (access.role !== "agency_admin" && access.role !== "client_admin")
-  ) {
-    return null;
-  }
+  if (!access || access.role !== "client_admin") return null;
 
   const { data: client, error } = await admin
     .from("clients")
-    .select("id, agency_id")
+    .select("id")
     .eq("id", clientId)
     .is("deleted_at", null)
-    .maybeSingle<{ id: string; agency_id: string }>();
+    .maybeSingle<{ id: string }>();
 
   if (error || !client) return null;
 
   return {
     userId,
     clientId: client.id,
-    agencyId: client.agency_id,
     role: access.role,
   };
 }
@@ -313,108 +303,8 @@ async function addAccountMembership(input: {
       userId: input.authUser.id,
       email: input.authUser.email,
       createdNewUser: input.authUser.created,
-      scope: "account",
       role: input.role,
       clientId: input.clientId,
-    },
-  };
-}
-
-async function addAgencyMembership(input: {
-  admin: AdminClient;
-  actorUserId: string;
-  agencyId: string;
-  authUser: ProvisionedAuthUser;
-}): Promise<AccessManagementResult<ProvisionedMembership>> {
-  const { data: acceptedMemberships, error: acceptedError } = await input.admin
-    .from("agency_members")
-    .select("id, agency_id")
-    .eq("user_id", input.authUser.id)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .returns<Array<{ id: string; agency_id: string }>>();
-
-  if (acceptedError) return UNKNOWN_ERROR;
-  if (
-    acceptedMemberships.some(
-      (membership) => membership.agency_id === input.agencyId,
-    )
-  ) {
-    return DUPLICATE_ACCESS;
-  }
-  if (acceptedMemberships.length > 0) {
-    return {
-      ok: false,
-      code: "DEPENDENCY_CONFLICT",
-      message: "This user already administers another Agency.",
-    };
-  }
-
-  const membershipValues = {
-    agency_id: input.agencyId,
-    user_id: input.authUser.id,
-    role: "agency_admin" as const,
-    invited_email: input.authUser.email,
-    invitation_status: "accepted",
-    invited_by_user_id: input.actorUserId,
-  };
-
-  const { data: revoked } = await input.admin
-    .from("agency_members")
-    .select("id")
-    .eq("agency_id", input.agencyId)
-    .eq("user_id", input.authUser.id)
-    .eq("invitation_status", "revoked")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  const mutation = revoked
-    ? input.admin
-        .from("agency_members")
-        .update(membershipValues)
-        .eq("id", revoked.id)
-        .select("id")
-        .maybeSingle<{ id: string }>()
-    : input.admin
-        .from("agency_members")
-        .insert(membershipValues)
-        .select("id")
-        .single<{ id: string }>();
-
-  const { data: membership, error } = await mutation;
-  if (error || !membership) return UNKNOWN_ERROR;
-
-  if (input.authUser.created) {
-    await writeAuditLog({
-      clientId: null,
-      userId: input.actorUserId,
-      action: "user_created",
-      entityType: "auth_user",
-      entityId: input.authUser.id,
-      metadata: { provisioned_without_email: true },
-    });
-  }
-
-  await writeAuditLog({
-    clientId: null,
-    userId: input.actorUserId,
-    action: "agency_access_added",
-    entityType: "agency_member",
-    entityId: membership.id,
-    metadata: { target_user_id: input.authUser.id, agency_id: input.agencyId },
-  });
-
-  return {
-    ok: true,
-    data: {
-      membershipId: membership.id,
-      userId: input.authUser.id,
-      email: input.authUser.email,
-      createdNewUser: input.authUser.created,
-      scope: "agency",
-      role: "agency_admin",
-      clientId: null,
     },
   };
 }
@@ -463,65 +353,6 @@ export async function provisionAccountUser(
   return result;
 }
 
-export async function provisionAgencyUser(
-  input: unknown,
-): Promise<AccessManagementResult<ProvisionedMembership>> {
-  const { user } = await getServerUser();
-  if (!user) return AUTH_REQUIRED;
-
-  const parsed = provisionAgencyUserSchema.safeParse(input);
-  if (!parsed.success) return validationFailure(parsed.error);
-
-  const agencyAccess = await getAgencyAccessForUser(user.id);
-  if (!agencyAccess.ok) return FORBIDDEN;
-
-  const admin = createAdminClient();
-  let clientId: string | null = null;
-
-  if (parsed.data.scope === "account") {
-    const { data: client, error } = await admin
-      .from("clients")
-      .select("id")
-      .eq("id", parsed.data.clientId!)
-      .eq("agency_id", agencyAccess.access.agencyId)
-      .is("deleted_at", null)
-      .maybeSingle<{ id: string }>();
-    if (error || !client) return FORBIDDEN;
-    clientId = client.id;
-  }
-
-  const authUserResult = await createOrFindAuthUser({
-    admin,
-    email: parsed.data.email,
-    name: parsed.data.name,
-    temporaryPassword: parsed.data.temporaryPassword,
-  });
-  if (!authUserResult.ok) return authUserResult;
-
-  const result =
-    parsed.data.scope === "agency"
-      ? await addAgencyMembership({
-          admin,
-          actorUserId: user.id,
-          agencyId: agencyAccess.access.agencyId,
-          authUser: authUserResult.data,
-        })
-      : await addAccountMembership({
-          admin,
-          actorUserId: user.id,
-          clientId: clientId!,
-          authUser: authUserResult.data,
-          role: parsed.data.role as ClientRole,
-          permissions: parsed.data.permissions,
-        });
-
-  if (!result.ok && authUserResult.data.created) {
-    await cleanupNewAuthUser(admin, authUserResult.data.id);
-  }
-
-  return result;
-}
-
 export async function updateAccountMembership(
   clientId: string,
   membershipId: string,
@@ -556,7 +387,6 @@ export async function updateAccountMembership(
 
   if (membershipError || !membership) return FORBIDDEN;
   if (
-    authorization.role === "client_admin" &&
     membership.user_id === user.id &&
     parsed.data.role !== membership.role
   ) {
@@ -628,7 +458,7 @@ export async function revokeAccountMembership(
     .maybeSingle<{ id: string; user_id: string | null }>();
 
   if (membershipError || !membership) return FORBIDDEN;
-  if (authorization.role === "client_admin" && membership.user_id === user.id) {
+  if (membership.user_id === user.id) {
     return {
       ok: false,
       code: "DEPENDENCY_CONFLICT",
@@ -667,8 +497,7 @@ async function setTemporaryPassword(input: {
   actorUserId: string;
   targetUserId: string;
   temporaryPassword: string;
-  clientId: string | null;
-  scope: "agency" | "account";
+  clientId: string;
 }): Promise<AccessManagementResult<Record<string, never>>> {
   const { data: previousProfile } = await input.admin
     .from("profiles")
@@ -706,7 +535,7 @@ async function setTemporaryPassword(input: {
     action: "password_reset",
     entityType: "auth_user",
     entityId: input.targetUserId,
-    metadata: { target_user_id: input.targetUserId, scope: input.scope },
+    metadata: { target_user_id: input.targetUserId },
   });
 
   return { ok: true, data: {} };
@@ -745,33 +574,20 @@ export async function resetAccountMemberPassword(
     .maybeSingle<{ id: string; user_id: string | null }>();
   if (error || !membership?.user_id) return FORBIDDEN;
 
-  if (authorization.role === "client_admin") {
-    const [agencyMemberships, accountMemberships] = await Promise.all([
-      admin
-        .from("agency_members")
-        .select("id")
-        .eq("user_id", membership.user_id)
-        .eq("invitation_status", "accepted"),
-      admin
-        .from("client_access")
-        .select("client_id")
-        .eq("user_id", membership.user_id)
-        .eq("invitation_status", "accepted"),
-    ]);
+  const { data: accountMemberships, error: accountsError } = await admin
+    .from("client_access")
+    .select("client_id")
+    .eq("user_id", membership.user_id)
+    .eq("invitation_status", "accepted");
 
-    if (
-      agencyMemberships.error ||
-      accountMemberships.error ||
-      !canAccountAdminResetTarget({
-        managedClientId: authorization.clientId,
-        acceptedClientIds: accountMemberships.data.map(
-          (candidate) => candidate.client_id,
-        ),
-        hasAcceptedAgencyMembership: agencyMemberships.data.length > 0,
-      })
-    ) {
-      return RESET_REQUIRES_AGENCY_ADMIN;
-    }
+  if (
+    accountsError ||
+    !canAccountAdminResetTarget({
+      managedClientId: authorization.clientId,
+      acceptedClientIds: accountMemberships.map((candidate) => candidate.client_id),
+    })
+  ) {
+    return RESET_NEEDS_DASHBOARD;
   }
 
   return setTemporaryPassword({
@@ -780,113 +596,7 @@ export async function resetAccountMemberPassword(
     targetUserId: membership.user_id,
     temporaryPassword: parsed.data.temporaryPassword,
     clientId: authorization.clientId,
-    scope: "account",
   });
-}
-
-export async function resetAgencyMemberPassword(
-  membershipId: string,
-  input: unknown,
-): Promise<AccessManagementResult<Record<string, never>>> {
-  const { user } = await getServerUser();
-  if (!user) return AUTH_REQUIRED;
-
-  const membershipIdResult = uuidSchema.safeParse(membershipId);
-  const parsed = resetPasswordSchema.safeParse(input);
-  if (!membershipIdResult.success) return VALIDATION_ERROR;
-  if (!parsed.success) return validationFailure(parsed.error);
-
-  const agencyAccess = await getAgencyAccessForUser(user.id);
-  if (!agencyAccess.ok) return FORBIDDEN;
-
-  const admin = createAdminClient();
-  const { data: membership, error } = await admin
-    .from("agency_members")
-    .select("id, user_id")
-    .eq("id", membershipIdResult.data)
-    .eq("agency_id", agencyAccess.access.agencyId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .maybeSingle<{ id: string; user_id: string }>();
-  if (error || !membership) return FORBIDDEN;
-
-  return setTemporaryPassword({
-    admin,
-    actorUserId: user.id,
-    targetUserId: membership.user_id,
-    temporaryPassword: parsed.data.temporaryPassword,
-    clientId: null,
-    scope: "agency",
-  });
-}
-
-export async function revokeAgencyMembership(
-  membershipId: string,
-): Promise<AccessManagementResult<Record<string, never>>> {
-  const { user } = await getServerUser();
-  if (!user) return AUTH_REQUIRED;
-
-  const membershipIdResult = uuidSchema.safeParse(membershipId);
-  if (!membershipIdResult.success) return VALIDATION_ERROR;
-
-  const agencyAccess = await getAgencyAccessForUser(user.id);
-  if (!agencyAccess.ok) return FORBIDDEN;
-
-  const admin = createAdminClient();
-  const { data: membership, error } = await admin
-    .from("agency_members")
-    .select("id, user_id")
-    .eq("id", membershipIdResult.data)
-    .eq("agency_id", agencyAccess.access.agencyId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .maybeSingle<{ id: string; user_id: string }>();
-  if (error || !membership) return FORBIDDEN;
-  if (membership.user_id === user.id) {
-    return {
-      ok: false,
-      code: "DEPENDENCY_CONFLICT",
-      message: "You cannot revoke your own Agency Admin access.",
-    };
-  }
-
-  const { count, error: countError } = await admin
-    .from("agency_members")
-    .select("id", { count: "exact", head: true })
-    .eq("agency_id", agencyAccess.access.agencyId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted");
-  if (countError || (count ?? 0) <= 1) {
-    return {
-      ok: false,
-      code: "DEPENDENCY_CONFLICT",
-      message: "The final Agency Admin cannot be revoked.",
-    };
-  }
-
-  const { data: revoked, error: revokeError } = await admin
-    .from("agency_members")
-    .update({ invitation_status: "revoked" })
-    .eq("id", membership.id)
-    .eq("agency_id", agencyAccess.access.agencyId)
-    .eq("invitation_status", "accepted")
-    .select("id")
-    .maybeSingle<{ id: string }>();
-  if (revokeError || !revoked) return UNKNOWN_ERROR;
-
-  await writeAuditLog({
-    clientId: null,
-    userId: user.id,
-    action: "agency_access_revoked",
-    entityType: "agency_member",
-    entityId: membership.id,
-    metadata: {
-      target_user_id: membership.user_id,
-      agency_id: agencyAccess.access.agencyId,
-    },
-  });
-
-  return { ok: true, data: {} };
 }
 
 export async function changeOwnPassword(

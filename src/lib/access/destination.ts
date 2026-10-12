@@ -4,9 +4,9 @@ import { getAccessibleClients } from "@/features/clients/queries";
 
 /**
  * Where a signed-in person lands. Everyone with exactly one company goes straight
- * into it; someone who can reach several (an agency admin) sees the Companies list
- * once, at /clients, and picks one. There is no agency area and no workspace
- * switcher inside a company.
+ * into it; someone who belongs to several sees the Companies list
+ * once, at /clients, and picks one. There is no workspace switcher inside a
+ * company.
  */
 export async function resolveAuthenticatedDestination(
   userId: string,

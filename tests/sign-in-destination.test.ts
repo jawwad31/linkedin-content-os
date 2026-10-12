@@ -48,8 +48,8 @@ describe("where sign-in lands (no agency area, no workspace switcher)", () => {
   });
 });
 
-const company = (id: string, name: string, role: AccessibleClient["role"] = "agency_admin"): AccessibleClient => ({
-  id, name, agencyName: "Agency", founderName: null, industry: "Marketing", updatedAt: "2026-10-12T08:00:00.000Z", role,
+const company = (id: string, name: string, role: AccessibleClient["role"] = "client_admin"): AccessibleClient => ({
+  id, name, founderName: null, industry: "Marketing", updatedAt: "2026-10-12T08:00:00.000Z", role,
 });
 
 describe("Companies list", () => {
@@ -58,7 +58,8 @@ describe("Companies list", () => {
     expect(html).toContain("Acme Co");
     expect(html).toContain("Beta Ltd");
     expect(html).toContain(`href="/client/${ID_A}/posts"`);
-    expect(html).toContain("Agency Admin");
+    expect(html).toContain("Account Admin");
+    expect(html).not.toContain("Agency");
     expect(html).not.toMatch(/Create company|New company|Delete|Archive/);
     expect(html).not.toContain("/dashboard");
   });

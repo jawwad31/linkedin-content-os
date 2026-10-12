@@ -73,12 +73,10 @@ describe("Content Bank and Safe Reuse (P02)", () => {
   });
 
   describe("Role & Capability Boundaries", () => {
-    it("allows agency_admin and client_admin to manage both lead magnets and experiences", () => {
-      expect(canRoleManageClientSetup("agency_admin")).toBe(true);
+    it("allows client_admin to manage both lead magnets and experiences", () => {
       expect(canRoleManageClientSetup("client_admin")).toBe(true);
       expect(canRoleManageClientSetup("client_user")).toBe(false);
 
-      expect(canRoleManageFounderExperiences("agency_admin", [])).toBe(true);
       expect(canRoleManageFounderExperiences("client_admin", [])).toBe(true);
     });
 

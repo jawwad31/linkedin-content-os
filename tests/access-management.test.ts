@@ -8,7 +8,6 @@ import { canAccountAdminResetTarget } from "@/features/access-management/policy"
 import { shouldBlockForTemporaryPassword } from "@/lib/access/password-gate";
 import {
   provisionAccountUserSchema,
-  provisionAgencyUserSchema,
   updateAccountMembershipSchema,
 } from "@/features/access-management/schemas";
 
@@ -32,28 +31,6 @@ describe("manual user provisioning contracts", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires an Account selection for Account-scoped Agency provisioning", () => {
-    const result = provisionAgencyUserSchema.safeParse({
-      scope: "account",
-      email: "user@example.com",
-      temporaryPassword: "StrongPassword1!",
-      role: "client_user",
-      permissions: ["posts_draft"],
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts Agency Admin provisioning without Account permissions", () => {
-    const result = provisionAgencyUserSchema.safeParse({
-      scope: "agency",
-      email: "admin@example.com",
-      temporaryPassword: "StrongPassword1!",
-      role: "agency_admin",
-      permissions: [],
-    });
-    expect(result.success).toBe(true);
-  });
-
   it("generates strong temporary passwords", () => {
     for (let index = 0; index < 25; index += 1) {
       expect(strongPasswordSchema.safeParse(generateTemporaryPassword()).success).toBe(true);
@@ -67,24 +44,15 @@ describe("Account Admin password reset boundary", () => {
       canAccountAdminResetTarget({
         managedClientId: "account-a",
         acceptedClientIds: ["account-a"],
-        hasAcceptedAgencyMembership: false,
       }),
     ).toBe(true);
   });
 
-  it("blocks targets with Agency or another Account access", () => {
+  it("blocks a target who also belongs to another Account", () => {
     expect(
       canAccountAdminResetTarget({
         managedClientId: "account-a",
         acceptedClientIds: ["account-a", "account-b"],
-        hasAcceptedAgencyMembership: false,
-      }),
-    ).toBe(false);
-    expect(
-      canAccountAdminResetTarget({
-        managedClientId: "account-a",
-        acceptedClientIds: ["account-a"],
-        hasAcceptedAgencyMembership: true,
       }),
     ).toBe(false);
   });

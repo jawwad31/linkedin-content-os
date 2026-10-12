@@ -86,7 +86,6 @@ describe("Two Context Profiles (P01)", () => {
   });
 
   it("enforces scoped admin editing and denies Account Users", () => {
-    expect(canRoleManageClientSetup("agency_admin")).toBe(true);
     expect(canRoleManageClientSetup("client_admin")).toBe(true);
     expect(canRoleManageClientSetup("client_user")).toBe(false);
   });

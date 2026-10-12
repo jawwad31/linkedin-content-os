@@ -13,7 +13,6 @@ import {
   canRoleManageWorkflowReview,
   canRoleRunResearchAgent,
   canRoleViewOperationalLogs,
-  type AgencyRole,
   type ClientAccessContext,
   type ClientPermission,
   type ClientRole,
@@ -27,19 +26,14 @@ export type ClientShellAccess =
       ok: true;
       clientId: string;
       clientName: string;
-      agencyId: string;
-      agencyName: string | null;
       role: EffectiveClientRole;
       permissions: ClientPermission[];
-      accessibleClientCount: number;
     }
   | { ok: false };
 
 type ClientShellRow = {
   id: string;
   name: string;
-  agency_id: string;
-  agencies: { name: string | null } | null;
 };
 
 type RoleRow<T extends string> = { role: T };
@@ -55,34 +49,6 @@ function toClientPermissions(value: unknown): ClientPermission[] {
     (permission): permission is ClientPermission =>
       typeof permission === "string" && allowed.has(permission),
   );
-}
-
-export async function getUserAgencyRoleForClient(
-  userId: string,
-  clientId: string,
-): Promise<AgencyRole | null> {
-  const supabase = await createClient();
-
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("agency_id")
-    .eq("id", clientId)
-    .is("deleted_at", null)
-    .maybeSingle<{ agency_id: string }>();
-
-  if (clientError || !client) return null;
-
-  const { data, error } = await supabase
-    .from("agency_members")
-    .select("role")
-    .eq("agency_id", client.agency_id)
-    .eq("user_id", userId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .maybeSingle<RoleRow<AgencyRole>>();
-
-  if (error || !data) return null;
-  return data.role;
 }
 
 export async function getUserClientRole(
@@ -125,9 +91,6 @@ export async function getCurrentUserAccessForClient(
   userId: string,
   clientId: string,
 ): Promise<ClientAccessContext | null> {
-  const agencyRole = await getUserAgencyRoleForClient(userId, clientId);
-  if (agencyRole) return { role: agencyRole, permissions: [] };
-
   const access = await getUserClientAccess(userId, clientId);
   if (!access) return null;
 
@@ -151,11 +114,7 @@ async function canUseClientPermission(
 ): Promise<boolean> {
   const access = await getCurrentUserAccessForClient(userId, clientId);
   if (!access) return false;
-  return (
-    access.role === "agency_admin" ||
-    access.role === "client_admin" ||
-    access.permissions.includes(permission)
-  );
+  return access.role === "client_admin" || access.permissions.includes(permission);
 }
 
 export function canContributeResearch(userId: string, clientId: string) {
@@ -229,29 +188,11 @@ export async function canManageWorkflowReview(
   return role ? canRoleManageWorkflowReview(role) : false;
 }
 
-export async function canManageAgency(
-  userId: string,
-  agencyId: string,
-): Promise<boolean> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("agency_members")
-    .select("id")
-    .eq("agency_id", agencyId)
-    .eq("user_id", userId)
-    .eq("role", "agency_admin")
-    .eq("invitation_status", "accepted")
-    .maybeSingle<{ id: string }>();
-
-  return !error && Boolean(data);
-}
-
 export async function canViewOperationalLogs(
   userId: string,
   clientId: string,
 ): Promise<boolean> {
-  const role = await getUserAgencyRoleForClient(userId, clientId);
+  const role = await getCurrentUserRoleForClient(userId, clientId);
   return role ? canRoleViewOperationalLogs(role) : false;
 }
 
@@ -279,43 +220,20 @@ export async function getClientShellAccess(
 
   const { data, error } = await supabase
     .from("clients")
-    .select("id, name, agency_id, agencies(name)")
+    .select("id, name")
     .eq("id", clientIdResult.data)
     .is("deleted_at", null)
     .maybeSingle<ClientShellRow>();
 
   if (error || !data) return { ok: false };
 
-  const accessibleClientCount =
-    currentAccess.role === "agency_admin"
-      ? 0
-      : await getDirectClientAccessCount(user.id);
-
   return {
     ok: true,
     clientId: data.id,
     clientName: data.name,
-    agencyId: data.agency_id,
-    agencyName: data.agencies?.name ?? null,
     role: currentAccess.role,
     permissions: currentAccess.permissions,
-    accessibleClientCount,
   };
-}
-
-async function getDirectClientAccessCount(userId: string): Promise<number> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("client_access")
-    .select("client_id")
-    .eq("user_id", userId)
-    .eq("invitation_status", "accepted")
-    .returns<{ client_id: string }[]>();
-
-  if (error) return 0;
-
-  return new Set(data.map((row) => row.client_id)).size;
 }
 
 export async function canUserDeleteBusinessRecords(
@@ -323,5 +241,5 @@ export async function canUserDeleteBusinessRecords(
   clientId: string,
 ): Promise<boolean> {
   const role = await getCurrentUserRoleForClient(userId, clientId);
-  return role === "agency_admin" || role === "client_admin";
+  return role === "client_admin";
 }

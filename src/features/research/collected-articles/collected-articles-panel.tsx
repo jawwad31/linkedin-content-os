@@ -129,7 +129,7 @@ export function CollectedArticlesPanel({
 }) {
   const router = useRouter();
   const canManage = canRoleContributeResearch(role, permissions);
-  const canDelete = role === "agency_admin" || role === "client_admin";
+  const canDelete = role === "client_admin";
   const canBulkManage = canManage || canDelete;
   const selection = useBulkSelection(articles.map((article) => article.id));
 

@@ -9,11 +9,8 @@ import { getServerUser } from "@/lib/supabase/session";
 import {
   changeOwnPassword,
   provisionAccountUser,
-  provisionAgencyUser,
   resetAccountMemberPassword,
-  resetAgencyMemberPassword,
   revokeAccountMembership,
-  revokeAgencyMembership,
   updateAccountMembership,
 } from "./service";
 import type { UserManagementState } from "./state";
@@ -42,30 +39,6 @@ export async function provisionAccountUserAction(
     success: result.data.createdNewUser
       ? "User created with immediate Account access. Share the temporary password securely."
       : "Existing user received immediate Account access. Their current password was not changed.",
-    createdNewUser: result.data.createdNewUser,
-  };
-}
-
-export async function provisionAgencyUserAction(
-  _state: UserManagementState,
-  formData: FormData,
-): Promise<UserManagementState> {
-  const result = await provisionAgencyUser({
-    scope: formData.get("scope"),
-    clientId: formData.get("clientId"),
-    email: formData.get("email"),
-    name: formData.get("name"),
-    temporaryPassword: formData.get("temporaryPassword"),
-    role: formData.get("role"),
-    permissions: permissionsFrom(formData),
-  });
-  if (!result.ok) return { error: result.message, success: null };
-
-  return {
-    error: null,
-    success: result.data.createdNewUser
-      ? "User created with immediate access. Share the temporary password securely."
-      : "Existing user received immediate access. Their current password was not changed.",
     createdNewUser: result.data.createdNewUser,
   };
 }
@@ -106,33 +79,6 @@ export async function resetAccountPasswordAction(
   formData: FormData,
 ): Promise<UserManagementState> {
   const result = await resetAccountMemberPassword(clientId, membershipId, {
-    temporaryPassword: formData.get("temporaryPassword"),
-  });
-  if (!result.ok) return { error: result.message, success: null };
-  return {
-    error: null,
-    success: "Password reset. Share it securely; the user must replace it after signing in.",
-  };
-}
-
-export async function revokeAgencyMembershipAction(
-  membershipId: string,
-  _state: UserManagementState,
-  _formData: FormData,
-): Promise<UserManagementState> {
-  void _state;
-  void _formData;
-  const result = await revokeAgencyMembership(membershipId);
-  if (!result.ok) return { error: result.message, success: null };
-  return { error: null, success: "Agency access revoked." };
-}
-
-export async function resetAgencyPasswordAction(
-  membershipId: string,
-  _state: UserManagementState,
-  formData: FormData,
-): Promise<UserManagementState> {
-  const result = await resetAgencyMemberPassword(membershipId, {
     temporaryPassword: formData.get("temporaryPassword"),
   });
   if (!result.ok) return { error: result.message, success: null };

@@ -13,14 +13,11 @@ import {
 } from "@/lib/access/roles";
 
 describe("Account access permissions", () => {
-  it.each(["agency_admin", "client_admin"] as const)(
-    "grants every capability to %s without explicit permissions",
-    (role) => {
-      for (const permission of CLIENT_PERMISSIONS) {
-        expect(hasClientPermission(role, [], permission)).toBe(true);
-      }
-    },
-  );
+  it("grants every capability to an Account Admin without explicit permissions", () => {
+    for (const permission of CLIENT_PERMISSIONS) {
+      expect(hasClientPermission("client_admin", [], permission)).toBe(true);
+    }
+  });
 
   it("grants an Account User only the selected capabilities", () => {
     const permissions = ["ideas_manage", "posts_review"] as const;

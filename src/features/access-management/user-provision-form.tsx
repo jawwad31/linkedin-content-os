@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DEFAULT_CLIENT_USER_PERMISSIONS } from "@/lib/access/roles";
 
-import {
-  provisionAccountUserAction,
-  provisionAgencyUserAction,
-} from "./actions";
+import { provisionAccountUserAction } from "./actions";
 import { PermissionFields, TemporaryPasswordField } from "./form-controls";
 import { EMPTY_USER_MANAGEMENT_STATE } from "./state";
 
@@ -30,62 +27,6 @@ export function AccountUserProvisionForm({ clientId }: { clientId: string }) {
       <RoleSelect value={role} onChange={setRole} />
       {role === "client_user" ? (
         <PermissionFields defaultPermissions={DEFAULT_CLIENT_USER_PERMISSIONS} />
-      ) : null}
-    </ProvisionFormShell>
-  );
-}
-
-export function AgencyUserProvisionForm({
-  accounts,
-}: {
-  accounts: Array<{ id: string; name: string }>;
-}) {
-  const [scope, setScope] = useState<"agency" | "account">("agency");
-  const [role, setRole] = useState<"client_admin" | "client_user">("client_user");
-  const [state, formAction, pending] = useActionState(
-    provisionAgencyUserAction,
-    EMPTY_USER_MANAGEMENT_STATE,
-  );
-
-  return (
-    <ProvisionFormShell state={state} formAction={formAction} pending={pending}>
-      <IdentityFields />
-      <TemporaryPasswordField />
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="scope" className="text-small font-medium">Access scope</label>
-          <select
-            id="scope"
-            name="scope"
-            value={scope}
-            onChange={(event) => setScope(event.target.value as "agency" | "account")}
-            className={selectClasses}
-          >
-            <option value="agency">Entire Agency</option>
-            <option value="account">One Account</option>
-          </select>
-        </div>
-        {scope === "account" ? (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="clientId" className="text-small font-medium">Account</label>
-            <select id="clientId" name="clientId" required className={selectClasses}>
-              <option value="">Select an Account</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.name}</option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <input type="hidden" name="role" value="agency_admin" />
-        )}
-      </div>
-      {scope === "account" ? (
-        <>
-          <RoleSelect value={role} onChange={setRole} />
-          {role === "client_user" ? (
-            <PermissionFields defaultPermissions={DEFAULT_CLIENT_USER_PERMISSIONS} />
-          ) : null}
-        </>
       ) : null}
     </ProvisionFormShell>
   );

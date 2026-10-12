@@ -37,7 +37,7 @@ const FORBIDDEN = {
 const ADMIN_REQUIRED = {
   ok: false as const,
   code: "ADMIN_REQUIRED",
-  message: "Only Client and Agency Admins can manage reader downloads and profile reference files.",
+  message: "Only Account Admins can manage reader downloads and profile reference files.",
 };
 
 const NOT_FOUND = {

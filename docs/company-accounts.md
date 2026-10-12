@@ -1,39 +1,86 @@
-# Company accounts: who exists, how to create one, how to delete one
+# Accounts: who exists, how to create one, how to delete one
 
-There is no public sign-up. Nobody can create an account or a company from the login page. People and companies are added on purpose, by someone who already has the right level.
+One account is one company, with a team. There is no agency above it and no public sign-up: nobody can create an account or a company from the login page. Accounts and people are added on purpose.
 
-## The three levels
+## The two levels
 
-| Level | Belongs to | What they can do |
-| --- | --- | --- |
-| **Agency Admin** | The agency, above all companies | Opens every company under the agency, with every capability. Sees the Companies list when there is more than one company. This is you. |
-| **Account Admin** | One company | Every capability inside that company. Manages Business Settings, Team access, research and logs. |
-| **Account User** | One company | Only the capabilities an admin ticks: Research, Manage experiences, Manage ideas, Draft posts, Review, Publish. |
+| Level | What they can do |
+| --- | --- |
+| **Account Admin** | Every capability in the account. Manages Business Settings, Team access, research and the operational logs. |
+| **Account User** | Only the capabilities an admin ticks: Research, Manage experiences, Manage ideas, Draft posts, Review, Publish. |
 
-Capabilities are the per-user switches under Account User, not a level. There is no screen for managing Agency Admins; that is done in SQL (the `agency_members` table).
+Capabilities are the per-user switches under Account User, not a level.
+
+The database still has an internal "agency" record that every company hangs from, because removing it would be a destructive change that nothing needs. It has no screen and no role in the app any more. You never type or see its id.
 
 ## How people get in
 
-1. An Agency Admin or Account Admin opens **Settings, Team access**, and presses **Invite member**.
+1. An Account Admin opens **Settings, Team access**, and presses **Invite member**.
 2. The form creates the login with a temporary password. The person must change it the first time they sign in.
-3. In the Supabase dashboard, under Authentication, Providers, Email, switch **off "Allow new users to sign up"**. That closes the last way a stranger could create a login through the API, not only the missing page. (This is a dashboard setting, not code. Please confirm it is off.)
+3. In the Supabase dashboard, under Authentication, Providers, Email, switch **off "Allow new users to sign up"**. That closes the last way a stranger could create a login through the API, not only the missing page. (A dashboard setting, not code. Please confirm it is off.)
 
-A person with exactly one company goes straight into it when they sign in. An Agency Admin with several companies lands on the **Companies** list, opens one, and has no switcher inside it (to return to the list, go to `/clients`). Someone with no company sees "Access unavailable".
+A person who belongs to one account goes straight into it when they sign in. A person who belongs to several (you, today) sees a short Companies list first, with no switcher inside an account; to return to it, go to `/clients`. Someone with no account sees "Access unavailable".
 
-## Create a company
+An Account Admin can reset the password of a member who belongs only to that account. A member who also belongs to another account has to be handled in the Supabase dashboard.
+
+## Move existing Agency Admins to Account Admins (one-off)
+
+Migration: `supabase/migrations/20261012230000_account_admins_replace_agency.sql`. It does two things, both additive (nothing is dropped or deleted):
+
+- Gives every person who administered the agency an ordinary **Account Admin** row in each company under it. The app no longer looks at agency membership, so without this you would lose access.
+- Lets **Account Admins** read their own company's operational logs (before, only Agency Admins could).
+
+The agency tables and the agency member rows are left exactly as they are, unused.
+
+**Preflight (read only):**
+
+```sql
+-- Who administered the agency, and which companies they will become Account Admin of
+select am.user_id, u.email, c.id as company_id, c.name as company
+from public.agency_members am
+join auth.users u on u.id = am.user_id
+join public.clients c on c.agency_id = am.agency_id and c.deleted_at is null
+where am.role = 'agency_admin' and am.invitation_status = 'accepted'
+order by u.email, c.name;
+```
+
+**Apply:** run the migration file as it is.
+
+**Verify (read only):** every row from the preflight should now show as an accepted Account Admin.
+
+```sql
+select u.email, c.name as company, ca.role, ca.invitation_status
+from public.agency_members am
+join auth.users u on u.id = am.user_id
+join public.clients c on c.agency_id = am.agency_id and c.deleted_at is null
+left join public.client_access ca on ca.client_id = c.id and ca.user_id = am.user_id and ca.invitation_status = 'accepted'
+where am.role = 'agency_admin' and am.invitation_status = 'accepted'
+order by u.email, c.name;
+-- expect role = client_admin and invitation_status = accepted on every line
+
+select policyname from pg_policies
+where schemaname = 'public' and tablename in ('audit_logs', 'llm_logs') and policyname like '%account_admin';
+-- expect two rows
+```
+
+**Rollback:** only the two log policies can be undone cleanly. The Account Admin rows are harmless to leave in place.
+
+```sql
+drop policy if exists audit_logs_select_account_admin on public.audit_logs;
+drop policy if exists llm_logs_select_account_admin on public.llm_logs;
+```
+
+Apply this **before** the app version that stops reading agency membership goes live. If the app goes first, you lose access to your companies until you apply it.
+
+## Create an account
 
 Script: `supabase/admin-scripts/create-company.sql`. Run it in the Supabase SQL Editor.
 
-1. Find your agency id:
+1. The first admin needs a login. In Supabase, Authentication, Users, **Add user**, with their email and a temporary password (tick auto-confirm). Share the password securely; they should change it after signing in.
+2. Open the script, replace `__COMPANY_NAME__` and `__ADMIN_EMAIL__`, and run it. It returns the new company's id and the first admin. An empty result means nothing was created: check the email has a login and the name is 2 to 200 characters.
+3. That person signs in, fills in Business Settings, and adds their team under **Settings, Team access, Invite member**.
 
-```sql
-select id, name from public.agencies;
-```
-
-2. Open the script, replace `__AGENCY_ID__` and `__COMPANY_NAME__`, and run it. It returns the new company's id.
-3. Sign in, open `/clients`, open the new company, then **Settings, Team access, Invite member** to add its first Account Admin. Then fill in Business Settings.
-
-## Delete a company (permanent)
+## Delete an account (permanent)
 
 Script: `supabase/admin-scripts/delete-company.sql`. **This cannot be undone.** It removes the company and everything under it: posts, ideas, Content Bank entries and resources, documents (database rows), calendar, research, newsletters, logs, audit history and who had access. The people's logins and profiles are kept.
 
@@ -73,4 +120,6 @@ select count(*) as left_over from public.client_access where client_id = '<COMPA
 
 ## What was tested
 
-`tests/company-scripts-sql.test.ts` runs both scripts on a throwaway PostgreSQL (PGlite) with every migration applied: a seeded company with rows in about twenty tables is deleted completely while a second company and all logins are untouched; a wrong name or unknown id deletes nothing; a table the script does not know about makes the whole thing roll back; creating a company adds one empty company, and nothing for an unknown agency. The delete test was mutation-checked (removing two delete lines makes it fail). Run against the real database, none of this has been tried: use the preflight and a backup.
+- `tests/account-admins-sql.test.ts` runs the migration on a throwaway PostgreSQL (PGlite) with every migration applied: an Account Admin reads their own company's logs and not another company's; an Account User reads none; each accepted Agency Admin becomes an Account Admin of every company under the agency (a narrower existing row is upgraded, a revoked one is ignored, and a second run changes nothing). Both halves were mutation-checked.
+- `tests/company-scripts-sql.test.ts`: a seeded company with rows in about twenty tables is deleted completely while a second company and all logins are untouched; a wrong name or unknown id deletes nothing; a table the script does not know about makes the whole thing roll back; creating an account adds one company with the person as its only Account Admin (and nothing for an unknown email or a one-letter name). The delete and create tests were mutation-checked.
+- Run against the real database, none of this has been tried: use the preflight and a backup.

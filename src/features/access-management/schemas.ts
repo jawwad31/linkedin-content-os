@@ -57,56 +57,6 @@ export const provisionAccountUserSchema = z
     }
   });
 
-export const provisionAgencyUserSchema = z
-  .object({
-    scope: z.enum(["agency", "account"]),
-    clientId: z.string().uuid().optional(),
-    email: emailSchema,
-    name: displayNameSchema,
-    temporaryPassword: optionalPasswordSchema,
-    role: z.enum(["agency_admin", "client_admin", "client_user"]),
-    permissions: permissionsSchema,
-  })
-  .superRefine((value, context) => {
-    if (value.scope === "agency" && value.role !== "agency_admin") {
-      context.addIssue({
-        code: "custom",
-        path: ["role"],
-        message: "Agency scope requires the Agency Admin role.",
-      });
-    }
-    if (value.scope === "account") {
-      if (!value.clientId) {
-        context.addIssue({
-          code: "custom",
-          path: ["clientId"],
-          message: "Select an Account.",
-        });
-      }
-      if (value.role === "agency_admin") {
-        context.addIssue({
-          code: "custom",
-          path: ["role"],
-          message: "Account scope requires an Account role.",
-        });
-      }
-    }
-    if (value.role === "client_user" && value.permissions.length === 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["permissions"],
-        message: "Select at least one Account User permission.",
-      });
-    }
-    if (value.role !== "client_user" && value.permissions.length > 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["permissions"],
-        message: "Administrator roles receive full access automatically.",
-      });
-    }
-  });
-
 export const updateAccountMembershipSchema = z
   .object({
     role: accountRoleSchema,
@@ -151,7 +101,6 @@ export const changePasswordSchema = z
 export type ProvisionAccountUserInput = z.infer<
   typeof provisionAccountUserSchema
 >;
-export type ProvisionAgencyUserInput = z.infer<typeof provisionAgencyUserSchema>;
 export type UpdateAccountMembershipInput = z.infer<
   typeof updateAccountMembershipSchema
 >;

@@ -6,8 +6,7 @@ import { getAccessibleClients } from "@/features/clients/queries";
 import { getServerUser } from "@/lib/supabase/session";
 
 /**
- * Companies: shown to someone who can reach more than one company (an agency
- * admin). A person with exactly one company never sees it; sign-in takes them
+ * Companies: shown to someone who belongs to more than one company. A person with exactly one company never sees it; sign-in takes them
  * straight in. Companies are created and removed with the SQL scripts in
  * `supabase/admin-scripts/`, not here.
  */

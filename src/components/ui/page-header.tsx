@@ -28,7 +28,7 @@ const HEADING_CLASS =
 /**
  * Page title and its one primary action. Inside the client app on large screens this is
  * the 60px top bar (white, hairline under it, full width of the content column); the
- * description sits under the bar. Elsewhere (agency pages, phones) it is a plain heading row.
+ * description sits under the bar. Elsewhere (phones) it is a plain heading row.
  * A `breadcrumb` (for example "Newsletter / November edition") replaces the title on detail
  * pages. Its heading is one line and truncates; the full label is in its title attribute.
  */

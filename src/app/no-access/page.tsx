@@ -34,7 +34,7 @@ export default async function NoAccessPage() {
             <div className="flex flex-col gap-2">
               <h1 className="text-section-title font-bold tracking-tight text-on-surface">Access Unavailable</h1>
               <p className="text-small text-on-surface-variant">
-                You do not currently have access to an Agency or Client Workspace. Contact your administrator to request access.
+                You do not currently have access to an account. Contact your administrator to request access.
               </p>
             </div>
           </div>

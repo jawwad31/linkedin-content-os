@@ -47,7 +47,7 @@ export function PostsView({
   posts: ReviewPost[];
   role: EffectiveClientRole;
 }) {
-  const isAdmin = role === "agency_admin" || role === "client_admin";
+  const isAdmin = role === "client_admin";
   const [activeTab, setActiveTab] = useState<TabId>("needs_review");
 
   const needsReviewPosts = posts.filter(
