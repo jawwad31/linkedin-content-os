@@ -15,7 +15,7 @@ const REASONS: Record<string, string> = {
   TIMEOUT:
     "The search took too long and was stopped. Retry; if it keeps happening, narrow the research prompt.",
   INVALID_RESPONSE:
-    "The model's answer could not be read as a briefing. Retry; if it repeats, the model may not support structured answers.",
+    "A step's answer could not be read in the required form, even after one conversion attempt. The sources collected are kept. Retry; if it repeats, the model may not support structured answers.",
   NO_SEARCH_EVIDENCE:
     "The model answered without actually searching the web, so nothing was saved. Retry, or use a model that supports web search.",
   INPUT_TOO_LARGE:

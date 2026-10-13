@@ -49,7 +49,7 @@ vi.mock("@/features/research/research-runs/run-guard", () => ({
 vi.mock("@/features/research/web-research/queries", () => ({
   getPreviousFindings: mocks.previous,
 }));
-vi.mock("@/features/research/web-research/provider", () => ({
+vi.mock("@/features/research/web-research/pipeline/run", () => ({
   researchWeb: mocks.provider,
 }));
 import {

@@ -3,13 +3,53 @@ import { z } from "zod";
 export const INITIAL_RESEARCH_PROMPT =
   "Deliver a concise, high-signal daily briefing for a digital marketing agency. Research the past week and cover only consequential changes or tactics: Meta and Google Ads platform/policy/measurement updates; GoHighLevel releases, best practices; Google Business Profile, local SEO, AI Overviews/local search, reviews and Maps; CRO and lead-conversion best practices; CRM, AI agents, AI Chatbots and calling agents, call/chat/SMS automation; and other material digital-marketing developments. For each item include what changed, why it matters for local-service clients, and a specific agency action. Prioritize primary sources and include direct source links. Clearly separate confirmed platform changes from informed trend analysis. Skip minor news and generic advice.";
 
+/**
+ * The most one research run may spend. These defaults can be lowered or raised with the optional
+ * RESEARCH_* settings read by `researchBudget()`; the figure used is saved with each run.
+ */
 export const RESEARCH_BUDGET = {
-  maxToolCalls: 6,
+  /** Web searches per run across all topic lanes: lanes x searchesPerLane at most. */
+  maxToolCalls: 8,
+  /** Longest answer one model step may write. */
   maxOutputTokens: 8000,
+  /** Longest one model step may take. */
   timeoutMs: 90_000,
   maxInputBytes: 180_000,
   maxResponseBytes: 3_000_000,
+  /** Topic lanes the saved prompt is split into, each searched separately. */
+  maxLanes: 4,
+  searchesPerLane: 2,
+  /** Pages opened and read in full, from search results and RSS leads together. */
+  maxPages: 14,
+  maxRssLeadPages: 4,
+  /** Characters of one page the evidence step reads. */
+  pageTextChars: 12_000,
+  pagesPerExtraction: 3,
+  /** Times a model answer that is not valid JSON may be converted again, across the whole run. */
+  maxRepairs: 3,
+  /** The whole run stops starting new steps after this, so it finishes inside the request limit. */
+  totalSeconds: 240,
 } as const;
+
+export type ResearchBudget = { [K in keyof typeof RESEARCH_BUDGET]: number };
+
+const withinLimits = (name: string, fallback: number, min: number, max: number) => {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value >= min && value <= max ? value : fallback;
+};
+/** The budget for this run: the defaults, optionally changed by RESEARCH_* server settings. */
+export function researchBudget(): ResearchBudget {
+  const lanes = withinLimits("RESEARCH_MAX_LANES", RESEARCH_BUDGET.maxLanes, 1, 6);
+  const perLane = withinLimits("RESEARCH_SEARCHES_PER_LANE", RESEARCH_BUDGET.searchesPerLane, 1, 3);
+  return {
+    ...RESEARCH_BUDGET,
+    maxLanes: lanes,
+    searchesPerLane: perLane,
+    maxToolCalls: lanes * perLane,
+    maxPages: withinLimits("RESEARCH_MAX_PAGES", RESEARCH_BUDGET.maxPages, 4, 24),
+    totalSeconds: withinLimits("RESEARCH_TOTAL_SECONDS", RESEARCH_BUDGET.totalSeconds, 60, 270),
+  };
+}
 export const settingsSchema = z
   .object({
     prompt: z.string().min(10).max(12_000),
@@ -66,6 +106,8 @@ export const evidenceSchema = z
     effectiveOn: date,
     dateEvidence: z.string().max(1200).nullable(),
     sourceKind: z.enum(["primary", "secondary", "unknown"]),
+    /** A short quote from the page that supports the claim, checked against the page text. */
+    excerpt: z.string().max(700).optional(),
   })
   .strict();
 export const findingSchema = z
@@ -76,6 +118,12 @@ export const findingSchema = z
     whyItMatters: z.string().min(3).max(1500),
     agencyAction: z.string().min(3).max(1500),
     angle: z.string().min(3).max(700),
+    /** What was true before the change, when the source says. */
+    previousState: z.string().max(1000).optional(),
+    /** Who is affected. */
+    audience: z.string().max(600).optional(),
+    /** What the sources do not show, or what is uncertain. */
+    limitations: z.string().max(1200).optional(),
     category: z.enum(["confirmed_change", "trend_analysis"]),
     confidence: z.enum(["high", "medium", "low"]),
     consequence: z.number().int().min(1).max(5),

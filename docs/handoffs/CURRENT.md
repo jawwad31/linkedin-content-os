@@ -9,6 +9,26 @@ Updated: 2026-10-10
 - P06 feature: `55fe6bb` (`feat: add resumable calendar drafting`), pushed to main. This final handoff update follows it as a documentation-only commit.
 - Product name: Virel. Jawad works one prompt/phase at a time; do not start the next phase until instructed.
 
+## Web research: staged pipeline (2026-10-13)
+
+- Uncommitted. **No migration, no Railway variable required** (optional `RESEARCH_MAX_LANES`, `RESEARCH_SEARCHES_PER_LANE`, `RESEARCH_MAX_PAGES`, `RESEARCH_TOTAL_SECONDS`). Full design, limits, cost notes and the validation record: `docs/web-research-pipeline.md`.
+- Baseline: `8f20206` plus the uncommitted "report everything, the user decides" change below it (it stays; the new pipeline's writing step applies the saved prompt's own materiality criteria instead of a fixed filter).
+- Call path: `service.ts` / `automation/executor.ts` -> `web-research/pipeline/run.ts` `researchWeb` -> plan -> per-lane search (OpenRouter web search/Exa) -> read pages with the existing hardened `fetchPublicText`/`extractPage` (`pipeline/reader.ts`) -> tool-free evidence extraction with deterministic verification (`pipeline/verify.ts`: quote must be on the page, dates must be written in a quoted passage, future publication dates dropped, before-window claims left out) -> tool-free writing step from verified evidence only, sources/dates/excerpts copied by code -> existing `finishBriefing` rules. One conversion pass per prose answer, 3 per run. `provider.ts` keeps `readEnvelope`, `mapWebResponse`, `finishBriefing` and the parsing helpers; the single-request `researchWeb` is gone.
+- Contracts: findings gain optional `previousState`, `audience`, `limitations`; evidence gains optional `excerpt` (old stored findings stay valid; no DB change). `RESEARCH_BUDGET` gains lane/page/time limits and `researchBudget()` applies the optional settings; both entry points save it as the run's budget.
+- Page: badges (confirmed or trend, confidence, new/follow-up/already reported), what was true before, who it affects, limits and uncertainty, the supporting passage found on the page; action is labelled as our recommendation.
+- Not changed: models (`LLM_WEB_RESEARCH_*` serve every step), RSS collector, content workflow, human review, run guard, idempotency, authorization rechecks, RLS, scheduled lease renewal (now before each stage). `LLM_RSS_SYNTHESIS_*` is read by no code and can be deleted from Railway.
+- Validation (automated only): `tsc` and `eslint` clean; 71 files / 632 tests pass; ten safeguards mutation-checked. **Not verified:** any real provider run, real page reads, real timings, cost, how well the structured steps work with `openai/gpt-6-luna`, the Research page in a browser. The earlier failures (400, prose answer) are not proven fixed live.
+- Known limit: a manual run is still inside the web request; the 240 s whole-run stop is the guard. Moving manual runs onto the worker is the follow-up if live timings need it.
+
+## Web research reports everything, the user decides (2026-10-13)
+
+- Uncommitted. No migration. Jawad: no filtering for verified or consequential items; he decides what to keep.
+- `web-research/provider.ts`: the instructions now tell the model to report every relevant update, including minor, early, unconfirmed or single-source ones, to show support through confidence, category and sourceKind, to include items whose date it cannot confirm inside the window (dates null), and to return an empty list only when nothing relevant was found. The old "return no findings when evidence is insufficient" sentence is gone.
+- A "confirmed change" with no primary source is no longer omitted: it is kept and relabelled `trend_analysis`. `softenFinding` repairs small slips before the strict check (a date that is not a real YYYY-MM-DD becomes null, a non-id `previousFindingId` becomes null, unknown keys are ignored, over-long text is cut to its limit); missing required text still omits the finding. Links that never appeared in the search results are still omitted (that is what stops invented citations).
+- The saved prompt text is separate and is edited on the Research page: the default prompt still says "consequential" and "skip minor news", which Jawad has to edit out of his saved prompt.
+- Tests: updated the citation/date/primary test, added a repair test, mutation-checked. Full suite 596 passed, `tsc` and `eslint` clean.
+- **Not verified against the real provider.** DEFERRED: run web research on Railway.
+
 ## Web research: briefing could not be validated (2026-10-12)
 
 - Uncommitted. No migration. After the 400 fix the search ran (27 candidate sources) but the card said "Sources were collected, but the briefing could not be validated" (`INVALID_RESPONSE`).

@@ -1,16 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  mapWebResponse,
-  researchWeb,
-} from "@/features/research/web-research/provider";
-import {
-  INITIAL_RESEARCH_PROMPT,
-  RESEARCH_BUDGET,
-} from "@/features/research/web-research/contracts";
+import { mapWebResponse } from "@/features/research/web-research/provider";
+import { RESEARCH_BUDGET } from "@/features/research/web-research/contracts";
 import { researchFinding, webResponse } from "./fixtures/web-research";
-import { writeLlmLog } from "@/lib/llm/log";
 
-vi.mock("@/lib/llm/log", () => ({ writeLlmLog: vi.fn() }));
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -56,7 +48,7 @@ describe("P07 bounded search and evidence mapping", () => {
     });
     expect(result.candidates[0].fetchedAt).toBe(now.toISOString());
   });
-  it("rejects invented citations, invalid dates, and confirmed changes without primary evidence", () => {
+  it("rejects invented citations but keeps findings with a bad date or no primary source, labelled honestly", () => {
     const invented = {
       ...researchFinding,
       sources: [
@@ -74,15 +66,49 @@ describe("P07 bounded search and evidence mapping", () => {
       ...researchFinding,
       sources: [{ ...researchFinding.sources[0], sourceKind: "secondary" }],
     };
-    const result = mapWebResponse(
-      webResponse([invented, badDate, secondary]),
-      [],
-      now,
-    );
+    const result = mapWebResponse(webResponse([invented]), [], now);
     expect(result.outcome).toBe("partial");
     expect(result.findings).toHaveLength(0);
-    expect(result.candidates).toHaveLength(1);
-    expect(result.coverageGaps).toHaveLength(3);
+    expect(result.coverageGaps).toEqual([
+      "A finding was omitted because a source link was absent from the search evidence.",
+    ]);
+    // The bad date becomes unknown and the secondary-only "confirmed change" is kept as a
+    // trend, so the user can decide about both (checked separately: the same key would group).
+    const dated = mapWebResponse(webResponse([badDate]), [], now);
+    expect(dated.findings).toHaveLength(1);
+    expect(dated.findings[0].sources[0]).toMatchObject({ publishedOn: null });
+    const trend = mapWebResponse(webResponse([secondary]), [], now);
+    expect(trend.findings).toHaveLength(1);
+    expect(trend.findings[0]).toMatchObject({ category: "trend_analysis" });
+    expect(trend.candidates).toHaveLength(1);
+  });
+  it("repairs small slips in a finding instead of losing it, without inventing anything", () => {
+    const slipped = {
+      ...researchFinding,
+      previousFindingId: "",
+      extraField: "ignored",
+      title: "T".repeat(400),
+      sources: [
+        {
+          ...researchFinding.sources[0],
+          publishedOn: "October 2026",
+          announcedOn: "2026-10",
+          effectiveOn: "2026-10-08",
+          unknownKey: true,
+        },
+      ],
+    };
+    const result = mapWebResponse(webResponse([slipped]), [], now);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].title).toHaveLength(300);
+    expect(result.findings[0].sources[0]).toMatchObject({
+      publishedOn: null,
+      announcedOn: null,
+      effectiveOn: "2026-10-08",
+    });
+    // Required content is not repaired: a finding with no whatChanged is still omitted.
+    const empty = { ...researchFinding, whatChanged: "" };
+    expect(mapWebResponse(webResponse([empty]), [], now).findings).toHaveLength(0);
   });
   it("groups the same development and distinguishes repeated coverage from a meaningful follow-up", () => {
     const first = mapWebResponse(webResponse(), [], now).findings[0];
@@ -302,111 +328,15 @@ describe("P07 bounded search and evidence mapping", () => {
     failed.output[0].status = "failed";
     expect(mapWebResponse(failed, [], now).outcome).toBe("partial");
     const budget = webResponse();
-    budget.output.push(...Array.from({ length: 5 }, () => budget.output[0]));
+    budget.output.push(
+      ...Array.from({ length: RESEARCH_BUDGET.maxToolCalls - 1 }, () => budget.output[0]),
+    );
     expect(mapWebResponse(budget, [], now).coverageGaps.join(" ")).toContain(
       "budget",
     );
     expect(
       mapWebResponse({ status: "completed", output: [] }, [], now).outcome,
     ).toBe("failed");
-  });
-  it("keeps missing configuration distinct and makes no provider call", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
-    const fetcher = vi.fn();
-    vi.stubGlobal("fetch", fetcher);
-    const result = await researchWeb({
-      clientId: "account",
-      userId: "actor",
-      settings: {
-        revision: 1,
-        prompt: INITIAL_RESEARCH_PROMPT,
-        lookbackDays: 7,
-        useProfileContext: false,
-      },
-      profile: null,
-      previous: [],
-    });
-    expect(result.outcome).toBe("not_configured");
-    expect(fetcher).not.toHaveBeenCalled();
-  });
-  it("sends OpenRouter a bounded server search and maps its sources without double-counting usage", async () => {
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "OpenRouter");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
-    vi.stubEnv("OPENROUTER_API_KEY", "router-test-key");
-    vi.stubEnv("OPENAI_API_KEY", "unused-openai-key");
-    const raw = webResponse();
-    raw.output[0].type = "openrouter:web_search";
-    const response = {
-      ...raw,
-      usage: {
-        ...raw.usage,
-        server_tool_use_details: { web_search_requests: 1 },
-      },
-    };
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify(response)));
-    vi.stubGlobal("fetch", fetcher);
-    const result = await researchWeb({
-      clientId: "account",
-      userId: "actor",
-      settings: {
-        revision: 1,
-        prompt: "Research astronomy releases",
-        lookbackDays: 7,
-        useProfileContext: false,
-      },
-      profile: { private: "excluded-profile" },
-      previous: [],
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(fetcher.mock.calls[0][0]).toBe(
-      "https://openrouter.ai/api/v1/responses",
-    );
-    const request = fetcher.mock.calls[0][1];
-    expect(request.headers.Authorization).toBe("Bearer router-test-key");
-    const body = JSON.parse(request.body);
-    expect(body).toMatchObject({
-      model: "anthropic/claude-haiku-5.5",
-      store: false,
-      truncation: "disabled",
-      max_tool_calls: RESEARCH_BUDGET.maxToolCalls,
-      max_output_tokens: RESEARCH_BUDGET.maxOutputTokens,
-      tool_choice: "auto",
-      provider: { require_parameters: true },
-      tools: [
-        {
-          type: "openrouter:web_search",
-          parameters: {
-            engine: "exa",
-            max_uses: RESEARCH_BUDGET.maxToolCalls,
-            max_results: 5,
-            max_total_results: 30,
-            max_characters: 4000,
-          },
-        },
-      ],
-      text: { format: { type: "json_schema", strict: true } },
-    });
-    // OpenRouter rejects the whole request ("Invalid Responses API request") when `include` holds a
-    // value outside its short list, so this OpenAI-only value must never be sent to it.
-    expect(body).not.toHaveProperty("include");
-    // Some models ignore the response-format setting once a search tool is in play, so the
-    // instructions also say in words that the answer is a bare JSON object.
-    expect(body.instructions).toContain("exactly one JSON object");
-    expect(JSON.parse(body.input).savedPrompt).toBe(
-      "Research astronomy releases",
-    );
-    expect(body.input).not.toContain("excluded-profile");
-    expect(result).toMatchObject({ outcome: "success", toolCalls: 1 });
-    expect(result.candidates).toHaveLength(1);
-    expect(writeLlmLog).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        provider: "openrouter",
-        model: "anthropic/claude-haiku-5.5",
-        tokenInputCount: 100,
-      }),
-    );
   });
   it("accepts Router citation metadata with reported searches, but never a generated URL alone", () => {
     const raw = webResponse();
@@ -446,7 +376,10 @@ describe("P07 bounded search and evidence mapping", () => {
     ).toBe("partial");
     expect(
       mapWebResponse(
-        { ...response, usage: { server_tool_use: { web_search_requests: 6 } } },
+        {
+          ...response,
+          usage: { server_tool_use: { web_search_requests: RESEARCH_BUDGET.maxToolCalls } },
+        },
         [],
         now,
       ).outcome,
@@ -497,11 +430,11 @@ describe("P07 bounded search and evidence mapping", () => {
   });
   it("logs which fields made a finding fail, never their values", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const bad = { ...researchFinding, previousFindingId: "SECRET-NOT-A-UUID", extraKey: "SECRET-X" };
+    const bad = { ...researchFinding, consequence: "SECRET-NOT-A-NUMBER", extraKey: "SECRET-X" };
     const result = mapWebResponse(webResponse([bad]), [], now);
     expect(result.findings).toHaveLength(0);
     const line = String(logged.mock.calls[0][0]);
-    expect(line).toContain("previousFindingId");
+    expect(line).toContain("consequence");
     expect(line).not.toContain("SECRET");
     logged.mockRestore();
   });
@@ -523,150 +456,5 @@ describe("P07 bounded search and evidence mapping", () => {
     incomplete.output[0].type = "openrouter:web_search";
     incomplete.status = "incomplete";
     expect(mapWebResponse(incomplete, [], now).outcome).toBe("partial");
-  });
-  it("does not call a legacy provider when Router is selected without its key", async () => {
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openrouter");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
-    vi.stubEnv("OPENROUTER_API_KEY", "");
-    vi.stubEnv("OPENAI_API_KEY", "unused-openai-key");
-    const fetcher = vi.fn();
-    vi.stubGlobal("fetch", fetcher);
-    expect(
-      await researchWeb({
-        clientId: "account",
-        userId: "actor",
-        settings: {
-          revision: 1,
-          prompt: INITIAL_RESEARCH_PROMPT,
-          lookbackDays: 7,
-          useProfileContext: false,
-        },
-        profile: null,
-        previous: [],
-      }),
-    ).toMatchObject({ outcome: "not_configured", errorCode: "NOT_CONFIGURED" });
-    expect(fetcher).not.toHaveBeenCalled();
-  });
-  it("sends the exact saved unrelated prompt, excludes profile when off, and bounds the paid call", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify(webResponse())));
-    vi.stubGlobal("fetch", fetcher);
-    const prompt =
-      "Research consequential changes in astronomical instrumentation.";
-    const result = await researchWeb({
-      clientId: "account",
-      userId: "actor",
-      settings: {
-        revision: 2,
-        prompt,
-        lookbackDays: 3,
-        useProfileContext: false,
-      },
-      profile: { privateFact: "must-not-appear" },
-      previous: [],
-    });
-    const body = JSON.parse(fetcher.mock.calls[0][1].body);
-    const input = JSON.parse(body.input);
-    expect(input.savedPrompt).toBe(prompt);
-    expect(input.optionalProfileContext).toBeNull();
-    expect(body.input).not.toContain("must-not-appear");
-    expect(body).toMatchObject({
-      store: false,
-      max_tool_calls: RESEARCH_BUDGET.maxToolCalls,
-      max_output_tokens: RESEARCH_BUDGET.maxOutputTokens,
-      tool_choice: "required",
-    });
-    expect(body.include).toContain("web_search_call.action.sources");
-    expect(result.outcome).toBe("success");
-  });
-  it("handles provider rate limits and timeouts without exposing provider bodies or prompts", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        new Response("sensitive provider details", { status: 429 }),
-      );
-    vi.stubGlobal("fetch", fetcher);
-    const input = {
-      clientId: "account",
-      userId: "actor",
-      settings: {
-        revision: 1,
-        prompt: INITIAL_RESEARCH_PROMPT,
-        lookbackDays: 7,
-        useProfileContext: false,
-      },
-      profile: null,
-      previous: [],
-    };
-    expect(await researchWeb(input)).toMatchObject({
-      outcome: "failed",
-      errorCode: "PROVIDER_RATE_LIMITED",
-    });
-    fetcher.mockRejectedValue(
-      new DOMException("private details", "TimeoutError"),
-    );
-    const timeout = await researchWeb(input);
-    expect(timeout.errorCode).toBe("TIMEOUT");
-    expect(JSON.stringify(timeout)).not.toContain("private details");
-  });
-  it("tells apart a missing model, no credit and a refused request, and keeps the provider message out of the saved result", async () => {
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openrouter");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "anthropic/claude-haiku-5.5");
-    vi.stubEnv("OPENROUTER_API_KEY", "router-test-key");
-    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const input = {
-      clientId: "account",
-      userId: "actor",
-      settings: { revision: 1, prompt: INITIAL_RESEARCH_PROMPT, lookbackDays: 7, useProfileContext: false },
-      profile: null,
-      previous: [],
-    };
-    for (const [status, code] of [
-      [404, "PROVIDER_MODEL_NOT_FOUND"],
-      [402, "PROVIDER_CREDITS"],
-      [400, "PROVIDER_BAD_REQUEST"],
-      [500, "PROVIDER_ERROR"],
-    ] as const) {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(
-          new Response(JSON.stringify({ error: { message: "secret prompt echo" } }), { status }),
-        ),
-      );
-      const result = await researchWeb(input);
-      expect(result.errorCode).toBe(code);
-      expect(result.coverageGaps).toEqual([`The provider replied with status ${status}.`]);
-      expect(JSON.stringify(result)).not.toContain("secret prompt echo");
-    }
-    // The administrator can still read the provider's own words in the server log.
-    expect(logged.mock.calls.map((call) => String(call[0])).join(" ")).toContain("secret prompt echo");
-  });
-  it("refuses oversized context before a paid call instead of silently truncating profile fields", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
-    vi.stubEnv("LLM_WEB_RESEARCH_PROVIDER", "openai");
-    vi.stubEnv("LLM_WEB_RESEARCH_MODEL", "configured-model");
-    const fetcher = vi.fn();
-    vi.stubGlobal("fetch", fetcher);
-    const result = await researchWeb({
-      clientId: "account",
-      userId: "actor",
-      settings: {
-        revision: 1,
-        prompt: INITIAL_RESEARCH_PROMPT,
-        lookbackDays: 7,
-        useProfileContext: true,
-      },
-      profile: { essential: "x".repeat(RESEARCH_BUDGET.maxInputBytes) },
-      previous: [],
-    });
-    expect(result.errorCode).toBe("INPUT_TOO_LARGE");
-    expect(fetcher).not.toHaveBeenCalled();
   });
 });

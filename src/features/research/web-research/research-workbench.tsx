@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -69,6 +70,14 @@ function EvidenceLink({
         <p className="text-caption text-muted-foreground">
           Fetched: {new Date(fetchedAt).toLocaleString()}
         </p>
+      ) : null}
+      {source.excerpt ? (
+        <details className="text-caption text-muted-foreground">
+          <summary className="cursor-pointer">
+            Supporting passage (found on the page)
+          </summary>
+          <p className="whitespace-pre-wrap">{source.excerpt}</p>
+        </details>
       ) : null}
       {source.dateEvidence ? (
         <details className="text-caption text-muted-foreground">
@@ -442,20 +451,59 @@ export function ResearchWorkbench({
                     <h3 className="min-w-0 break-words text-body font-medium">
                       {finding.title}
                     </h3>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Badge
+                        variant={
+                          finding.category === "confirmed_change" ? "success" : "neutral"
+                        }
+                      >
+                        {finding.category === "confirmed_change"
+                          ? "Confirmed change"
+                          : "Trend or analysis"}
+                      </Badge>
+                      <Badge variant="outline">{finding.confidence} confidence</Badge>
+                      <Badge
+                        variant={finding.novelty === "follow_up" ? "info" : "outline"}
+                      >
+                        {finding.novelty === "follow_up"
+                          ? "Follow-up with new facts"
+                          : finding.novelty === "repeated"
+                            ? "Already reported"
+                            : "New"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 <p className="whitespace-pre-wrap text-small">
                   <strong>What changed: </strong>
                   {finding.whatChanged}
                 </p>
+                {finding.previousState ? (
+                  <p className="whitespace-pre-wrap text-small">
+                    <strong>What was true before: </strong>
+                    {finding.previousState}
+                  </p>
+                ) : null}
+                {finding.audience ? (
+                  <p className="whitespace-pre-wrap text-small">
+                    <strong>Who it affects: </strong>
+                    {finding.audience}
+                  </p>
+                ) : null}
                 <p className="whitespace-pre-wrap text-small">
                   <strong>Why it matters: </strong>
                   {finding.whyItMatters}
                 </p>
                 <p className="whitespace-pre-wrap text-small">
-                  <strong>Action: </strong>
+                  <strong>Suggested action (our recommendation): </strong>
                   {finding.agencyAction}
                 </p>
+                {finding.limitations ? (
+                  <p className="whitespace-pre-wrap text-small">
+                    <strong>Limits and uncertainty: </strong>
+                    {finding.limitations}
+                  </p>
+                ) : null}
                 <p className="whitespace-pre-wrap text-small">
                   <strong>Suggested angle: </strong>
                   {finding.angle}

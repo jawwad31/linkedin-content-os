@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     },
   }),
 }));
-vi.mock("@/features/research/web-research/provider", () => ({
+vi.mock("@/features/research/web-research/pipeline/run", () => ({
   researchWeb: mocks.provider,
 }));
 vi.mock("@/features/research/rss-collector/collect-for-client", () => ({

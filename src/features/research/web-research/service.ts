@@ -18,7 +18,7 @@ import {
   withResearchRunGuard,
 } from "../research-runs/run-guard";
 import {
-  RESEARCH_BUDGET,
+  researchBudget,
   runRequestSchema,
   saveSettingsSchema,
   storedFindingSchema,
@@ -27,7 +27,7 @@ import {
 } from "./contracts";
 import { findingToEntryFields } from "./finding-entry";
 import { getPreviousFindings } from "./queries";
-import { researchWeb } from "./provider";
+import { researchWeb } from "./pipeline/run";
 import { automationEnabled } from "../automation/contracts";
 import { loadResearchSources } from "../automation/executor";
 
@@ -139,7 +139,7 @@ export async function runWebResearch(
           p_run_id: runId,
           p_request_key: parsed.data.requestKey,
           p_revision: parsed.data.expectedRevision,
-          p_budget: RESEARCH_BUDGET,
+          p_budget: researchBudget(),
         });
         if (error || !prepared?.ok) {
           problem = prepared?.code ?? "UNKNOWN_ERROR";

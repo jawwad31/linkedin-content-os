@@ -4,10 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   storedFindingSchema,
   settingsSchema,
-  RESEARCH_BUDGET,
+  researchBudget,
   type ResearchResult,
 } from "../web-research/contracts";
-import { researchWeb } from "../web-research/provider";
+import { researchWeb } from "../web-research/pipeline/run";
 import { fetchSource, type SourcePage } from "./safe-fetch";
 import { automationEnabled } from "./contracts";
 import { collectForClient } from "../rss-collector/collect-for-client";
@@ -146,7 +146,7 @@ export async function dispatchResearchSchedules(): Promise<{
   for (const row of due.data ?? []) {
     const { data, error } = await db.rpc("claim_scheduled_research", {
       p_client_id: row.client_id,
-      p_budget: RESEARCH_BUDGET,
+      p_budget: researchBudget(),
     });
     if (error) {
       summary.errors++;
@@ -213,6 +213,7 @@ export async function dispatchResearchSchedules(): Promise<{
         profile: claim.profile,
         previous: prior,
         sources,
+        beforeStage: () => renewClaim(db, row.client_id, claim),
       });
       if (gaps.length) {
         result.coverageGaps.push(...gaps);
